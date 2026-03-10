@@ -1,16 +1,33 @@
 import { useMemo, useState } from 'react';
 import { InstanceRenderer } from '../engine/InstanceRenderer';
+import { SingleModelRenderer } from '../engine/SingleModelRenderer';
 import { WGS84_TO_MERCATOR } from '../utils/coordinate';
 import { Euler, Vector3 } from 'three';
 
 interface ModelManagerProps {
-  centerCoord: { x: number; y: number; z: number };
+  centerCoord: { x: number; y: number; z: number; meterScale: number };
 }
 
 /**
  * Orchestrate model placement and group them by type for instancing.
  */
 export const ModelManager = ({ centerCoord }: ModelManagerProps) => {
+  // Sample data provided:
+  const sampleModel = {
+    name: "cong",
+    file: "/Ivory3D/cong.glb", // Adjusted to match project structure
+    assetId: 4193440,
+    lng: 105.464649,
+    lat: 20.90334,
+    height: 0,
+    yaw: 0,
+    pitch: 0,
+    roll: 240,
+    scale: 1
+  };
+
+  /* 
+  // Commented out instancing logic for now to focus on SingleModelRenderer
   const [seeds] = useState(() => ({
     trees: Array.from({ length: 500 }, () => ({
       r1: Math.random(),
@@ -26,68 +43,25 @@ export const ModelManager = ({ centerCoord }: ModelManagerProps) => {
   }));
 
   const models = useMemo(() => {
-    const trees = [];
-    const lamps = [];
-
-    // Example: generate 1000 random objects in a bounding box near center.
-    // Near center: ± 0.005 degrees.
-    const baseLng = 105.8342; // Example: Hanoi center
-    const baseLat = 21.0285;
-
-    for (let i = 0; i < 500; i++) {
-      const seed = seeds.trees[i];
-      const lng = baseLng + (seed.r1 - 0.5) * 0.01;
-      const lat = baseLat + (seed.r2 - 0.5) * 0.01;
-
-      const mercPos = WGS84_TO_MERCATOR(lng, lat, 0);
-      const relativePos = new Vector3(
-        mercPos.x - centerCoord.x,
-        mercPos.y - centerCoord.y,
-        mercPos.z - centerCoord.z
-      );
-
-      trees.push({
-        id: `tree_${i}`,
-        position: relativePos,
-        scale: new Vector3(10, 10, 10).multiplyScalar(0.5 + seed.r3),
-        rotation: new Euler(0, seed.r4 * Math.PI, 0),
-      });
-    }
-
-    for (let i = 0; i < 500; i++) {
-      const seed = seeds.lamps[i];
-      const lng = baseLng + (seed.r1 - 0.5) * 0.01;
-      const lat = baseLat + (seed.r2 - 0.5) * 0.01;
-
-      const mercPos = WGS84_TO_MERCATOR(lng, lat, 0);
-      const relativePos = new Vector3(
-        mercPos.x - centerCoord.x,
-        mercPos.y - centerCoord.y,
-        mercPos.z - centerCoord.z
-      );
-
-      lamps.push({
-        id: `lamp_${i}`,
-        position: relativePos,
-        scale: new Vector3(0.05, 0.05, 0.05).multiplyScalar(1 + seed.r3),
-      });
-    }
-
-    return { trees, lamps };
-  }, [centerCoord.x, centerCoord.y, centerCoord.z, seeds.lamps, seeds.trees]);
-
-  const handleInstanceClick = (id: string) => {
-    console.log(`Clicked on instance: ${id}`);
-  };
+    // ... instancing logic ...
+    return { trees: [], lamps: [] };
+  }, [centerCoord.x, centerCoord.y, centerCoord.z, seeds.trees]);
+  */
 
   return (
     <>
-      <InstanceRenderer
-        url='/Ivory3D/villa3.glb'
-        instances={models.trees}
-        onInstanceClick={handleInstanceClick}
+      {/* Single Model from Sample Data */}
+      <SingleModelRenderer
+        url={sampleModel.file}
+        lng={sampleModel.lng}
+        lat={sampleModel.lat}
+        height={sampleModel.height}
+        yaw={sampleModel.yaw}
+        pitch={sampleModel.pitch}
+        roll={sampleModel.roll}
+        scale={sampleModel.scale}
+        centerCoord={centerCoord}
       />
-      {/* Add more instances as needed */}
     </>
   );
 };

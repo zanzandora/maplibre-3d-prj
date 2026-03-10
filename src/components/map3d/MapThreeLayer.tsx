@@ -1,49 +1,121 @@
-import { Suspense } from 'react';
-import { Canvas } from '@react-three/fiber';
-import { CameraSync } from './CameraSync';
-import { ModelManager } from '../../loader/ModelManager';
+import { useEffect } from 'react';
 import maplibregl from 'maplibre-gl';
+import { Canvas, useThree } from '@react-three/fiber';
+import { Matrix4, Vector3 } from 'three';
 
 interface MapThreeLayerProps {
   map: maplibregl.Map;
-  centerCoord: { x: number; y: number; z: number };
+  centerCoord: { x: number; y: number; z: number; meterScale: number };
+  children: React.ReactNode;
 }
 
 /**
- * The bridge between MapLibre and R3F.
- * Renders an overlay Canvas and synchronizes the camera.
+ * Component nội bộ để đồng bộ Camera của R3F với MapLibre.
+ * Sử dụng một "Dummy" Custom Layer để trích xuất ma trận biến đổi từ MapLibre.
  */
-export const MapThreeLayer = ({ map, centerCoord }: MapThreeLayerProps) => {
+const CameraSync = ({
+  map,
+  centerCoord,
+}: Omit<MapThreeLayerProps, 'children'>) => {
+  const { camera, gl, scene } = useThree();
+
+  useEffect(() => {
+    const layerId = 'r3f-sync-layer';
+
+    const customLayer: maplibregl.CustomLayerInterface = {
+      id: layerId,
+      type: 'custom',
+      renderingMode: '3d',
+      onAdd: () => {
+        // Vô hiệu hóa auto update matrix để MapLibre toàn quyền điều khiển
+        camera.matrixAutoUpdate = false;
+      },
+      render: (_gl, args) => {
+        // 1. Lấy ma trận projection-view từ MapLibre (v5+ style)
+        const m = new Matrix4().fromArray(
+          args.defaultProjectionData.mainMatrix
+        );
+
+        // 2. Đồng bộ không gian Three.js với Mercator của MapLibre qua centerCoord
+        const l = new Matrix4()
+          .makeTranslation(centerCoord.x, centerCoord.y, centerCoord.z)
+          .scale(
+            new Vector3(
+              centerCoord.meterScale,
+              -centerCoord.meterScale,
+              centerCoord.meterScale
+            )
+          );
+
+        // 3. Inject ma trận vào R3F camera
+        camera.projectionMatrix.copy(m.multiply(l));
+        camera.projectionMatrixInverse.copy(camera.projectionMatrix).invert();
+
+        // Reset world matrices vì chúng đã được tính gộp trong projectionMatrix
+        camera.matrixWorld.identity();
+        camera.matrixWorldInverse.identity();
+
+        // 4. Thủ công kích hoạt render để đảm bảo đồng bộ hoàn hảo theo từng frame của map
+        gl.render(scene, camera);
+      },
+    };
+
+    if (!map.getLayer(layerId)) {
+      map.addLayer(customLayer);
+    }
+
+    // Ép MapLibre render lại khi di chuyển để duy trì đồng bộ
+    const syncRepaint = () => map.triggerRepaint();
+    map.on('move', syncRepaint);
+    map.on('rotate', syncRepaint);
+    map.on('pitch', syncRepaint);
+
+    return () => {
+      map.off('move', syncRepaint);
+      map.off('rotate', syncRepaint);
+      map.off('pitch', syncRepaint);
+      if (map.getLayer(layerId)) {
+        map.removeLayer(layerId);
+      }
+    };
+  }, [map, camera, gl, scene, centerCoord]);
+
+  return null;
+};
+
+/**
+ * Hybrid 3D Layer: Render R3F trong một Canvas overlay riêng biệt.
+ * Giải pháp này tránh xung đột WebGL Context và hỗ trợ đầy đủ hệ sinh thái R3F.
+ */
+export const MapThreeLayer = ({
+  map,
+  centerCoord,
+  children,
+}: MapThreeLayerProps) => {
   return (
-    <div
-      style={{
-        position: 'absolute',
-        top: 0,
-        left: 0,
-        width: '100%',
-        height: '100%',
-        pointerEvents: 'none', // Let map interactions pass through
-      }}
-    >
+    <>
       <Canvas
+        gl={{ antialias: true, alpha: true }}
         shadows
-        gl={{
-          antialias: true,
-          alpha: true,
-          logarithmicDepthBuffer: true, // Helps with z-fighting in large scales
+        frameloop='never' // Dùng mode "never" để chủ động render theo nhịp của MapLibre
+        dpr={[1, 2]}
+        style={{
+          position: 'absolute',
+          top: 0,
+          left: 0,
+          width: '100%',
+          height: '100%',
+          pointerEvents: 'none', // Cho phép tương tác map xuyên qua canvas
         }}
-        camera={{ near: 0.1, far: 10000 }} // Sync will override projection
-        style={{ pointerEvents: 'auto' }} // Re-enable for 3D object interaction
       >
-        <Suspense fallback={null}>
-          <CameraSync map={map} centerCoord={centerCoord} />
+        <CameraSync map={map} centerCoord={centerCoord} />
 
-          <ambientLight intensity={0.5} />
-          <directionalLight position={[10, 10, 5]} intensity={1} />
+        <ambientLight intensity={1.5} />
+        <directionalLight position={[0, -70, 100]} intensity={1} />
+        <directionalLight position={[0, 70, 100]} intensity={1} />
 
-          <ModelManager centerCoord={centerCoord} />
-        </Suspense>
+        {children}
       </Canvas>
-    </div>
+    </>
   );
 };

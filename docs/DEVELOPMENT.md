@@ -7,26 +7,30 @@ Tài liệu tóm tắt cấu trúc, luồng xử lý và hướng dẫn phát tr
 Dự án được tổ chức theo mô hình Modular để tách biệt logic bản đồ, logic render 3D và quản lý tài nguyên:
 
 - `src/components/map/`: Chứa `MapView.tsx` - Khởi tạo MapLibre GL JS.
-- `src/components/map3d/`: Chứa `MapThreeLayer.tsx` (Bridge) và `CameraSync.tsx` (Đồng bộ camera).
+- `src/components/map3d/`: Chứa `MapThreeLayer.tsx` (Hybrid Sync Bridge).
 - `src/engine/`: Chứa `InstanceRenderer.tsx` - Logic tối ưu GPU Instancing.
 - `src/loader/`: Chứa `GLBLoader.ts` (Cache) và `ModelManager.tsx` (Quản lý phân bổ model).
 - `src/utils/`: Chứa `coordinate.ts` - Các hàm toán học chuyển đổi hệ tọa độ WGS84 sang Web Mercator.
 
-## 2. Luồng xử lý chính (Core Flow)
+## 2. Luồng xử lý chính (Core Flow - Hybrid Sync)
 
-1.  **Khởi tạo Map:** `MapView` tạo instance MapLibre và xác định một điểm gốc (`centerCoord`) để làm mốc tọa độ (0,0,0) cho Three.js nhằm tránh lỗi rung lắc (jittering) do số thực dấu phẩy động.
-2.  **Đồng bộ Camera:** Component `CameraSync` lắng nghe sự kiện `move` của MapLibre. Nó lấy `customLayerMatrix` từ MapLibre và áp dụng vào `projectionMatrix` của Three.js Camera.
+1.  **Khởi tạo Map:** `MapView` tạo instance MapLibre và xác định một điểm gốc (`centerCoord`).
+2.  **Đồng bộ Camera (Hybrid):** 
+    - `MapThreeLayer` thêm một Custom Layer "giả" vào MapLibre.
+    - Trong mỗi frame `render` của layer này, ma trận camera được trích xuất và "inject" trực tiếp vào `projectionMatrix` của R3F Camera.
+    - Canvas R3F được đặt làm lớp phủ (Overlay) tuyệt đối trên bản đồ.
 3.  **Tối ưu Render:** 
-    - Thay vì tạo 1,000 Mesh riêng biệt, `InstanceRenderer` sử dụng `THREE.InstancedMesh`.
-    - Tất cả các model cùng loại (ví dụ: Tree) sẽ được gộp vào 1 Draw Call duy nhất.
+    - Sử dụng `THREE.InstancedMesh` qua `InstanceRenderer`.
+    - Tận dụng hệ sinh thái R3F (`@react-three/drei`) một cách tự nhiên mà không lo xung đột Context.
 4.  **Tọa độ:** `coordinate.ts` chuyển đổi LngLat sang đơn vị Mercator [0, 1]. Sau đó trừ đi `centerCoord` để có tọa độ tương đối trong không gian Three.js.
 
 ## 3. Các cập nhật quan trọng (Key Updates)
 
+- **Hybrid Sync:** Đã chuyển sang mô hình Overlay Canvas. Điều này giải quyết triệt để lỗi "Context lost" và xung đột khi MapLibre và Three.js cùng tranh giành tài nguyên WebGL.
 - **GPU Instancing:** Đã triển khai `InstancedMesh`, hỗ trợ render hàng ngàn vật thể mà vẫn duy trì FPS > 40.
-- **Raycasting:** Tích hợp sẵn trong `InstanceRenderer` qua `onPointerDown`, cho phép click vào từng instance để lấy ID.
-- **Asset Cache:** Sử dụng `@react-three/drei` để tự động cache model GLB, tránh fetch trùng lặp.
-- **Z-Fighting Fix:** Sử dụng `logarithmicDepthBuffer: true` trong cấu hình Canvas để xử lý hiển thị chiều sâu chính xác ở quy mô bản đồ lớn.
+- **Raycasting:** Tích hợp sẵn trong `InstanceRenderer` qua `onPointerDown`. Lưu ý: Do Canvas dùng `pointerEvents: none`, cần cấu hình thêm nếu muốn click xuyên thấu/tương tác phức tạp hơn.
+- **Asset Cache:** Sử dụng `@react-three/drei` để tự động cache model GLB.
+
 
 ## 4. Hướng dẫn cho Developer
 
