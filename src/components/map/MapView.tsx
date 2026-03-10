@@ -9,6 +9,7 @@ import 'maplibre-gl/dist/maplibre-gl.css';
 import { MapThreeLayer } from '../map3d/MapThreeLayer';
 import { ModelManager } from '../../loader/ModelManager';
 import { WGS84_TO_MERCATOR } from '../../utils/coordinate';
+import { MAP_CENTER, DEFAULT_VIEW_STATE, MAP_BOUNDS_OFFSET } from '../../utils/constants';
 
 /**
  * Main Viewport: MapLibre managed by react-map-gl with R3F Overlay.
@@ -18,26 +19,33 @@ export const MapView = () => {
 
   // Center coordinate for relative positioning (Near the sample model).
   const centerCoord = useMemo(
-    () => WGS84_TO_MERCATOR(105.464649, 20.90334, 0),
+    () => WGS84_TO_MERCATOR(MAP_CENTER.lng, MAP_CENTER.lat, 0),
     []
   );
 
   const onMapLoad = useCallback((e: { target: maplibregl.Map }) => {
-    setMapInstance(e.target);
+    const map = e.target;
+    setMapInstance(map);
+  }, []);
+
+  // Calculate bounds: ~1km around center
+  const maxBounds = useMemo(() => {
+    const { lng, lat } = MAP_CENTER;
+    const offset = MAP_BOUNDS_OFFSET;
+    return [
+      [lng - offset, lat - offset], // Southwest
+      [lng + offset, lat + offset], // Northeast
+    ] as [[number, number], [number, number]];
   }, []);
 
   return (
     <div style={{ width: '100vw', height: '100vh', position: 'relative' }}>
       <Map
-        initialViewState={{
-          longitude: 105.464649,
-          latitude: 20.90334,
-          zoom: 18,
-          pitch: 45,
-        }}
+        initialViewState={DEFAULT_VIEW_STATE}
+        maxBounds={maxBounds}
         mapStyle='https://tiles.openfreemap.org/styles/liberty'
         onLoad={onMapLoad}
-        // antialias={true}
+        maxPitch={85}
         style={{ width: '100%', height: '100%' }}
       >
         {mapInstance && (

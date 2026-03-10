@@ -3,6 +3,7 @@ import { InstanceRenderer } from '../engine/InstanceRenderer';
 import { SingleModelRenderer } from '../engine/SingleModelRenderer';
 import { WGS84_TO_MERCATOR } from '../utils/coordinate';
 import { Euler, Vector3 } from 'three';
+import { MAP_CENTER } from '../utils/constants';
 
 interface ModelManagerProps {
   centerCoord: { x: number; y: number; z: number; meterScale: number };
