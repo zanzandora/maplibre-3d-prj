@@ -1,5 +1,9 @@
 import { useState, useMemo, useCallback } from 'react';
-import { Map } from 'react-map-gl/maplibre';
+import {
+  GeolocateControl,
+  Map,
+  NavigationControl,
+} from 'react-map-gl/maplibre';
 import maplibregl from 'maplibre-gl';
 import 'maplibre-gl/dist/maplibre-gl.css';
 import { MapThreeLayer } from '../map3d/MapThreeLayer';
@@ -29,7 +33,7 @@ export const MapView = () => {
           longitude: 105.464649,
           latitude: 20.90334,
           zoom: 18,
-          // pitch: 45,
+          pitch: 45,
         }}
         mapStyle='https://tiles.openfreemap.org/styles/liberty'
         onLoad={onMapLoad}
@@ -42,6 +46,9 @@ export const MapView = () => {
             <ModelManager centerCoord={centerCoord} />
           </MapThreeLayer>
         )}
+
+        <NavigationControl />
+        <GeolocateControl />
       </Map>
     </div>
   );

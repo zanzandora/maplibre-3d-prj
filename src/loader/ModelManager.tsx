@@ -14,8 +14,8 @@ interface ModelManagerProps {
 export const ModelManager = ({ centerCoord }: ModelManagerProps) => {
   // Sample data provided:
   const sampleModel = {
-    name: "cong",
-    file: "/Ivory3D/cong.glb", // Adjusted to match project structure
+    name: 'cong',
+    file: '/Ivory3D/cong.glb', // Adjusted to match project structure
     assetId: 4193440,
     lng: 105.464649,
     lat: 20.90334,
@@ -23,7 +23,7 @@ export const ModelManager = ({ centerCoord }: ModelManagerProps) => {
     yaw: 0,
     pitch: 0,
     roll: 240,
-    scale: 1
+    scale: 1,
   };
 
   /* 

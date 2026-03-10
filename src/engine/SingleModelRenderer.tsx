@@ -46,13 +46,16 @@ export const SingleModelRenderer = ({
   }, [lng, lat, height, centerCoord]);
 
   // Apply rotations:
-  // 1. Initial rotation to make GLB stand up (PI/2 around X)
-  // 2. User defined yaw, pitch, roll
   const rotation = useMemo(() => {
+    const yawRad = (yaw * Math.PI) / 180; // Hướng ngang (Bản đồ)
+    const pitchRad = (pitch * Math.PI) / 180; // Chúc/ngóc
+    const rollRad = (roll * Math.PI) / 180; // Liệng/lăn
+
     return new Euler(
-      Math.PI / 2 + (pitch * Math.PI) / 180,
-      (yaw * Math.PI) / 180,
-      (roll * Math.PI) / 180
+      Math.PI / 2 + pitchRad, // Trục X: Dựng đứng model + Pitch (Trục ngang)
+      -rollRad, // Trục Y: Yaw (Trục đứng) - Sử dụng giá trị roll từ JSON vì nó chứa Heading
+      yawRad, // Trục Z: Roll (Trục dọc) - Sử dụng yaw từ JSON
+      'XZY'
     );
   }, [pitch, yaw, roll]);
 
