@@ -16,7 +16,7 @@ export const ModelManager = ({ centerCoord }: ModelManagerProps) => {
   // Sample data provided:
   const sampleModel = {
     name: 'cong',
-    file: '/Ivory3D/cong.glb', // Adjusted to match project structure
+    file: '/map3d/Ivory/cong.glb', // Adjusted to match project structure
     assetId: 4193440,
     lng: 105.464649,
     lat: 20.90334,
