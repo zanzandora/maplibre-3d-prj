@@ -59,6 +59,8 @@ export const SingleModelRenderer = ({
     );
   }, [pitch, yaw, roll]);
 
+  console.log('rotation', { yaw, pitch, roll }, '=>', rotation.toArray());
+  console.log('position', { lng, lat, height }, '=>', position.toArray());
   return (
     <primitive
       object={clonedScene}

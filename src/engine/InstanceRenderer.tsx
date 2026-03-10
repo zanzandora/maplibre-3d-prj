@@ -11,53 +11,61 @@ import {
   type Vector3,
 } from 'three';
 
+interface InstanceData {
+  id: string;
+  position: Vector3;
+  rotation?: Euler;
+  scale?: Vector3;
+}
+
 interface InstanceProps {
   url: string;
-  instances: {
-    id: string;
-    position: Vector3;
-    rotation?: Euler;
-    scale?: Vector3;
-  }[];
+  instances: InstanceData[];
   onInstanceClick?: (id: string) => void;
 }
 
 /**
  * Optimized renderer for multiple instances of a GLB model.
- * Uses InstancedMesh for high performance (FPS > 40).
+ * Handles models with multiple sub-meshes by creating an InstancedMesh for each.
  */
 export const InstanceRenderer = ({
   url,
   instances,
   onInstanceClick,
 }: InstanceProps) => {
-  const { scene } = useGLTF(url);
-  const meshRef = useRef<InstancedMesh>(null);
+  // Track and log asset cache status
 
-  // Extract geometry and material from GLB.
-  // Assumes the GLB has a main mesh.
-  const { geometry, material } = useMemo(() => {
-    let geo: BufferGeometry | null = null;
-    let mat: Material | null = null;
+  // Extract nodes from GLTF data instead of rendering/traversing the scene
+  const { nodes } = useGLTF(url);
 
-    scene.traverse((child) => {
-      if ((child as Mesh).isMesh) {
-        geo = (child as Mesh).geometry;
-        mat = (child as Mesh).material as Material;
+  // A GLB can have multiple meshes. InstancedMesh only supports ONE geometry/material pair.
+  // We extract all unique mesh parts to create a corresponding InstancedMesh for each part.
+  const meshParts = useMemo(() => {
+    const parts: { geometry: BufferGeometry; material: Material }[] = [];
+
+    Object.values(nodes).forEach((node) => {
+      if ((node as Mesh).isMesh) {
+        const mesh = node as Mesh;
+        parts.push({
+          geometry: mesh.geometry,
+          material: mesh.material as Material,
+        });
       }
     });
 
-    if (!geo || !mat)
-      throw new Error(
-        `Model ${url} does not contain valid geometry or material.`
-      );
-    return { geometry: geo, material: mat };
-  }, [scene, url]);
+    if (parts.length === 0) {
+      throw new Error(`Model ${url} does not contain any valid geometry.`);
+    }
 
+    return parts;
+  }, [nodes, url]);
+
+  const refs = useRef<(InstancedMesh | null)[]>([]);
+
+  // Update instance matrices for all mesh parts
   useEffect(() => {
-    if (!meshRef.current) return;
-
     const dummy = new Object3D();
+
     instances.forEach((inst, i) => {
       dummy.position.copy(inst.position);
       if (inst.rotation) dummy.rotation.copy(inst.rotation);
@@ -65,11 +73,19 @@ export const InstanceRenderer = ({
       else dummy.scale.set(1, 1, 1);
 
       dummy.updateMatrix();
-      meshRef.current!.setMatrixAt(i, dummy.matrix);
+
+      // Apply the same matrix to every mesh part of the instance
+      refs.current.forEach((mesh) => {
+        if (mesh) {
+          mesh.setMatrixAt(i, dummy.matrix);
+        }
+      });
     });
 
-    meshRef.current.instanceMatrix.needsUpdate = true;
-  }, [instances]);
+    refs.current.forEach((mesh) => {
+      if (mesh) mesh.instanceMatrix.needsUpdate = true;
+    });
+  }, [instances, meshParts]);
 
   const handlePointerDown = (e: ThreeEvent<PointerEvent>) => {
     if (e.instanceId !== undefined && onInstanceClick) {
@@ -80,11 +96,16 @@ export const InstanceRenderer = ({
   };
 
   return (
-    <instancedMesh
-      ref={meshRef}
-      args={[geometry, material, instances.length]}
-      onPointerDown={handlePointerDown}
-      frustumCulled={true}
-    />
+    <group>
+      {meshParts.map((part, index) => (
+        <instancedMesh
+          key={index}
+          ref={(el) => (refs.current[index] = el)}
+          args={[part.geometry, part.material, instances.length]}
+          onPointerDown={handlePointerDown}
+          frustumCulled={true}
+        />
+      ))}
+    </group>
   );
 };

@@ -9,7 +9,11 @@ import 'maplibre-gl/dist/maplibre-gl.css';
 import { MapThreeLayer } from '../map3d/MapThreeLayer';
 import { ModelManager } from '../../loader/ModelManager';
 import { WGS84_TO_MERCATOR } from '../../utils/coordinate';
-import { MAP_CENTER, DEFAULT_VIEW_STATE, MAP_BOUNDS_OFFSET } from '../../utils/constants';
+import {
+  MAP_CENTER,
+  DEFAULT_VIEW_STATE,
+  MAP_BOUNDS_OFFSET,
+} from '../../utils/constants';
 
 /**
  * Main Viewport: MapLibre managed by react-map-gl with R3F Overlay.
@@ -42,7 +46,7 @@ export const MapView = () => {
     <div style={{ width: '100vw', height: '100vh', position: 'relative' }}>
       <Map
         initialViewState={DEFAULT_VIEW_STATE}
-        maxBounds={maxBounds}
+        // maxBounds={maxBounds}
         mapStyle='https://tiles.openfreemap.org/styles/liberty'
         onLoad={onMapLoad}
         maxPitch={85}
