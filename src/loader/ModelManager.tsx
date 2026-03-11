@@ -22,7 +22,6 @@ export const ModelManager = ({ centerCoord, map }: ModelManagerProps) => {
   const [rawData, setRawData] = useState<ModelData[]>([]);
   const [elevations, setElevations] = useState<Record<number, number>>({});
 
-  // 1. Fetch initial building data
   useEffect(() => {
     fetch('/map3d/ivory/buildings.json')
       .then((res) => res.json())
@@ -30,12 +29,11 @@ export const ModelManager = ({ centerCoord, map }: ModelManagerProps) => {
       .catch((err) => console.error('Error loading buildings.json:', err));
   }, []);
 
-  // 2. Calculate missing elevations when map is idle
+  // todo: Calculate missing elevations when map is idle
   useEffect(() => {
     if (!map || rawData.length === 0) return;
 
     const fetchElevations = () => {
-      // We check if terrain is available on the map style to perform the query
       if (!map.getTerrain()) return;
 
       setElevations((prev) => {
@@ -43,15 +41,17 @@ export const ModelManager = ({ centerCoord, map }: ModelManagerProps) => {
         const nextElevations = { ...prev };
 
         rawData.forEach((model, index) => {
-          // Only query if we don't already have the elevation for this model
+          // * Only query if we don't already have the elevation for this model
           if (nextElevations[index] === undefined) {
             const queried = map.queryTerrainElevation([model.lng, model.lat]);
             if (queried !== undefined && queried !== null) {
               nextElevations[index] = queried;
               hasNewData = true;
+              console.log('Miss');
             }
           }
         });
+        console.log('HIT ELEVATION QUERY:');
 
         // Only return a new object if data actually changed to avoid unnecessary re-renders
         return hasNewData ? nextElevations : prev;
@@ -66,7 +66,7 @@ export const ModelManager = ({ centerCoord, map }: ModelManagerProps) => {
     };
   }, [map, rawData]);
 
-  // 3. Group by file URL and convert coordinates to local Vector3 relative to centerCoord
+  // todo: Group by file URL and convert coordinates to local Vector3 relative to centerCoord
   const groupedModels = useMemo(() => {
     const groups: GroupedInstances = {};
 

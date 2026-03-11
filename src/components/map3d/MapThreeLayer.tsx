@@ -11,7 +11,6 @@ interface MapThreeLayerProps {
 
 /**
  * Component nội bộ để đồng bộ Camera của R3F với MapLibre.
- * Sử dụng một "Dummy" Custom Layer để trích xuất ma trận biến đổi từ MapLibre.
  */
 const CameraSync = ({
   map,

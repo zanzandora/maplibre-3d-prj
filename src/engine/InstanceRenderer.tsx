@@ -33,13 +33,10 @@ export const InstanceRenderer = ({
   instances,
   onInstanceClick,
 }: InstanceProps) => {
-  // Track and log asset cache status
-
-  // Extract nodes from GLTF data instead of rendering/traversing the scene
   const { nodes } = useGLTF(url);
 
-  // A GLB can have multiple meshes. InstancedMesh only supports ONE geometry/material pair.
-  // We extract all unique mesh parts to create a corresponding InstancedMesh for each part.
+  // note: A GLB can have multiple meshes. InstancedMesh only supports ONE geometry/material pair.
+  // note: We extract all unique mesh parts to create a corresponding InstancedMesh for each part.
   const meshParts = useMemo(() => {
     const parts: { geometry: BufferGeometry; material: Material }[] = [];
 
@@ -62,7 +59,7 @@ export const InstanceRenderer = ({
 
   const refs = useRef<(InstancedMesh | null)[]>([]);
 
-  // Update instance matrices for all mesh parts
+  // note: Update instance matrices for all mesh parts
   useEffect(() => {
     const dummy = new Object3D();
 

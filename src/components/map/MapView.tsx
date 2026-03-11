@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { useState, useMemo, useCallback } from 'react';
 import Map from 'react-map-gl/maplibre';
 import * as maptilersdk from '@maptiler/sdk';
@@ -12,7 +13,6 @@ import {
   MAP_BOUNDS_OFFSET,
 } from '../../utils/constants';
 
-// lấy key trong env để cấu hình cho SDK
 maptilersdk.config.apiKey = import.meta.env.VITE_MAPTILER_API_KEY;
 
 /**
@@ -31,8 +31,8 @@ const MapView = () => {
   const onMapLoad = useCallback((e: any) => {
     const map = e.target as maptilersdk.Map;
 
-    // Ensure terrain source is present.
-    // Sometimes the SDK auto-injection is skipped when using react-map-gl wrappers.
+    // note: Ensure terrain source is present.
+    // note: Sometimes the SDK auto-injection is skipped when using react-map-gl wrappers.
     if (!map.getSource('maptiler-terrain')) {
       map.addSource('maptiler-terrain', {
         type: 'raster-dem',
@@ -48,10 +48,31 @@ const MapView = () => {
       exaggeration: 1,
     });
 
+    // Add Sky effect
+    map.setSky({
+      'sky-color': '#1990ff',
+      'sky-horizon-blend': 0.5,
+      'horizon-color': '#ffffff',
+      'horizon-fog-blend': 0.5,
+      'fog-color': '#ffffff',
+      'fog-ground-blend': 0.5,
+      'atmosphere-blend': [
+        'interpolate',
+        ['linear'],
+        ['zoom'],
+        0,
+        1,
+        10,
+        1,
+        12,
+        0,
+      ],
+    });
+
     setMapInstance(map);
   }, []);
 
-  // Calculate bounds: ~1km around center
+  // todo: Calculate bounds: ~1km around center
   const maxBounds = useMemo(() => {
     const { lng, lat } = MAP_CENTER;
     const offset = MAP_BOUNDS_OFFSET;
@@ -65,12 +86,9 @@ const MapView = () => {
     <div style={{ width: '100vw', height: '100vh', position: 'relative' }}>
       <Map
         mapLib={maptilersdk as any}
-        initialViewState={{
-          ...DEFAULT_VIEW_STATE,
-          pitch: 60, // Increase pitch to better see 3D terrain
-        }}
+        initialViewState={DEFAULT_VIEW_STATE}
         maxBounds={maxBounds}
-        mapStyle={maptilersdk.MapStyle.OUTDOOR_V4}
+        mapStyle={maptilersdk.MapStyle.OUTDOOR_V4.DEFAULT as any}
         onLoad={onMapLoad}
         maxPitch={85}
         hash={true}

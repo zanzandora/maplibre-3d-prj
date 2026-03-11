@@ -27,7 +27,7 @@ export const getRelativePosition = (
   alt: number,
   center: { x: number; y: number; z: number; meterScale: number }
 ) => {
-  const coord = maplibregl.MercatorCoordinate.fromLngLat([lng, lat], alt);
+  const coord = WGS84_TO_MERCATOR(lng, lat, alt);
 
   return new Vector3(
     (coord.x - center.x) / center.meterScale,
@@ -76,7 +76,6 @@ export const augmentData = <
       // Cộng thêm một giá trị ngẫu nhiên trong khoảng từ -offsetRange/2 đến +offsetRange/2
       lng: original.lng + (Math.random() - 0.5) * offsetRange,
       lat: original.lat + (Math.random() - 0.5) * offsetRange,
-      // Randomize heading (yaw) to create variety, but keep pitch/roll to stay upright
     });
     i++;
   }
