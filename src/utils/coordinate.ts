@@ -50,7 +50,7 @@ export const getRelativeRotation = (
 
   return new Euler(
     Math.PI / 2 + pitchRad, // Trục X: Dựng đứng model + Pitch
-    -rollRad, // Trục Y: Roll (Heading)
+    Math.PI / 2 + rollRad, // Trục Y: Roll (Heading)
     yawRad, // Trục Z: Yaw
     'XZY'
   );

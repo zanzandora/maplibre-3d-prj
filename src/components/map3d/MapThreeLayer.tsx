@@ -110,9 +110,11 @@ export const MapThreeLayer = ({
       >
         <CameraSync map={map} centerCoord={centerCoord} />
 
+        <fog attach='fog' args={['#ffffff', 50, 1500]} />
+
         <ambientLight intensity={1.5} />
-        <directionalLight position={[0, -70, 100]} intensity={1} />
-        <directionalLight position={[0, 70, 100]} intensity={1} />
+        <directionalLight position={[10, 20, 100]} intensity={1.5} />
+        <directionalLight position={[-10, -20, 100]} intensity={0.5} />
 
         {children}
       </Canvas>

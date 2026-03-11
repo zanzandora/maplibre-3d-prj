@@ -1,12 +1,12 @@
-import { MapView } from './components/map/MapView'
-import './App.css'
+import MapView from './components/map/MapView';
+import './App.css';
 
 function App() {
   return (
-    <div className="App">
+    <div className='App'>
       <MapView />
     </div>
-  )
+  );
 }
 
-export default App
+export default App;

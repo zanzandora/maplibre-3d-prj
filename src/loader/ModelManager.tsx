@@ -1,77 +1,84 @@
 import { useEffect, useMemo, useState } from 'react';
 import { InstanceRenderer } from '../engine/InstanceRenderer';
-import {
-  augmentData,
-  getRelativePosition,
-  getRelativeRotation,
-} from '../utils/coordinate';
-import { Euler, Vector3 } from 'three';
-
-interface ModelData {
-  name: string;
-  file: string;
-  assetId: number;
-  lng: number;
-  lat: number;
-  height: number;
-  yaw: number;
-  pitch: number;
-  roll: number;
-  scale: number;
-}
-
-type GroupedInstances = Record<
-  string,
-  { id: string; position: Vector3; rotation: Euler; scale: Vector3 }[]
->;
+import { getRelativePosition, getRelativeRotation } from '../utils/coordinate';
+import { Vector3 } from 'three';
+import maplibregl from 'maplibre-gl';
+import type {
+  CenterCoordinate,
+  GroupedInstances,
+  ModelData,
+} from '../utils/types';
 
 interface ModelManagerProps {
-  centerCoord: { x: number; y: number; z: number; meterScale: number };
+  centerCoord: CenterCoordinate;
+  map?: maplibregl.Map;
 }
 
 /**
  * Orchestrate model placement and group them by type for instancing.
- * Loads 1000 models via data augmentation.
+ * Loads models and synchronizes their height with MapLibre terrain.
  */
-export const ModelManager = ({ centerCoord }: ModelManagerProps) => {
+export const ModelManager = ({ centerCoord, map }: ModelManagerProps) => {
   const [rawData, setRawData] = useState<ModelData[]>([]);
-  // Sample data provided:
-  // const sampleModel = {
-  //   name: 'cong',
-  //   file: '/map3d/Ivory/cong.glb', // Adjusted to match project structure
-  //   assetId: 4193440,
-  //   lng: 105.464649,
-  //   lat: 20.90334,
-  //   height: 0,
-  //   yaw: 0,
-  //   pitch: 0,
-  //   roll: 240,
-  //   scale: 1,
-  // };
+  const [elevations, setElevations] = useState<Record<number, number>>({});
 
-  // Fetch initial building data
+  // 1. Fetch initial building data
   useEffect(() => {
-    fetch('/map3d/Ivory/buildings.json')
+    fetch('/map3d/ivory/buildings.json')
       .then((res) => res.json())
       .then((data) => setRawData(data))
       .catch((err) => console.error('Error loading buildings.json:', err));
   }, []);
 
-  // Data Augmentation: Clone 90 objects to reach 1000
-  const augmentedModels = useMemo(() => {
-    if (rawData.length === 0) return [];
-    return augmentData(rawData, 1000, 0.05);
-  }, [rawData]);
+  // 2. Calculate missing elevations when map is idle
+  useEffect(() => {
+    if (!map || rawData.length === 0) return;
 
-  // Group by file URL and convert coordinates to local Vector3 relative to centerCoord
+    const fetchElevations = () => {
+      // We check if terrain is available on the map style to perform the query
+      if (!map.getTerrain()) return;
+
+      setElevations((prev) => {
+        let hasNewData = false;
+        const nextElevations = { ...prev };
+
+        rawData.forEach((model, index) => {
+          // Only query if we don't already have the elevation for this model
+          if (nextElevations[index] === undefined) {
+            const queried = map.queryTerrainElevation([model.lng, model.lat]);
+            if (queried !== undefined && queried !== null) {
+              nextElevations[index] = queried;
+              hasNewData = true;
+            }
+          }
+        });
+
+        // Only return a new object if data actually changed to avoid unnecessary re-renders
+        return hasNewData ? nextElevations : prev;
+      });
+    };
+
+    map.on('idle', fetchElevations);
+    fetchElevations(); // Attempt an immediate fetch
+
+    return () => {
+      map.off('idle', fetchElevations);
+    };
+  }, [map, rawData]);
+
+  // 3. Group by file URL and convert coordinates to local Vector3 relative to centerCoord
   const groupedModels = useMemo(() => {
     const groups: GroupedInstances = {};
 
-    augmentedModels.forEach((model, index) => {
+    rawData.forEach((model, index) => {
+      // Use cached elevation if available
+      const terrainHeight = elevations[index] || 0;
+      const adjustedHeight = model.height + terrainHeight;
+
       const position = getRelativePosition(
         model.lng,
         model.lat,
-        model.height,
+        adjustedHeight,
         centerCoord
       );
 
@@ -89,21 +96,10 @@ export const ModelManager = ({ centerCoord }: ModelManagerProps) => {
     });
 
     return groups;
-  }, [augmentedModels, centerCoord]);
+  }, [rawData, centerCoord, elevations]);
 
   return (
     <>
-      {/* <SingleModelRenderer
-        url={sampleModel.file}
-        lng={sampleModel.lng}
-        lat={sampleModel.lat}
-        height={sampleModel.height}
-        yaw={sampleModel.yaw}
-        pitch={sampleModel.pitch}
-        roll={sampleModel.roll}
-        scale={sampleModel.scale}
-        centerCoord={centerCoord}
-      /> */}
       {Object.entries(groupedModels).map(([url, instances]) => (
         <InstanceRenderer key={url} url={url} instances={instances} />
       ))}
