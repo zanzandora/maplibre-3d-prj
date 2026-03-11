@@ -47,11 +47,9 @@ export const ModelManager = ({ centerCoord, map }: ModelManagerProps) => {
             if (queried !== undefined && queried !== null) {
               nextElevations[index] = queried;
               hasNewData = true;
-              console.log('Miss');
             }
           }
         });
-        console.log('HIT ELEVATION QUERY:');
 
         // Only return a new object if data actually changed to avoid unnecessary re-renders
         return hasNewData ? nextElevations : prev;
@@ -101,7 +99,7 @@ export const ModelManager = ({ centerCoord, map }: ModelManagerProps) => {
   return (
     <>
       {Object.entries(groupedModels).map(([url, instances]) => (
-        <InstanceRenderer key={url} url={url} instances={instances} />
+        <InstanceRenderer key={url} url={url} instances={instances} map={map} />
       ))}
     </>
   );

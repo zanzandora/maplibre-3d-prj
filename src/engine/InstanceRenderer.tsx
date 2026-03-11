@@ -1,4 +1,4 @@
-import { useRef, useMemo, useEffect } from 'react';
+import { useRef, useMemo, useEffect, useState } from 'react';
 import { useGLTF } from '@react-three/drei';
 import type { ThreeEvent } from '@react-three/fiber';
 import {
@@ -10,6 +10,7 @@ import {
   type Mesh,
   type Vector3,
 } from 'three';
+import maplibregl from 'maplibre-gl';
 
 interface InstanceData {
   id: string;
@@ -21,22 +22,33 @@ interface InstanceData {
 interface InstanceProps {
   url: string;
   instances: InstanceData[];
+  map?: maplibregl.Map;
   onInstanceClick?: (id: string) => void;
 }
 
 /**
- * Optimized renderer for multiple instances of a GLB model.
- * Handles models with multiple sub-meshes by creating an InstancedMesh for each.
+ * Optimized renderer for multiple instances of a GLB model with Zoom-based LOD.
  */
 export const InstanceRenderer = ({
   url,
   instances,
+  map,
   onInstanceClick,
 }: InstanceProps) => {
   const { nodes } = useGLTF(url);
+  const [zoom, setZoom] = useState(map?.getZoom() || 17);
 
-  // note: A GLB can have multiple meshes. InstancedMesh only supports ONE geometry/material pair.
-  // note: We extract all unique mesh parts to create a corresponding InstancedMesh for each part.
+  // Sync zoom from MapLibre
+  useEffect(() => {
+    if (!map) return;
+    const updateZoom = () => setZoom(map.getZoom());
+    map.on('zoom', updateZoom);
+    return () => {
+      map.off('zoom', updateZoom);
+    };
+  }, [map]);
+
+  // note: LOD 0 & 1 - GLB Meshes
   const meshParts = useMemo(() => {
     const parts: { geometry: BufferGeometry; material: Material }[] = [];
 
@@ -50,17 +62,16 @@ export const InstanceRenderer = ({
       }
     });
 
-    if (parts.length === 0) {
-      throw new Error(`Model ${url} does not contain any valid geometry.`);
-    }
-
     return parts;
-  }, [nodes, url]);
+  }, [nodes]);
 
-  const refs = useRef<(InstancedMesh | null)[]>([]);
+  const glbRefs = useRef<(InstancedMesh | null)[]>([]);
+  const boxRef = useRef<InstancedMesh>(null);
 
-  // note: Update instance matrices for all mesh parts
+  // note: Update instance matrices for GLB parts
   useEffect(() => {
+    if (zoom < 16) return; // Skip GLB update if in LOD 2
+
     const dummy = new Object3D();
 
     instances.forEach((inst, i) => {
@@ -71,18 +82,36 @@ export const InstanceRenderer = ({
 
       dummy.updateMatrix();
 
-      // Apply the same matrix to every mesh part of the instance
-      refs.current.forEach((mesh) => {
-        if (mesh) {
-          mesh.setMatrixAt(i, dummy.matrix);
-        }
+      glbRefs.current.forEach((mesh) => {
+        if (mesh) mesh.setMatrixAt(i, dummy.matrix);
       });
     });
 
-    refs.current.forEach((mesh) => {
+    glbRefs.current.forEach((mesh) => {
       if (mesh) mesh.instanceMatrix.needsUpdate = true;
     });
-  }, [instances, meshParts]);
+  }, [instances, meshParts, zoom]);
+
+  // note: Update instance matrices for LOD 2 (Box)
+  useEffect(() => {
+    if (zoom >= 16) return; // Skip Box update if in LOD 0/1
+
+    const dummy = new Object3D();
+    instances.forEach((inst, i) => {
+      dummy.position.copy(inst.position);
+      // Box just needs position, maybe Y-rotation if needed
+      if (inst.rotation) dummy.rotation.copy(inst.rotation);
+
+      // Scale box to a generic building size if not specified
+      const s = inst.scale ? inst.scale.x * 10 : 10;
+      dummy.scale.set(s, s, s);
+
+      dummy.updateMatrix();
+      if (boxRef.current) boxRef.current.setMatrixAt(i, dummy.matrix);
+    });
+
+    if (boxRef.current) boxRef.current.instanceMatrix.needsUpdate = true;
+  }, [instances, zoom]);
 
   const handlePointerDown = (e: ThreeEvent<PointerEvent>) => {
     if (e.instanceId !== undefined && onInstanceClick) {
@@ -94,15 +123,30 @@ export const InstanceRenderer = ({
 
   return (
     <group>
-      {meshParts.map((part, index) => (
+      {/* LOD 0 & 1: Detailed GLB Model */}
+      {zoom >= 16 &&
+        meshParts.map((part, index) => (
+          <instancedMesh
+            key={index}
+            ref={(el) => (glbRefs.current[index] = el)}
+            args={[part.geometry, part.material, instances.length]}
+            onPointerDown={handlePointerDown}
+            frustumCulled={true}
+          />
+        ))}
+
+      {/* LOD 2: Bounding Box (Massing) */}
+      {zoom < 16 && (
         <instancedMesh
-          key={index}
-          ref={(el) => (refs.current[index] = el)}
-          args={[part.geometry, part.material, instances.length]}
+          ref={boxRef}
+          args={[undefined, undefined, instances.length]}
           onPointerDown={handlePointerDown}
           frustumCulled={true}
-        />
-      ))}
+        >
+          <boxGeometry args={[1, 1, 1]} />
+          <meshStandardMaterial color='#888888' />
+        </instancedMesh>
+      )}
     </group>
   );
 };
