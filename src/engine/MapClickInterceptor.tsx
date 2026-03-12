@@ -1,8 +1,8 @@
 import { useEffect } from 'react';
 import { useThree } from '@react-three/fiber';
-import * as THREE from 'three';
 import maplibregl from 'maplibre-gl';
 import type { InstanceData } from '../utils/types';
+import { InstancedMesh, Raycaster, Vector2, Vector3 } from 'three';
 
 interface MapClickInterceptorProps {
   map: maplibregl.Map;
@@ -16,8 +16,8 @@ export const MapClickInterceptor = ({
   const { camera, scene } = useThree();
 
   useEffect(() => {
-    const raycaster = new THREE.Raycaster();
-    const mouse = new THREE.Vector2();
+    const raycaster = new Raycaster();
+    const mouse = new Vector2();
 
     const onMapClick = (e: maplibregl.MapMouseEvent) => {
       const canvas = map.getCanvas();
@@ -31,8 +31,8 @@ export const MapClickInterceptor = ({
       // 🚀 THUẬT TOÁN BẮN TIA DÀNH RIÊNG CHO MAPLIBRE
       // ==========================================
       // Tạo điểm đầu (near) và điểm cuối (far) của tia sáng trên không gian 2D
-      const near = new THREE.Vector3(mouse.x, mouse.y, -1);
-      const far = new THREE.Vector3(mouse.x, mouse.y, 1);
+      const near = new Vector3(mouse.x, mouse.y, -1);
+      const far = new Vector3(mouse.x, mouse.y, 1);
 
       // Giải mã ngược bằng projectionMatrixInverse của CameraSync
       near.applyMatrix4(camera.projectionMatrixInverse);
@@ -51,7 +51,7 @@ export const MapClickInterceptor = ({
         const hit = intersects[0];
 
         if (
-          hit.object instanceof THREE.InstancedMesh &&
+          hit.object instanceof InstancedMesh &&
           hit.instanceId !== undefined
         ) {
           const instanceList: InstanceData[] = hit.object.userData.instances;
