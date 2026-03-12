@@ -71,12 +71,20 @@ export const InstanceRenderer = ({
         DUMMY.updateMatrix();
 
         glbRefs.current.forEach((mesh) => {
-          if (mesh) mesh.setMatrixAt(i, DUMMY.matrix);
+          if (mesh) {
+            mesh.setMatrixAt(i, DUMMY.matrix);
+          }
         });
       });
 
       glbRefs.current.forEach((mesh) => {
-        if (mesh) mesh.instanceMatrix.needsUpdate = true;
+        if (mesh) {
+          mesh.instanceMatrix.needsUpdate = true;
+          // note: Compute bounding box and sphere to ensure correct frustum culling
+          // This prevents instances from disappearing when the "origin" is off-screen.
+          mesh.computeBoundingBox();
+          mesh.computeBoundingSphere();
+        }
       });
     } else {
       // LOD 2: Simple Bounding Box
@@ -92,7 +100,11 @@ export const InstanceRenderer = ({
         if (boxRef.current) boxRef.current.setMatrixAt(i, DUMMY.matrix);
       });
 
-      if (boxRef.current) boxRef.current.instanceMatrix.needsUpdate = true;
+      if (boxRef.current) {
+        boxRef.current.instanceMatrix.needsUpdate = true;
+        boxRef.current.computeBoundingBox();
+        boxRef.current.computeBoundingSphere();
+      }
     }
   }, [instances, meshParts, zoom]);
 
