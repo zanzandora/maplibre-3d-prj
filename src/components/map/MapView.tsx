@@ -45,7 +45,7 @@ const MapView = () => {
 
     map.setTerrain({
       source: 'maptiler-terrain',
-      exaggeration: 1,
+      exaggeration: 0.8,
     });
 
     // Add Sky effect

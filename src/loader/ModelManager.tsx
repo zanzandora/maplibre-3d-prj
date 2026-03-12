@@ -1,8 +1,12 @@
 import { useEffect, useMemo, useState } from 'react';
 import { InstanceRenderer } from '../engine/InstanceRenderer';
-import { getRelativePosition, getRelativeRotation } from '../utils/coordinate';
+import {
+  getRelativePosition,
+  getRelativeRotation,
+  isWithinBounds,
+} from '../utils/coordinate';
 import { Vector3 } from 'three';
-import maplibregl from 'maplibre-gl';
+import maplibregl, { type MapSourceDataEvent } from 'maplibre-gl';
 import type {
   CenterCoordinate,
   GroupedInstances,
@@ -11,65 +15,110 @@ import type {
 
 interface ModelManagerProps {
   centerCoord: CenterCoordinate;
-  map?: maplibregl.Map;
+  map: maplibregl.Map;
 }
 
 /**
- * Orchestrate model placement and group them by type for instancing.
- * Loads models and synchronizes their height with MapLibre terrain.
+ * ModelManager with basic Tile Loading (Chunking).
+ * Divides the world into a grid and only renders models in visible tiles.
  */
 export const ModelManager = ({ centerCoord, map }: ModelManagerProps) => {
   const [rawData, setRawData] = useState<ModelData[]>([]);
   const [elevations, setElevations] = useState<Record<number, number>>({});
+  const [zoom, setZoom] = useState(map.getZoom());
 
+  // Track visible bounds to filter models
+  const [visibleBounds, setVisibleBounds] = useState(() => {
+    const b = map.getBounds();
+    return {
+      minLng: b.getWest(),
+      minLat: b.getSouth(),
+      maxLng: b.getEast(),
+      maxLat: b.getNorth(),
+    };
+  });
+
+  // 1. Initial Data Fetch
   useEffect(() => {
     fetch('/map3d/ivory/buildings.json')
       .then((res) => res.json())
-      .then((data) => setRawData(data))
-      .catch((err) => console.error('Error loading buildings.json:', err));
+      .then(setRawData)
+      .catch((err) => console.error('Error loading buildings:', err));
   }, []);
 
-  // todo: Calculate missing elevations when map is idle
+  // 2. Map Event Listeners
   useEffect(() => {
-    if (!map || rawData.length === 0) return;
+    if (!map) return;
 
-    const fetchElevations = () => {
+    const updateView = () => {
+      const b = map.getBounds();
+      setVisibleBounds({
+        minLng: b.getWest(),
+        minLat: b.getSouth(),
+        maxLng: b.getEast(),
+        maxLat: b.getNorth(),
+      });
+      setZoom(map.getZoom());
+    };
+
+    const updateElevations = () => {
       if (!map.getTerrain()) return;
-
       setElevations((prev) => {
-        let hasNewData = false;
-        const nextElevations = { ...prev };
-
+        const next = { ...prev };
+        let hasNew = false;
         rawData.forEach((model, index) => {
-          // * Only query if we don't already have the elevation for this model
-          if (nextElevations[index] === undefined) {
-            const queried = map.queryTerrainElevation([model.lng, model.lat]);
-            if (queried !== undefined && queried !== null) {
-              nextElevations[index] = queried;
-              hasNewData = true;
+          if (next[index] === undefined) {
+            const h = map.queryTerrainElevation([model.lng, model.lat]);
+            if (h !== null && h !== undefined) {
+              next[index] = h;
+              hasNew = true;
             }
           }
         });
-
-        // Only return a new object if data actually changed to avoid unnecessary re-renders
-        return hasNewData ? nextElevations : prev;
+        return hasNew ? next : prev;
       });
     };
 
-    map.on('idle', fetchElevations);
-    fetchElevations(); // Attempt an immediate fetch
+    const handleSourceData = (e: MapSourceDataEvent) => {
+      if (e.sourceId === 'maptiler-terrain' && e.isSourceLoaded) {
+        updateElevations();
+      }
+    };
+
+    map.on('moveend', updateView);
+    map.on('idle', updateElevations);
+    map.on('sourcedata', handleSourceData);
+
+    // Initial call in case map is already idle and rawData just arrived
+    updateElevations();
 
     return () => {
-      map.off('idle', fetchElevations);
+      map.off('moveend', updateView);
+      map.off('idle', updateElevations);
+      map.off('sourcedata', handleSourceData);
     };
   }, [map, rawData]);
 
-  // todo: Group by file URL and convert coordinates to local Vector3 relative to centerCoord
+  // 3. Tile Filtering & Grouping
+  // We apply a small padding to the bounds to load models just before they enter the screen.
+  const padding = 0.002; // Roughly 200m
+  const bufferedBounds = useMemo(
+    () => ({
+      minLng: visibleBounds.minLng - padding,
+      minLat: visibleBounds.minLat - padding,
+      maxLng: visibleBounds.maxLng + padding,
+      maxLat: visibleBounds.maxLat + padding,
+    }),
+    [visibleBounds]
+  );
+
   const groupedModels = useMemo(() => {
     const groups: GroupedInstances = {};
 
     rawData.forEach((model, index) => {
-      // Use cached elevation if available
+      // Basic Tile Loading: Only process models within buffered viewport
+      if (!isWithinBounds(model.lng, model.lat, bufferedBounds)) return;
+
       const terrainHeight = elevations[index] || 0;
       const adjustedHeight = model.height + terrainHeight;
 
@@ -94,12 +143,17 @@ export const ModelManager = ({ centerCoord, map }: ModelManagerProps) => {
     });
 
     return groups;
-  }, [rawData, centerCoord, elevations]);
+  }, [rawData, centerCoord, elevations, bufferedBounds]);
 
   return (
     <>
       {Object.entries(groupedModels).map(([url, instances]) => (
-        <InstanceRenderer key={url} url={url} instances={instances} map={map} />
+        <InstanceRenderer
+          key={url}
+          url={url}
+          instances={instances}
+          zoom={zoom}
+        />
       ))}
     </>
   );

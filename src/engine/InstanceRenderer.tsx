@@ -1,4 +1,4 @@
-import { useRef, useMemo, useEffect, useState } from 'react';
+import { useRef, useMemo, useEffect } from 'react';
 import { useGLTF } from '@react-three/drei';
 import type { ThreeEvent } from '@react-three/fiber';
 import {
@@ -8,9 +8,8 @@ import {
   type InstancedMesh,
   type Material,
   type Mesh,
-  type Vector3,
+  Vector3,
 } from 'three';
-import maplibregl from 'maplibre-gl';
 
 interface InstanceData {
   id: string;
@@ -22,36 +21,28 @@ interface InstanceData {
 interface InstanceProps {
   url: string;
   instances: InstanceData[];
-  map?: maplibregl.Map;
+  zoom: number;
   onInstanceClick?: (id: string) => void;
 }
 
+// Reuse dummy object to avoid GC
+const DUMMY = new Object3D();
+
 /**
- * Optimized renderer for multiple instances of a GLB model with Zoom-based LOD.
+ * InstanceRenderer: Efficiently renders multiple instances of a GLB model with LOD.
+ * LOD switching is handled via the 'zoom' prop passed from ModelManager.
  */
 export const InstanceRenderer = ({
   url,
   instances,
-  map,
+  zoom,
   onInstanceClick,
 }: InstanceProps) => {
   const { nodes } = useGLTF(url);
-  const [zoom, setZoom] = useState(map?.getZoom() || 17);
 
-  // Sync zoom from MapLibre
-  useEffect(() => {
-    if (!map) return;
-    const updateZoom = () => setZoom(map.getZoom());
-    map.on('zoom', updateZoom);
-    return () => {
-      map.off('zoom', updateZoom);
-    };
-  }, [map]);
-
-  // note: LOD 0 & 1 - GLB Meshes
+  // Extract geometries and materials from GLB
   const meshParts = useMemo(() => {
     const parts: { geometry: BufferGeometry; material: Material }[] = [];
-
     Object.values(nodes).forEach((node) => {
       if ((node as Mesh).isMesh) {
         const mesh = node as Mesh;
@@ -61,81 +52,74 @@ export const InstanceRenderer = ({
         });
       }
     });
-
     return parts;
   }, [nodes]);
 
   const glbRefs = useRef<(InstancedMesh | null)[]>([]);
   const boxRef = useRef<InstancedMesh>(null);
 
-  // note: Update instance matrices for GLB parts
+  // Synchronize instances with Three.js engine
   useEffect(() => {
-    if (zoom < 16) return; // Skip GLB update if in LOD 2
+    if (instances.length === 0) return;
 
-    const dummy = new Object3D();
+    if (zoom >= 16) {
+      // LOD 0/1: High poly GLB
+      instances.forEach((inst, i) => {
+        DUMMY.position.copy(inst.position);
+        if (inst.rotation) DUMMY.rotation.copy(inst.rotation);
+        DUMMY.scale.copy(inst.scale || new Vector3(1, 1, 1));
+        DUMMY.updateMatrix();
 
-    instances.forEach((inst, i) => {
-      dummy.position.copy(inst.position);
-      if (inst.rotation) dummy.rotation.copy(inst.rotation);
-      if (inst.scale) dummy.scale.copy(inst.scale);
-      else dummy.scale.set(1, 1, 1);
-
-      dummy.updateMatrix();
+        glbRefs.current.forEach((mesh) => {
+          if (mesh) mesh.setMatrixAt(i, DUMMY.matrix);
+        });
+      });
 
       glbRefs.current.forEach((mesh) => {
-        if (mesh) mesh.setMatrixAt(i, dummy.matrix);
+        if (mesh) mesh.instanceMatrix.needsUpdate = true;
       });
-    });
+    } else {
+      // LOD 2: Simple Bounding Box
+      instances.forEach((inst, i) => {
+        DUMMY.position.copy(inst.position);
+        if (inst.rotation) DUMMY.rotation.copy(inst.rotation);
 
-    glbRefs.current.forEach((mesh) => {
-      if (mesh) mesh.instanceMatrix.needsUpdate = true;
-    });
+        // Scale box to be visible but simple
+        const s = inst.scale ? inst.scale.x * 10 : 10;
+        DUMMY.scale.set(s, s, s);
+        DUMMY.updateMatrix();
+
+        if (boxRef.current) boxRef.current.setMatrixAt(i, DUMMY.matrix);
+      });
+
+      if (boxRef.current) boxRef.current.instanceMatrix.needsUpdate = true;
+    }
   }, [instances, meshParts, zoom]);
-
-  // note: Update instance matrices for LOD 2 (Box)
-  useEffect(() => {
-    if (zoom >= 16) return; // Skip Box update if in LOD 0/1
-
-    const dummy = new Object3D();
-    instances.forEach((inst, i) => {
-      dummy.position.copy(inst.position);
-      // Box just needs position, maybe Y-rotation if needed
-      if (inst.rotation) dummy.rotation.copy(inst.rotation);
-
-      // Scale box to a generic building size if not specified
-      const s = inst.scale ? inst.scale.x * 10 : 10;
-      dummy.scale.set(s, s, s);
-
-      dummy.updateMatrix();
-      if (boxRef.current) boxRef.current.setMatrixAt(i, dummy.matrix);
-    });
-
-    if (boxRef.current) boxRef.current.instanceMatrix.needsUpdate = true;
-  }, [instances, zoom]);
 
   const handlePointerDown = (e: ThreeEvent<PointerEvent>) => {
     if (e.instanceId !== undefined && onInstanceClick) {
       e.stopPropagation();
-      const instanceId = instances[e.instanceId].id;
-      onInstanceClick(instanceId);
+      onInstanceClick(instances[e.instanceId].id);
     }
   };
 
   return (
     <group>
-      {/* LOD 0 & 1: Detailed GLB Model */}
+      {/* Detail Mode (Zoom 16+) */}
       {zoom >= 16 &&
         meshParts.map((part, index) => (
           <instancedMesh
-            key={index}
-            ref={(el) => (glbRefs.current[index] = el)}
+            key={`${url}-${index}`}
+            ref={(el) => {
+              glbRefs.current[index] = el;
+            }}
             args={[part.geometry, part.material, instances.length]}
             onPointerDown={handlePointerDown}
             frustumCulled={true}
           />
         ))}
 
-      {/* LOD 2: Bounding Box (Massing) */}
+      {/* Massing Mode (Zoom < 16) */}
       {zoom < 16 && (
         <instancedMesh
           ref={boxRef}
@@ -144,7 +128,7 @@ export const InstanceRenderer = ({
           frustumCulled={true}
         >
           <boxGeometry args={[1, 1, 1]} />
-          <meshStandardMaterial color='#888888' />
+          <meshStandardMaterial color='#888888' transparent opacity={0.8} />
         </instancedMesh>
       )}
     </group>

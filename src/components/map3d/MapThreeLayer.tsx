@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useMemo } from 'react';
 import maplibregl from 'maplibre-gl';
 import { Canvas, useThree } from '@react-three/fiber';
 import { Matrix4, Vector3 } from 'three';
@@ -8,6 +8,11 @@ interface MapThreeLayerProps {
   centerCoord: { x: number; y: number; z: number; meterScale: number };
   children: React.ReactNode;
 }
+
+// Pre-allocate objects to avoid GC overhead in the render loop
+const PROJECTION_MATRIX = new Matrix4();
+const WORLD_MATRIX = new Matrix4();
+const SCALE_VECTOR = new Vector3();
 
 /**
  * Component nội bộ để đồng bộ Camera của R3F với MapLibre.
@@ -26,35 +31,33 @@ const CameraSync = ({
       type: 'custom',
       renderingMode: '3d',
       onAdd: () => {
-        // Vô hiệu hóa auto update matrix để MapLibre toàn quyền điều khiển
         camera.matrixAutoUpdate = false;
       },
       render: (_gl, args) => {
-        // 1. Lấy ma trận projection-view từ MapLibre (v5+ style)
-        const m = new Matrix4().fromArray(
-          args.defaultProjectionData.mainMatrix
+        // 1. Sync Projection Matrix (MapLibre v5+)
+        PROJECTION_MATRIX.fromArray(args.defaultProjectionData.mainMatrix);
+
+        // 2. Sync World Matrix using centerCoord (Relative to Mercator)
+        SCALE_VECTOR.set(
+          centerCoord.meterScale,
+          -centerCoord.meterScale,
+          centerCoord.meterScale
         );
 
-        // 2. Đồng bộ không gian Three.js với Mercator của MapLibre qua centerCoord
-        const l = new Matrix4()
-          .makeTranslation(centerCoord.x, centerCoord.y, centerCoord.z)
-          .scale(
-            new Vector3(
-              centerCoord.meterScale,
-              -centerCoord.meterScale,
-              centerCoord.meterScale
-            )
-          );
+        WORLD_MATRIX.makeTranslation(
+          centerCoord.x,
+          centerCoord.y,
+          centerCoord.z
+        ).scale(SCALE_VECTOR);
 
-        // 3. Inject ma trận vào R3F camera
-        camera.projectionMatrix.copy(m.multiply(l));
+        // 3. Inject into R3F Camera
+        camera.projectionMatrix.copy(PROJECTION_MATRIX.multiply(WORLD_MATRIX));
         camera.projectionMatrixInverse.copy(camera.projectionMatrix).invert();
 
-        // Reset world matrices vì chúng đã được tính gộp trong projectionMatrix
         camera.matrixWorld.identity();
         camera.matrixWorldInverse.identity();
 
-        // 4. Thủ công kích hoạt render để đảm bảo đồng bộ hoàn hảo theo từng frame của map
+        // 4. Manual render pass synchronized with MapLibre's frame
         gl.render(scene, camera);
       },
     };
@@ -91,32 +94,51 @@ export const MapThreeLayer = ({
   centerCoord,
   children,
 }: MapThreeLayerProps) => {
-  return (
-    <>
-      <Canvas
-        gl={{ antialias: true, alpha: true }}
-        shadows
-        frameloop='never' // Dùng mode "never" để chủ động render theo nhịp của MapLibre
-        dpr={[1, 2]}
-        style={{
-          position: 'absolute',
-          top: 0,
-          left: 0,
-          width: '100%',
-          height: '100%',
-          pointerEvents: 'none', // Cho phép tương tác map xuyên qua canvas
-        }}
-      >
-        <CameraSync map={map} centerCoord={centerCoord} />
-
-        <fog attach='fog' args={['#ffffff', 50, 1500]} />
-
+  // Memoize light setup to avoid re-renders
+  const lights = useMemo(
+    () => (
+      <>
         <ambientLight intensity={1.5} />
         <directionalLight position={[10, 20, 100]} intensity={1.5} />
         <directionalLight position={[-10, -20, 100]} intensity={0.5} />
+      </>
+    ),
+    []
+  );
 
-        {children}
-      </Canvas>
-    </>
+  return (
+    <Canvas
+      gl={{
+        antialias: true,
+        alpha: true,
+        powerPreference: 'high-performance', // Ưu tiên GPU rời
+        preserveDrawingBuffer: true,
+      }}
+      shadows={false}
+      frameloop='never'
+      dpr={window.devicePixelRatio > 2 ? 2 : window.devicePixelRatio}
+      // Tối ưu Raycaster: Chỉ lấy vật thể đầu tiên và bỏ qua threshold cho Mesh
+      raycaster={{
+        params: {
+          Mesh: { threshold: 0 },
+          LOD: { threshold: 0 },
+          Sprite: { threshold: 0 },
+          Line: { threshold: 0 },
+          Points: { threshold: 0 },
+        },
+      }}
+      style={{
+        position: 'absolute',
+        top: 0,
+        left: 0,
+        width: '100%',
+        height: '100%',
+        pointerEvents: 'none', // Cho phép bắt sự kiện click/up/down
+      }}
+    >
+      <CameraSync map={map} centerCoord={centerCoord} />
+      {lights}
+      {children}
+    </Canvas>
   );
 };

@@ -37,6 +37,32 @@ export const getRelativePosition = (
 };
 
 /**
+ * Get a unique key for a tile/chunk based on coordinates.
+ * TILE_SIZE roughly 0.005 is ~500m at this latitude.
+ */
+export const getTileKey = (lng: number, lat: number, tileSize = 0.005) => {
+  const tx = Math.floor(lng / tileSize);
+  const ty = Math.floor(lat / tileSize);
+  return `${tx}_${ty}`;
+};
+
+/**
+ * Check if a coordinate is within given bounds.
+ */
+export const isWithinBounds = (
+  lng: number,
+  lat: number,
+  bounds: { minLng: number; minLat: number; maxLng: number; maxLat: number }
+) => {
+  return (
+    lng >= bounds.minLng &&
+    lng <= bounds.maxLng &&
+    lat >= bounds.minLat &&
+    lat <= bounds.maxLat
+  );
+};
+
+/**
  * Calculate Euler rotation based on MapLibre yaw/pitch/roll.
  */
 export const getRelativeRotation = (
