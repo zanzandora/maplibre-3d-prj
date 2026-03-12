@@ -120,7 +120,8 @@ const MapView = () => {
         dragRotate={true}
         touchZoomRotate={true}
         keyboard={true}
-        transformRequest={transformRequest}
+        doubleClickZoom={false}
+        // transformRequest={transformRequest}
         style={{ width: '100%', height: '100%' }}
       >
         {mapInstance && (

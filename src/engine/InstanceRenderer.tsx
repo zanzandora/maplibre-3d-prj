@@ -1,5 +1,4 @@
-import { useRef, useMemo, useEffect } from 'react';
-import type { ThreeEvent } from '@react-three/fiber';
+import { useRef, useMemo, useLayoutEffect } from 'react';
 import {
   Object3D,
   type BufferGeometry,
@@ -11,7 +10,7 @@ import {
 } from 'three';
 import { GLBLoader } from '../loader/GLBLoader';
 
-interface InstanceData {
+export interface InstanceData {
   id: string;
   position: Vector3;
   rotation?: Euler;
@@ -22,7 +21,6 @@ interface InstanceProps {
   url: string;
   instances: InstanceData[];
   zoom: number;
-  onInstanceClick?: (id: string) => void;
 }
 
 // Reuse dummy object to avoid GC
@@ -32,12 +30,7 @@ const DUMMY = new Object3D();
  * InstanceRenderer: Efficiently renders multiple instances of a GLB model with LOD.
  * LOD switching is handled via the 'zoom' prop passed from ModelManager.
  */
-export const InstanceRenderer = ({
-  url,
-  instances,
-  zoom,
-  onInstanceClick,
-}: InstanceProps) => {
+export const InstanceRenderer = ({ url, instances, zoom }: InstanceProps) => {
   const { nodes } = GLBLoader.useLoad(url);
 
   // Extract geometries and materials from GLB
@@ -59,7 +52,7 @@ export const InstanceRenderer = ({
   const boxRef = useRef<InstancedMesh>(null);
 
   // Synchronize instances with Three.js engine
-  useEffect(() => {
+  useLayoutEffect(() => {
     if (instances.length === 0) return;
 
     if (zoom >= 16) {
@@ -108,13 +101,6 @@ export const InstanceRenderer = ({
     }
   }, [instances, meshParts, zoom]);
 
-  const handlePointerDown = (e: ThreeEvent<PointerEvent>) => {
-    if (e.instanceId !== undefined && onInstanceClick) {
-      e.stopPropagation();
-      onInstanceClick(instances[e.instanceId].id);
-    }
-  };
-
   return (
     <group>
       {/* Detail Mode (Zoom 16+) */}
@@ -124,23 +110,25 @@ export const InstanceRenderer = ({
             key={`${url}-${index}`}
             ref={(el) => {
               glbRefs.current[index] = el;
+              if (el) el.userData.instances = instances;
             }}
             args={[part.geometry, part.material, instances.length]}
-            onPointerDown={handlePointerDown}
-            frustumCulled={true}
+            frustumCulled={false}
           />
         ))}
 
       {/* Massing Mode (Zoom < 16) */}
       {zoom < 16 && (
         <instancedMesh
-          ref={boxRef}
+          ref={(el) => {
+            boxRef.current = el;
+            if (el) el.userData.instances = instances;
+          }}
           args={[undefined, undefined, instances.length]}
-          onPointerDown={handlePointerDown}
-          frustumCulled={true}
+          frustumCulled={false}
         >
           <boxGeometry args={[1, 1, 1]} />
-          <meshStandardMaterial color='#888888' transparent opacity={0.8} />
+          <meshStandardMaterial color='#ffffff' transparent opacity={0.8} />
         </instancedMesh>
       )}
     </group>

@@ -118,16 +118,16 @@ export const MapThreeLayer = ({
       shadows={false}
       frameloop='never'
       dpr={window.devicePixelRatio > 2 ? 2 : window.devicePixelRatio}
-      // Tối ưu Raycaster: Chỉ lấy vật thể đầu tiên và bỏ qua threshold cho Mesh
-      raycaster={{
-        params: {
-          Mesh: { threshold: 0 },
-          LOD: { threshold: 0 },
-          Sprite: { threshold: 0 },
-          Line: { threshold: 0 },
-          Points: { threshold: 0 },
-        },
-      }}
+      // // Tối ưu Raycaster: Chỉ lấy vật thể đầu tiên và bỏ qua threshold cho Mesh
+      // raycaster={{
+      //   params: {
+      //     Mesh: { threshold: 0 },
+      //     LOD: { threshold: 0 },
+      //     Sprite: { threshold: 0 },
+      //     Line: { threshold: 0 },
+      //     Points: { threshold: 0 },
+      //   },
+      // }}
       style={{
         position: 'absolute',
         top: 0,

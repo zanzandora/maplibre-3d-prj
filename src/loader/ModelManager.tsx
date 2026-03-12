@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, useRef } from 'react';
+import { useEffect, useMemo, useState, useRef, useCallback } from 'react';
 import { InstanceRenderer } from '../engine/InstanceRenderer';
 import {
   getRelativePosition,
@@ -13,6 +13,7 @@ import type {
   ModelData,
 } from '../utils/types';
 import { Bvh } from '@react-three/drei';
+import { MapClickInterceptor } from '../engine/MapClickInterceptor';
 
 interface ModelManagerProps {
   centerCoord: CenterCoordinate;
@@ -48,7 +49,46 @@ export const ModelManager = ({ centerCoord, map }: ModelManagerProps) => {
       .catch((err) => console.error('Error loading buildings:', err));
   }, []);
 
-  // 2. Map Event Listeners
+  // 2. Tối ưu hóa việc quét Elevation: Chỉ quét những gì đang hiện thấy
+  const updateVisibleElevations = useCallback(() => {
+    if (!map.getTerrain() || rawData.length === 0) return;
+
+    if (rafRef.current) cancelAnimationFrame(rafRef.current);
+
+    rafRef.current = requestAnimationFrame(() => {
+      // Sử dụng bounds hiện tại của map để lọc nhanh
+      const b = map.getBounds();
+      const currentBounds = {
+        minLng: b.getWest(),
+        minLat: b.getSouth(),
+        maxLng: b.getEast(),
+        maxLat: b.getNorth(),
+      };
+
+      setElevations((prev) => {
+        const next = { ...prev };
+        let hasNew = false;
+
+        // Chỉ quét các model đang nằm trong vùng nhìn
+        rawData.forEach((model, index) => {
+          if (
+            next[index] === undefined &&
+            isWithinBounds(model.lng, model.lat, currentBounds)
+          ) {
+            const h = map.queryTerrainElevation([model.lng, model.lat]);
+            if (h !== null && h !== undefined) {
+              next[index] = h;
+              hasNew = true;
+            }
+          }
+        });
+
+        return hasNew ? next : prev;
+      });
+    });
+  }, [map, rawData]);
+
+  // 3. Map Event Listeners
   useEffect(() => {
     if (!map) return;
 
@@ -61,54 +101,32 @@ export const ModelManager = ({ centerCoord, map }: ModelManagerProps) => {
         maxLat: b.getNorth(),
       });
       setZoom(map.getZoom());
-    };
-
-    const updateElevations = () => {
-      // note: Throttling terrain calculation with requestAnimationFrame
-      if (rafRef.current) cancelAnimationFrame(rafRef.current);
-
-      rafRef.current = requestAnimationFrame(() => {
-        if (!map.getTerrain()) return;
-        setElevations((prev) => {
-          const next = { ...prev };
-          let hasNew = false;
-          rawData.forEach((model, index) => {
-            if (next[index] === undefined) {
-              const h = map.queryTerrainElevation([model.lng, model.lat]);
-              if (h !== null && h !== undefined) {
-                next[index] = h;
-                hasNew = true;
-              }
-            }
-          });
-          return hasNew ? next : prev;
-        });
-      });
+      // Thử cập nhật elevation ngay khi view thay đổi
+      updateVisibleElevations();
     };
 
     const handleSourceData = (e: MapSourceDataEvent) => {
       if (e.sourceId === 'maptiler-terrain' && e.isSourceLoaded) {
-        updateElevations();
+        updateVisibleElevations();
       }
     };
 
     map.on('moveend', updateView);
-    map.on('idle', updateElevations);
+    map.on('idle', updateVisibleElevations);
     map.on('sourcedata', handleSourceData);
 
-    // Initial call in case map is already idle and rawData just arrived
-    updateElevations();
+    // Initial call
+    updateVisibleElevations();
 
     return () => {
       map.off('moveend', updateView);
-      map.off('idle', updateElevations);
+      map.off('idle', updateVisibleElevations);
       map.off('sourcedata', handleSourceData);
       if (rafRef.current) cancelAnimationFrame(rafRef.current);
     };
-  }, [map, rawData]);
+  }, [map, updateVisibleElevations]);
 
-  // 3. Tile Filtering & Grouping
-  // We apply a small padding to the bounds to load models just before they enter the screen.
+  // 4. Tile Filtering & Grouping
   const padding = 0.002; // Roughly 200m
   const bufferedBounds = useMemo(
     () => ({
@@ -124,7 +142,6 @@ export const ModelManager = ({ centerCoord, map }: ModelManagerProps) => {
     const groups: GroupedInstances = {};
 
     rawData.forEach((model, index) => {
-      // Basic Tile Loading: Only process models within buffered viewport
       if (!isWithinBounds(model.lng, model.lat, bufferedBounds)) return;
 
       const terrainHeight = elevations[index] || 0;
@@ -150,12 +167,15 @@ export const ModelManager = ({ centerCoord, map }: ModelManagerProps) => {
       });
     });
 
-    console.log('Số lượng model đang render', Object.keys(groups).length);
     return groups;
   }, [rawData, centerCoord, elevations, bufferedBounds]);
 
   return (
     <>
+      <MapClickInterceptor
+        map={map}
+        onModelClick={(id) => console.log('✅ ModelManager: Clicked', id)}
+      />
       <Bvh firstHitOnly>
         {Object.entries(groupedModels).map(([url, instances]) => (
           <InstanceRenderer
