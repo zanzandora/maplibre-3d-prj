@@ -2,6 +2,7 @@ import { useEffect, useMemo } from 'react';
 import maplibregl from 'maplibre-gl';
 import { Canvas, useThree } from '@react-three/fiber';
 import { Matrix4, Vector3 } from 'three';
+import { AdaptiveEvents } from '@react-three/drei';
 
 interface MapThreeLayerProps {
   map: maplibregl.Map;
@@ -137,6 +138,8 @@ export const MapThreeLayer = ({
       }}
     >
       <CameraSync map={map} centerCoord={centerCoord} />
+      <AdaptiveEvents />
+
       {lights}
       {children}
     </Canvas>

@@ -12,6 +12,7 @@ import type {
   GroupedInstances,
   ModelData,
 } from '../utils/types';
+import { Bvh } from '@react-three/drei';
 
 interface ModelManagerProps {
   centerCoord: CenterCoordinate;
@@ -147,14 +148,16 @@ export const ModelManager = ({ centerCoord, map }: ModelManagerProps) => {
 
   return (
     <>
-      {Object.entries(groupedModels).map(([url, instances]) => (
-        <InstanceRenderer
-          key={url}
-          url={url}
-          instances={instances}
-          zoom={zoom}
-        />
-      ))}
+      <Bvh firstHitOnly>
+        {Object.entries(groupedModels).map(([url, instances]) => (
+          <InstanceRenderer
+            key={url}
+            url={url}
+            instances={instances}
+            zoom={zoom}
+          />
+        ))}
+      </Bvh>
     </>
   );
 };

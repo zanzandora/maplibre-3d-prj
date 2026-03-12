@@ -43,9 +43,12 @@ const MapView = () => {
       });
     }
 
-    map.setTerrain({
-      source: 'maptiler-terrain',
-      exaggeration: 0.8,
+    // note: Only set terrain when camera stops to improve performance during movement.
+    map.on('moveend', () => {
+      map.setTerrain({
+        source: 'maptiler-terrain',
+        exaggeration: 0.8,
+      });
     });
 
     // Add Sky effect
