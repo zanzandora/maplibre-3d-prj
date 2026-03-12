@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState, useRef } from 'react';
 import { InstanceRenderer } from '../engine/InstanceRenderer';
 import {
   getRelativePosition,
@@ -27,6 +27,7 @@ export const ModelManager = ({ centerCoord, map }: ModelManagerProps) => {
   const [rawData, setRawData] = useState<ModelData[]>([]);
   const [elevations, setElevations] = useState<Record<number, number>>({});
   const [zoom, setZoom] = useState(map.getZoom());
+  const rafRef = useRef<number>(0);
 
   // Track visible bounds to filter models
   const [visibleBounds, setVisibleBounds] = useState(() => {
@@ -63,20 +64,25 @@ export const ModelManager = ({ centerCoord, map }: ModelManagerProps) => {
     };
 
     const updateElevations = () => {
-      if (!map.getTerrain()) return;
-      setElevations((prev) => {
-        const next = { ...prev };
-        let hasNew = false;
-        rawData.forEach((model, index) => {
-          if (next[index] === undefined) {
-            const h = map.queryTerrainElevation([model.lng, model.lat]);
-            if (h !== null && h !== undefined) {
-              next[index] = h;
-              hasNew = true;
+      // note: Throttling terrain calculation with requestAnimationFrame
+      if (rafRef.current) cancelAnimationFrame(rafRef.current);
+
+      rafRef.current = requestAnimationFrame(() => {
+        if (!map.getTerrain()) return;
+        setElevations((prev) => {
+          const next = { ...prev };
+          let hasNew = false;
+          rawData.forEach((model, index) => {
+            if (next[index] === undefined) {
+              const h = map.queryTerrainElevation([model.lng, model.lat]);
+              if (h !== null && h !== undefined) {
+                next[index] = h;
+                hasNew = true;
+              }
             }
-          }
+          });
+          return hasNew ? next : prev;
         });
-        return hasNew ? next : prev;
       });
     };
 
@@ -97,6 +103,7 @@ export const ModelManager = ({ centerCoord, map }: ModelManagerProps) => {
       map.off('moveend', updateView);
       map.off('idle', updateElevations);
       map.off('sourcedata', handleSourceData);
+      if (rafRef.current) cancelAnimationFrame(rafRef.current);
     };
   }, [map, rawData]);
 
@@ -143,6 +150,7 @@ export const ModelManager = ({ centerCoord, map }: ModelManagerProps) => {
       });
     });
 
+    console.log('Số lượng model đang render', Object.keys(groups).length);
     return groups;
   }, [rawData, centerCoord, elevations, bufferedBounds]);
 

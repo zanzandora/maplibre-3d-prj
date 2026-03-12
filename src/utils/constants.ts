@@ -1,12 +1,12 @@
 export const MAP_CENTER = {
-  lng: 105.464649,
-  lat: 20.90334,
+  lng: 105.463556,
+  lat: 20.901976,
 };
 
 export const DEFAULT_VIEW_STATE = {
   longitude: MAP_CENTER.lng,
   latitude: MAP_CENTER.lat,
-  zoom: 17,
+  zoom: 12,
   pitch: 60,
 };
 

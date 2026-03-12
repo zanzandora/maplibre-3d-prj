@@ -1,5 +1,4 @@
 import { useRef, useMemo, useEffect } from 'react';
-import { useGLTF } from '@react-three/drei';
 import type { ThreeEvent } from '@react-three/fiber';
 import {
   Object3D,
@@ -10,6 +9,7 @@ import {
   type Mesh,
   Vector3,
 } from 'three';
+import { GLBLoader } from '../loader/GLBLoader';
 
 interface InstanceData {
   id: string;
@@ -38,7 +38,7 @@ export const InstanceRenderer = ({
   zoom,
   onInstanceClick,
 }: InstanceProps) => {
-  const { nodes } = useGLTF(url);
+  const { nodes } = GLBLoader.useLoad(url);
 
   // Extract geometries and materials from GLB
   const meshParts = useMemo(() => {
