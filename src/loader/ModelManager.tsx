@@ -58,14 +58,13 @@ export const ModelManager = ({ centerCoord, map }: ModelManagerProps) => {
       .catch((err) => console.error('Error loading buildings:', err));
   }, []);
 
-  // todo: Tối ưu hóa việc quét Elevation: Chỉ quét những gì đang hiện thấy
+  // todo: Tối ưu hóa việc quét Elevation: Quét liên tục cho đến khi hoàn tất vùng nhìn
   const updateVisibleElevations = useCallback(() => {
     if (!map.getTerrain() || rawData.length === 0) return;
 
     if (rafRef.current) cancelAnimationFrame(rafRef.current);
 
     rafRef.current = requestAnimationFrame(() => {
-      // Sử dụng bounds hiện tại của map để lọc nhanh
       const b = map.getBounds();
       const currentBounds = {
         minLng: b.getWest(),
@@ -77,20 +76,37 @@ export const ModelManager = ({ centerCoord, map }: ModelManagerProps) => {
       setElevations((prev) => {
         const next = { ...prev };
         let hasNew = false;
+        let missingInView = 0;
 
-        // Chỉ quét các model đang nằm trong vùng nhìn
-        rawData.forEach((model, index) => {
-          if (
-            next[index] === undefined &&
-            isWithinBounds(model.lng, model.lat, currentBounds)
-          ) {
-            const h = map.queryTerrainElevation([model.lng, model.lat]);
-            if (h !== null && h !== undefined) {
-              next[index] = h;
-              hasNew = true;
+        // Giới hạn số lượng quét mỗi frame để tránh drop fps
+        let scanCount = 0;
+        const MAX_SCAN_PER_FRAME = 300;
+
+        for (let i = 0; i < rawData.length; i++) {
+          const model = rawData[i];
+          if (isWithinBounds(model.lng, model.lat, currentBounds)) {
+            if (next[i] === undefined) {
+              if (scanCount < MAX_SCAN_PER_FRAME) {
+                const h = map.queryTerrainElevation([model.lng, model.lat]);
+                if (h !== null && h !== undefined) {
+                  next[i] = h;
+                  hasNew = true;
+                  scanCount++;
+                } else {
+                  missingInView++;
+                }
+              } else {
+                missingInView++;
+              }
             }
           }
-        });
+        }
+
+        // Nếu vẫn còn model trong vùng nhìn chưa có elevation, tiếp tục quét ở frame tiếp theo
+        if (missingInView > 0) {
+          // eslint-disable-next-line react-hooks/immutability
+          rafRef.current = requestAnimationFrame(updateVisibleElevations);
+        }
 
         return hasNew ? next : prev;
       });
@@ -110,19 +126,23 @@ export const ModelManager = ({ centerCoord, map }: ModelManagerProps) => {
         maxLat: b.getNorth(),
       });
       setZoom(map.getZoom());
-      // Thử cập nhật elevation ngay khi view thay đổi
       updateVisibleElevations();
     };
 
-    const handleSourceData = (e: MapSourceDataEvent) => {
-      if (e.sourceId === 'maptiler-terrain' && e.isSourceLoaded) {
+    const handleMapData = (e: MapSourceDataEvent) => {
+      // Lắng nghe cả sourcedata và data để bắt kịp tiến độ load terrain
+      if (
+        e.dataType === 'source' &&
+        (e.sourceId === 'maptiler-terrain' || e.sourceId === 'terrain')
+      ) {
         updateVisibleElevations();
       }
     };
 
     map.on('moveend', updateView);
     map.on('idle', updateVisibleElevations);
-    map.on('sourcedata', handleSourceData);
+    map.on('sourcedata', handleMapData);
+    map.on('data', handleMapData);
 
     // Initial call
     updateVisibleElevations();
@@ -130,7 +150,8 @@ export const ModelManager = ({ centerCoord, map }: ModelManagerProps) => {
     return () => {
       map.off('moveend', updateView);
       map.off('idle', updateVisibleElevations);
-      map.off('sourcedata', handleSourceData);
+      map.off('sourcedata', handleMapData);
+      map.off('data', handleMapData);
       if (rafRef.current) cancelAnimationFrame(rafRef.current);
     };
   }, [map, updateVisibleElevations]);

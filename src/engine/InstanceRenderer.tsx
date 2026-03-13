@@ -72,12 +72,9 @@ export const InstanceRenderer = ({
         DUMMY.scale.copy(inst.scale || new Vector3(1, 1, 1));
         DUMMY.updateMatrix();
 
-        const color = inst.id === selectedId ? HIGHLIGHT_COLOR : DEFAULT_COLOR;
-
         glbRefs.current.forEach((mesh) => {
           if (mesh) {
             mesh.setMatrixAt(i, DUMMY.matrix);
-            mesh.setColorAt(i, color);
           }
         });
       });
@@ -103,11 +100,8 @@ export const InstanceRenderer = ({
         DUMMY.scale.set(s, s, s);
         DUMMY.updateMatrix();
 
-        const color = inst.id === selectedId ? HIGHLIGHT_COLOR : DEFAULT_COLOR;
-
         if (boxRef.current) {
           boxRef.current.setMatrixAt(i, DUMMY.matrix);
-          boxRef.current.setColorAt(i, color);
         }
       });
 
