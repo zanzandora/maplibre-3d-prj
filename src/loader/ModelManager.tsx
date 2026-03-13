@@ -41,6 +41,15 @@ export const ModelManager = ({ centerCoord, map }: ModelManagerProps) => {
     };
   });
 
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+
+  // note: Đảm bảo MapLibre repaint sau khi React đã cập nhật xong trạng thái Highlight vào Three.js
+  useEffect(() => {
+    if (selectedId) {
+      map.triggerRepaint();
+    }
+  }, [selectedId, map]);
+
   // 1. Initial Data Fetch
   useEffect(() => {
     fetch('/map3d/ivory/buildings.json')
@@ -174,7 +183,10 @@ export const ModelManager = ({ centerCoord, map }: ModelManagerProps) => {
     <>
       <MapClickInterceptor
         map={map}
-        onModelClick={(id) => console.log('✅ ModelManager: Clicked', id)}
+        onModelClick={(id) => {
+          console.log('✅ ModelManager: Clicked', id);
+          setSelectedId(id);
+        }}
       />
       <Bvh firstHitOnly>
         {Object.entries(groupedModels).map(([url, instances]) => (
@@ -183,6 +195,7 @@ export const ModelManager = ({ centerCoord, map }: ModelManagerProps) => {
             url={url}
             instances={instances}
             zoom={zoom}
+            selectedId={selectedId}
           />
         ))}
       </Bvh>
