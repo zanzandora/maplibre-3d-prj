@@ -30,7 +30,7 @@ export const ModelManager = ({ centerCoord, map }: ModelManagerProps) => {
   const [zoom, setZoom] = useState(map.getZoom());
   const rafRef = useRef<number>(0);
 
-  // Track visible bounds to filter models
+  // todo: Track visible bounds to filter models
   const [visibleBounds, setVisibleBounds] = useState(() => {
     const b = map.getBounds();
     return {
@@ -50,7 +50,7 @@ export const ModelManager = ({ centerCoord, map }: ModelManagerProps) => {
     }
   }, [selectedId, map]);
 
-  // 1. Initial Data Fetch
+  // todo: Initial Data Fetch
   useEffect(() => {
     fetch('/map3d/ivory/buildings.json')
       .then((res) => res.json())
@@ -58,7 +58,7 @@ export const ModelManager = ({ centerCoord, map }: ModelManagerProps) => {
       .catch((err) => console.error('Error loading buildings:', err));
   }, []);
 
-  // 2. Tối ưu hóa việc quét Elevation: Chỉ quét những gì đang hiện thấy
+  // todo: Tối ưu hóa việc quét Elevation: Chỉ quét những gì đang hiện thấy
   const updateVisibleElevations = useCallback(() => {
     if (!map.getTerrain() || rawData.length === 0) return;
 
@@ -97,7 +97,7 @@ export const ModelManager = ({ centerCoord, map }: ModelManagerProps) => {
     });
   }, [map, rawData]);
 
-  // 3. Map Event Listeners
+  // todo: Map Event Listeners
   useEffect(() => {
     if (!map) return;
 
@@ -135,7 +135,7 @@ export const ModelManager = ({ centerCoord, map }: ModelManagerProps) => {
     };
   }, [map, updateVisibleElevations]);
 
-  // 4. Tile Filtering & Grouping
+  // todo: Tile Filtering & Grouping
   const padding = 0.002; // Roughly 200m
   const bufferedBounds = useMemo(
     () => ({
