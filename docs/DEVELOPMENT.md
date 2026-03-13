@@ -6,49 +6,46 @@ Tài liệu tóm tắt cấu trúc, luồng xử lý và hướng dẫn phát tr
 
 Dự án được tổ chức theo mô hình Modular để tách biệt logic bản đồ, logic render 3D và quản lý tài nguyên:
 
-- `src/components/map/`: Chứa `MapView.tsx` - Khởi tạo MapLibre GL JS.
-- `src/components/map3d/`: Chứa `MapThreeLayer.tsx` (Hybrid Sync Bridge).
-- `src/engine/`: Chứa `InstanceRenderer.tsx` - Logic tối ưu GPU Instancing & LOD.
-- `src/loader/`: Chứa `GLBLoader.ts` (Batch Preloading) và `ModelManager.tsx` (Quản lý phân bổ model & Elevation Scanning).
-- `src/utils/`: Chứa `coordinate.ts` - Các hàm toán học chuyển đổi hệ tọa độ WGS84 sang Web Mercator.
+- `src/components/map/`: Chứa `MapView.tsx` - Khởi tạo MapLibre GL JS & MapTiler SDK.
+- `src/components/map3d/`:
+  - `MapThreeLayer.tsx`: Lớp phủ R3F Overlay.
+  - `Lights.tsx`: Cấu hình ánh sáng tập trung cho Scene 3D.
+- `src/engine/`:
+  - `CameraSync.tsx`: Logic đồng bộ ma trận Camera giữa MapLibre và Three.js.
+  - `InstanceRenderer.tsx`: Logic tối ưu GPU Instancing & LOD.
+  - `MapClickInterceptor.tsx`: Xử lý tương tác click model 3D.
+- `src/loader/`:
+  - `GLBLoader.ts`: Centralized cache và batch preloading.
+  - `ModelManager.tsx`: Quản lý phân bổ model và dữ liệu.
+- `src/utils/`: Chứa các hàm tiện ích về tọa độ và hằng số.
 
-## 2. Luồng xử lý chính (Core Flow - Hybrid Sync)
+## 2. Luồng xử lý chính (Core Flow)
 
-1.  **Khởi tạo Map:** `MapView` tạo instance MapLibre và xác định một điểm gốc (`centerCoord`).
-2.  **Đồng bộ Camera (Hybrid):**
-    - `MapThreeLayer` thêm một Custom Layer vào MapLibre.
-    - Trong mỗi frame `render` của layer này, ma trận camera được trích xuất và "inject" trực tiếp vào `projectionMatrix` của R3F Camera.
-    - Canvas R3F được đặt làm lớp phủ (Overlay) tuyệt đối trên bản đồ.
-3.  **Tối ưu Render:**
-    - Sử dụng `THREE.InstancedMesh` qua `InstanceRenderer`.
-    - **LOD:** Tự động chuyển đổi giữa Model chi tiết và Bounding Box dựa trên mức Zoom.
-4.  **Tọa độ & Địa hình:**
-    - Chuyển đổi LngLat sang đơn vị Mercator tương đối.
-    - **Elevation Scanning:** Tự động truy vấn cao độ địa hình từ MapLibre và áp dụng vào model 3D.
+1.  **Khởi tạo Map:** `MapView` thiết lập MapTiler SDK, API Key và Terrain.
+2.  **Đồng bộ Camera:**
+    - `MapThreeLayer` sử dụng `CameraSync` để tạo một Custom Layer trong MapLibre.
+    - Ma trận được trích xuất và inject trực tiếp vào R3F Camera trong mỗi frame render.
+3.  **Quản lý Địa hình:** `ModelManager` sử dụng hook `useElevationScanner` để đảm bảo model luôn bám sát mặt đất ngay cả khi terrain đang tải.
+4.  **Tối ưu Render:** Sử dụng `InstancedMesh` kết hợp với hệ thống LOD (Level of Detail) tự động chuyển đổi dựa trên mức Zoom.
 
 ## 3. Các cập nhật quan trọng (Key Updates)
 
-- **LOD System:** Đã triển khai render Bounding Box ở mức zoom thấp, giúp cải thiện hiệu năng đáng kể khi nhìn toàn cảnh.
-- **Continuous Elevation Scanning:** Khắc phục lỗi model bị lơ lửng khi load trang lần đầu. Hệ thống tự động quét cho đến khi khớp địa hình.
-- **Model Highlighting:** Hỗ trợ đổi màu model ngay khi click mà không bị trễ frame.
-- **Batch Preloading:** Sử dụng `Suspense` kết hợp với tải trước tài nguyên để tránh hiện tượng giật lag khi model xuất hiện.
+- **Decoupled Architecture:** Tách rời logic đồng bộ camera và ánh sáng khỏi layer chính, giúp code gọn gàng và dễ bảo trì hơn.
+- **Hook-based Elevation:** Chuyển logic quét địa hình phức tạp sang `useElevationScanner`, hỗ trợ quét liên tục (Continuous Scanning).
+- **Batch Preloading:** Giảm thiểu hiện tượng "pop-in" khi model xuất hiện bằng cách tải trước tài nguyên qua `GLBLoader`.
 
 ## 4. Hướng dẫn cho Developer
 
 ### Thêm Model mới:
 
-1. Đảm bảo file `.glb` nằm trong thư mục `public/`.
-2. Cập nhật dữ liệu trong `buildings.json` với đường dẫn file tương ứng.
-3. `ModelManager` sẽ tự động nhận diện, preload và render thông qua `InstanceRenderer`.
-
-### Quản lý Trạng thái Chọn (Selection):
-
-Sử dụng `selectedId` trong `ModelManager`. Khi muốn đổi màu highlight, hãy điều chỉnh `HIGHLIGHT_COLOR` trong `InstanceRenderer.tsx`.
+1. Thêm file `.glb` vào `public/map3d/`.
+2. Cập nhật `buildings.json` với thông tin tọa độ và tên file.
+3. Hệ thống sẽ tự động preload và hiển thị.
 
 ### Kiểm tra hiệu năng:
 
-- Sử dụng Chrome DevTools (FPS Meter).
-- Kiểm tra số lượng `instancedMesh` được tạo ra trong Three.js tab (nên tối thiểu hóa số lượng này).
+- Sử dụng `r3f-perf` (nếu đã bật) hoặc Chrome DevTools.
+- Đảm bảo số lượng Draw Calls được giữ ở mức thấp thông qua Instancing.
 
 ## 5. Lệnh chạy dự án
 
