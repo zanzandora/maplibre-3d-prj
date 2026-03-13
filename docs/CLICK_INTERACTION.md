@@ -5,14 +5,18 @@ Tài liệu này giải thích cách hệ thống bắt sự kiện click trên 
 ---
 
 ## 1. Thách thức kỹ thuật
+
 Khi nhúng Three.js vào MapLibre qua Custom Layer, hệ thống sự kiện mặc định của R3F (`onPointerDown`, `onClick`) đôi khi bị xung đột hoặc không chính xác do:
+
 - **Tọa độ không khớp**: MapLibre quản lý Canvas riêng, việc chuyển đổi từ pixel màn hình sang tọa độ 3D (NDC) cần sự chính xác tuyệt đối từ Camera đã đồng bộ.
 - **Pointer Events**: `pointer-events: none` trên Canvas overlay thường được dùng để cho phép tương tác với bản đồ nền, nhưng lại làm mất sự kiện của Three.js.
 
 ## 2. Giải pháp: MapClickInterceptor
+
 Chúng ta sử dụng một component "Interceptor" để nghe sự kiện click trực tiếp từ MapLibre, sau đó tự bắn tia (Manual Raycasting) xuyên qua không gian 3D.
 
 ### Quy trình xử lý (Pipeline):
+
 1. **Bắt sự kiện MapLibre**: Đăng ký `map.on('click', ...)`.
 2. **Chuẩn hóa tọa độ (NDC)**: Chuyển đổi `e.point` (pixel) sang dải `[-1, 1]` dựa trên kích thước thực tế của Canvas.
 3. **Manual Raycasting**:
@@ -21,9 +25,12 @@ Chúng ta sử dụng một component "Interceptor" để nghe sự kiện click
 4. **Truy xuất dữ liệu (Data Retrieval)**:
    - Nếu trúng `InstancedMesh`, lấy `instanceId`.
    - Truy cập `userData.instances` (đã được gắn sẵn trong `InstanceRenderer`) để lấy thông tin cụ thể của model đó.
-   - Phân tích ID (ví dụ: `Name-Index`) để đối chiếu với dữ liệu gốc (`rawData`).
+5. **Đồng bộ Hiển thị (Repaint Sync)**:
+   - Sau khi cập nhật `selectedId`, hệ thống gọi `map.triggerRepaint()`.
+   - Việc này ép MapLibre vẽ lại frame mới ngay lập tức để hiển thị màu sắc highlight mà không cần chờ người dùng di chuyển chuột.
 
 ## 3. Cấu trúc dữ liệu hỗ trợ
+
 Để click hoạt động chính xác và nhanh chóng, dữ liệu được tổ chức như sau:
 
 ```typescript
@@ -37,12 +44,15 @@ Chúng ta sử dụng một component "Interceptor" để nghe sự kiện click
 ```
 
 ## 4. Ưu điểm của phương pháp này
+
 - **Chính xác tuyệt đối**: Tia raycast đi đúng theo góc nhìn của Camera đã được đồng bộ với MapLibre.
-- **Hiệu năng cao**: Không cần bật sự kiện cho từng Mesh riêng lẻ, chỉ xử lý khi người dùng thực sự click.
+- **Không có độ trễ**: Kết hợp với `map.triggerRepaint()`, hiệu ứng đổi màu diễn ra tức thì.
 - **Không chặn bản đồ**: Cho phép MapLibre xử lý các tương tác mặc định (pan, zoom) đồng thời với việc bắt click model 3D.
 
 ---
-**File tham chiếu:** 
+
+**File tham chiếu:**
+
 - `src/engine/MapClickInterceptor.tsx`
 - `src/loader/ModelManager.tsx`
 - `src/engine/InstanceRenderer.tsx`

@@ -1,6 +1,6 @@
 # Giải thích Cơ chế Render 3D và Tối ưu hóa hiệu năng
 
-Tài liệu này giải thích các kỹ thuật được sử dụng trong component `InstanceRenderer.tsx` và `ModelManager.tsx` để render hàng ngàn model 3D với hiệu năng cao (> 40 FPS).
+Tài liệu này giải thích các kỹ thuật được sử dụng trong component `InstanceRenderer.tsx` và `ModelManager.tsx` để render hàng ngàn model 3D với hiệu năng cao (> 60 FPS).
 
 ## 1. Instanced Rendering (Render hàng loạt)
 
@@ -9,41 +9,35 @@ Thay vì render từng model riêng lẻ (điều này sẽ tạo ra hàng ngàn
 - **Cơ chế:** GPU chỉ nhận dữ liệu Geometry (hình dạng) và Material (vật liệu) một lần duy nhất. Sau đó, nó sử dụng một mảng các ma trận biến đổi (Transformation Matrices) để vẽ lại hình dạng đó ở nhiều vị trí khác nhau trong một lần vẽ duy nhất.
 - **Hiệu quả:** Giảm số lượng Draw Calls từ 1000 xuống còn 1 (hoặc bằng số lượng sub-mesh của model).
 
-## 2. Xử lý Model GLB phức tạp (Multi-mesh)
+## 2. LOD (Level of Detail) & Phân cấp hiển thị
 
-Một model GLB thường không chỉ là một khối duy nhất mà gồm nhiều phần (sub-meshes) với các vật liệu khác nhau (ví dụ: một căn villa có phần tường, phần kính, phần mái).
+Để duy trì hiệu năng khi camera ở xa, chúng ta sử dụng cơ chế LOD dựa trên mức Zoom của bản đồ:
 
-- **Vấn đề:** `THREE.InstancedMesh` tiêu chuẩn chỉ hỗ trợ **một** Geometry và **một** Material.
-- **Giải pháp:** Trong `InstanceRenderer.tsx`, chúng ta duyệt qua toàn bộ cấu trúc của model GLB:
-    1. Trích xuất tất cả các cặp Geometry/Material riêng biệt.
-    2. Tạo một `instancedMesh` riêng cho mỗi cặp đó.
-    3. Đồng bộ hóa ma trận vị trí (`matrixAt`) cho tất cả các `instancedMesh` này để đảm bảo các bộ phận của model luôn dính liền với nhau.
+- **High Detail (Zoom >= 16):** Render model GLB đầy đủ chi tiết (High poly). Duyệt qua toàn bộ cấu trúc GLB, trích xuất tất cả các cặp Geometry/Material và tạo `instancedMesh` cho từng phần.
+- **Massing Mode (Zoom < 16):** Render dưới dạng các khối hộp đơn giản (Bounding Box) sử dụng `BoxGeometry`. Điều này giúp GPU xử lý cực nhanh khi bản đồ hiển thị hàng chục ngàn công trình ở tầm nhìn rộng.
+- **Culling:** Sử dụng `frustumCulled={false}` kết hợp với việc tính toán thủ công `computeBoundingBox/Sphere` để đảm bảo model không bị mất khi tâm (origin) nằm ngoài màn hình nhưng phần thân vẫn còn hiển thị.
 
-## 3. Đồng bộ Tọa độ Địa lý (MapLibre & Three.js)
+## 3. Cơ chế Highlight (Chọn Model)
 
-Để model 3D nằm chính xác trên bản đồ MapLibre, chúng ta thực hiện các bước sau:
+Khi người dùng click vào một model, hệ thống sẽ kích hoạt trạng thái Highlight:
 
-- **Relative Positioning:** Chuyển đổi tọa độ Lng/Lat sang đơn vị Mercator, sau đó tính toán khoảng cách theo **mét** tương đối so với một điểm gốc (`centerCoord`). Việc này giúp tránh lỗi rung lắc (jittering) do giới hạn độ chính xác của số thực dấu phẩy động (floating point precision).
-- **Coordinate Correction:** 
-    - Đảo ngược trục Y (`-y`) vì hệ tọa độ của MapLibre và Three.js ngược nhau.
-    - Sử dụng `meterScale` để chuyển đổi đơn vị Mercator sang đơn vị mét thực tế.
-- **Rotation (Heading):** 
-    - Áp dụng Euler rotation với thứ tự `XZY`.
-    - Thêm `Math.PI / 2` (90 độ) vào trục X để dựng đứng các model GLB (vốn thường nằm ngang khi export).
+- **State Management:** `selectedId` được quản lý tại `ModelManager` và truyền xuống `InstanceRenderer`.
+- **Fast Color Update:** Sử dụng `setColorAt(index, color)` trên `InstancedMesh`. Việc cập nhật màu sắc được tách biệt khỏi việc cập nhật ma trận vị trí để đảm bảo phản hồi tức thì (Immediate Feedback).
+- **Repaint Sync:** Gọi `map.triggerRepaint()` thông qua `useEffect` sau khi React cập nhật state để ép MapLibre vẽ lại frame mới với màu sắc đã thay đổi.
 
-## 4. Tăng cường Dữ liệu (Data Augmentation)
+## 4. Tối ưu hóa Địa hình (Elevation Scanning)
 
-Để đáp ứng yêu cầu render 1000 đối tượng khi chỉ có dữ liệu thực tế cho 90 đối tượng:
+Để model bám sát mặt đất nhấp nhô của MapLibre Terrain:
 
-- Hàm `augmentData` trong `coordinate.ts` thực hiện nhân bản các đối tượng hiện có.
-- Thêm các sai số ngẫu nhiên nhỏ vào vị trí (`lng`, `lat`) và góc quay (`yaw/heading`).
-- **Lưu ý:** Chỉ thay đổi vị trí mặt bằng và hướng, giữ nguyên cao độ và góc nghiêng để đảm bảo model luôn bám chặt vào mặt đất, không bị chìm hay bay lơ lửng.
+- **Continuous Scanning:** Hệ thống thực hiện quét cao độ liên tục (`requestAnimationFrame`) cho đến khi toàn bộ model trong vùng nhìn có đủ dữ liệu elevation.
+- **Batch Processing:** Giới hạn quét tối đa 200 model mỗi frame (`MAX_SCAN_PER_FRAME`) để tránh làm treo main thread (UI Thread).
+- **Event-Driven:** Lắng nghe sự kiện `data` và `sourcedata` của MapLibre để kích hoạt quét ngay khi các ô gạch địa hình (terrain tiles) vừa được tải về.
+- **Immediate Feedback:** Model mặc định xuất hiện ở độ cao 0 và tự động "nhảy" (snap) lên đúng vị trí ngay khi quét xong dữ liệu địa hình.
 
-## 5. Tương tác (Picking/Click)
+## 5. Tối ưu hóa Tải tài nguyên (Loading & Preloading)
 
-Interaction với `InstancedMesh` khác với model thông thường:
-- Khi người dùng click, sự kiện của Three.js trả về một `instanceId` (số thứ tự của instance trong mảng).
-- Chúng ta sử dụng `instanceId` này để truy ngược lại dữ liệu gốc (ví dụ: lấy ID của căn villa cụ thể đó) và thực hiện các logic xử lý tiếp theo.
+- **Parallel Preloading:** Sử dụng `GLBLoader.preloadBatch()` để tải song song tất cả các file GLB độc nhất ngay khi dữ liệu JSON được fetch, thay vì đợi đến lúc render mới tải.
+- **React Suspense:** Bọc mỗi `InstanceRenderer` trong `<Suspense fallback={null}>` để quản lý luồng render bất đồng bộ, giúp bản đồ mượt mà ngay cả khi đang tải hàng loạt model.
 
 ---
-*Tài liệu này được soạn để hỗ trợ việc bảo trì và mở rộng hệ thống render 3D của dự án.*
+*Tài liệu này được cập nhật để phản hồi các thay đổi về LOD, Highlight và Terrain Optimization.*

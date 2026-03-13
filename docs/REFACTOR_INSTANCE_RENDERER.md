@@ -5,6 +5,7 @@ Tài liệu này chi tiết các cải tiến kỹ thuật để giải quyết 
 ## 1. Vấn đề: Quá nhiều Draw Calls & GC Pressure
 
 Trước khi tối ưu, hệ thống gặp phải hai "nút thắt" cổ chai chính:
+
 1.  **CPU Overhead:** Việc khởi tạo `new Matrix4()` và `new Vector3()` trong mỗi frame (vòng lặp `render`) gây áp lực cực lớn lên bộ thu gom rác (Garbage Collector), dẫn đến hiện tượng đứng hình (stuttering).
 2.  **Draw Call Bottleneck:** Việc render 1.000 đối tượng bằng 1.000 Mesh riêng lẻ khiến CPU phải gửi 1.000 lệnh vẽ tới GPU, làm nghẽn luồng xử lý.
 
@@ -13,8 +14,9 @@ Trước khi tối ưu, hệ thống gặp phải hai "nút thắt" cổ chai ch
 Chúng ta sử dụng kỹ thuật **GPU Instancing** thông qua `THREE.InstancedMesh`. Thay vì vẽ nhiều Mesh, chúng ta chỉ gửi **1 lệnh vẽ duy nhất** kèm theo một mảng các ma trận biến đổi (Position, Rotation, Scale) cho toàn bộ 1.000 instance.
 
 ### Kết quả:
--   **Draw Calls:** Giảm từ 1.000 xuống còn ~1-5 (tùy số lượng loại model).
--   **Render Time:** Giảm từ ~100ms xuống còn **< 16ms** (đạt mức 60 FPS ổn định).
+
+- **Draw Calls:** Giảm từ 1.000 xuống còn ~1-5 (tùy số lượng loại model).
+- **Render Time:** Giảm từ ~100ms xuống còn **< 16ms** (đạt mức 60 FPS ổn định).
 
 ## 3. Quản lý bộ nhớ trong vòng lặp Render (MapThreeLayer)
 
@@ -35,8 +37,9 @@ Việc này giúp loại bỏ hoàn toàn việc cấp phát bộ nhớ động 
 ## 4. Tối ưu hóa Frustum Culling
 
 Mặc định, `InstancedMesh` thực hiện culling dựa trên Bounding Box của toàn bộ nhóm. Để tối ưu hơn:
--   **frustumCulled={true}:** Đã được kích hoạt cho tất cả InstancedMesh.
--   **DPR Limiting:** Giới hạn `devicePixelRatio` tối đa là 2 để tránh render quá nhiều pixel trên các màn hình Retina cao cấp mà không mang lại sự khác biệt đáng kể về thị giác.
+
+- **frustumCulled={true}:** Đã được kích hoạt cho tất cả InstancedMesh.
+- **DPR Limiting:** Giới hạn `devicePixelRatio` tối đa là 2 để tránh render quá nhiều pixel trên các màn hình Retina cao cấp mà không mang lại sự khác biệt đáng kể về thị giác.
 
 ## 5. Lưu ý cho Nhà phát triển
 
