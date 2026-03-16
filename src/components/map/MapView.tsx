@@ -16,6 +16,7 @@ import {
   LAYERS_TO_FORCE_SHOW,
 } from '../../utils/constants';
 import { SITES_LIST } from '../../utils/siteList';
+import Loading3D from '../Loading3D';
 
 // note: Limit workers to avoid Main Thread congestion.
 maplibregl.setWorkerCount(
@@ -34,6 +35,8 @@ maptilersdk.config.apiKey = import.meta.env.VITE_MAPTILER_API_KEY;
 const MapView = () => {
   const [mapInstance, setMapInstance] = useState<maptilersdk.Map | null>(null);
   const [isTerrainActive, setIsTerrainActive] = useState<boolean>(false);
+
+  const [isLoading3D, setIsLoading3D] = useState<boolean>(false);
 
   // Center coordinate for relative positioning (Near the sample model).
   const centerCoord = useMemo(
@@ -141,7 +144,13 @@ const MapView = () => {
 
     const handleTerrainChange = () => {
       const terrainState = mapInstance.getTerrain();
-      setIsTerrainActive(!!terrainState);
+      const isActive = !!terrainState;
+
+      if (isActive && !isTerrainActive) {
+        setIsLoading3D(true);
+      }
+
+      setIsTerrainActive(isActive);
     };
 
     mapInstance.on('terrain', handleTerrainChange);
@@ -152,10 +161,12 @@ const MapView = () => {
       mapInstance.off('terrain', handleTerrainChange);
       mapInstance.off('styledata', handleTerrainChange);
     };
-  }, [mapInstance]);
+  }, [isTerrainActive, mapInstance]);
 
   return (
     <div style={{ width: '100vw', height: '100vh', position: 'relative' }}>
+      {isLoading3D && <Loading3D />}
+
       <Map
         mapLib={maptilersdk as any}
         initialViewState={DEFAULT_VIEW_STATE}
@@ -186,6 +197,7 @@ const MapView = () => {
               centerCoord={centerCoord}
               map={mapInstance as unknown as maplibregl.Map}
               isVisible={isTerrainActive}
+              onLoadComplete={() => setIsLoading3D(false)}
             />
 
             <Source

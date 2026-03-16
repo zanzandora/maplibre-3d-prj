@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, useRef, useCallback } from 'react';
+import { useEffect, useMemo, useState, useRef } from 'react';
 import { InstanceRenderer } from '../engine/InstanceRenderer';
 import {
   getRelativePosition,
@@ -19,6 +19,7 @@ interface ModelManagerProps {
   centerCoord: CenterCoordinate;
   map: maplibregl.Map;
   isVisible: boolean;
+  onLoadComplete?: () => void;
 }
 
 /**
@@ -29,11 +30,15 @@ export const ModelManager = ({
   centerCoord,
   map,
   isVisible,
+  onLoadComplete,
 }: ModelManagerProps) => {
   const [rawData, setRawData] = useState<ModelData[]>([]);
   const [elevations, setElevations] = useState<Record<number, number>>({});
   const [zoom, setZoom] = useState(map.getZoom());
+
   const rafRef = useRef<number>(0);
+  // todo: Sync Elevation with Terrain
+  const initializedRef = useRef<boolean>(false);
 
   // todo: Track visible bounds to filter models
   const [visibleBounds, setVisibleBounds] = useState(() => {
@@ -63,60 +68,60 @@ export const ModelManager = ({
       .catch((err) => console.error('Error loading buildings:', err));
   }, []);
 
-  // todo: Tối ưu hóa việc quét Elevation: Quét liên tục cho đến khi hoàn tất vùng nhìn
-  const updateVisibleElevations = useCallback(() => {
-    if (!map.getTerrain() || rawData.length === 0) return;
+  useEffect(() => {
+    if (rawData.length === 0 || !map) return;
 
-    if (rafRef.current) cancelAnimationFrame(rafRef.current);
+    if (Object.keys(elevations).length === rawData.length) {
+      if (onLoadComplete) onLoadComplete();
+      return;
+    }
 
-    rafRef.current = requestAnimationFrame(() => {
-      const b = map.getBounds();
-      const currentBounds = {
-        minLng: b.getWest(),
-        minLat: b.getSouth(),
-        maxLng: b.getEast(),
-        maxLat: b.getNorth(),
-      };
+    const updateAllElevations = () => {
+      if (!map.getTerrain()) return;
 
-      setElevations((prev) => {
-        const next = { ...prev };
-        let hasNew = false;
-        let missingInView = 0;
-
-        // Giới hạn số lượng quét mỗi frame để tránh drop fps
-        let scanCount = 0;
-        const MAX_SCAN_PER_FRAME = 300;
-
-        for (let i = 0; i < rawData.length; i++) {
-          const model = rawData[i];
-          if (isWithinBounds(model.lng, model.lat, currentBounds)) {
-            if (next[i] === undefined) {
-              if (scanCount < MAX_SCAN_PER_FRAME) {
-                const h = map.queryTerrainElevation([model.lng, model.lat]);
-                if (h !== null && h !== undefined) {
-                  next[i] = h;
-                  hasNew = true;
-                  scanCount++;
-                } else {
-                  missingInView++;
-                }
-              } else {
-                missingInView++;
-              }
-            }
-          }
-        }
-
-        // Nếu vẫn còn model trong vùng nhìn chưa có elevation, tiếp tục quét ở frame tiếp theo
-        if (missingInView > 0) {
-          // eslint-disable-next-line react-hooks/immutability
-          rafRef.current = requestAnimationFrame(updateVisibleElevations);
-        }
-
-        return hasNew ? next : prev;
+      // note: Compute everything once and cache
+      const initialElevations: Record<number, number> = {};
+      rawData.forEach((model, index) => {
+        initialElevations[index] =
+          map.queryTerrainElevation([model.lng, model.lat]) || 0;
       });
-    });
-  }, [map, rawData]);
+
+      // note: Wrap in RAF to avoid "synchronous setState within effect" warning
+      // and ensure it doesn't block the initial mount/render cycle.
+      rafRef.current = requestAnimationFrame(() => {
+        setElevations(initialElevations);
+        initializedRef.current = true;
+      });
+    };
+
+    // Try immediately
+    updateAllElevations();
+
+    // Terrain tiles might load later, so we listen for data events
+    const handleData = (e: MapSourceDataEvent) => {
+      if (
+        !initializedRef.current &&
+        e.dataType === 'source' &&
+        e.sourceId?.includes('terrain')
+      ) {
+        updateAllElevations();
+      }
+    };
+
+    map.on('data', handleData);
+    if (!map.isSourceLoaded('maptiler-terrain')) {
+      map.once('idle', updateAllElevations);
+      return;
+    }
+
+    if (onLoadComplete) onLoadComplete();
+
+    return () => {
+      map.off('data', handleData);
+      map.off('idle', updateAllElevations);
+      if (rafRef.current) cancelAnimationFrame(rafRef.current);
+    };
+  }, [rawData, map, elevations, onLoadComplete]);
 
   // todo: Map Event Listeners
   useEffect(() => {
@@ -131,35 +136,15 @@ export const ModelManager = ({
         maxLat: b.getNorth(),
       });
       setZoom(map.getZoom());
-      updateVisibleElevations();
-    };
-
-    const handleMapData = (e: MapSourceDataEvent) => {
-      // Lắng nghe cả sourcedata và data để bắt kịp tiến độ load terrain
-      if (
-        e.dataType === 'source' &&
-        (e.sourceId === 'maptiler-terrain' || e.sourceId === 'terrain')
-      ) {
-        updateVisibleElevations();
-      }
     };
 
     map.on('moveend', updateView);
-    map.on('idle', updateVisibleElevations);
-    map.on('sourcedata', handleMapData);
-    map.on('data', handleMapData);
-
-    // Initial call
-    updateVisibleElevations();
 
     return () => {
       map.off('moveend', updateView);
-      map.off('idle', updateVisibleElevations);
-      map.off('sourcedata', handleMapData);
-      map.off('data', handleMapData);
       if (rafRef.current) cancelAnimationFrame(rafRef.current);
     };
-  }, [map, updateVisibleElevations]);
+  }, [map]);
 
   // todo: Tile Filtering & Grouping
   const padding = 0.002; // Roughly 200m
