@@ -18,13 +18,18 @@ import { MapClickInterceptor } from '../engine/MapClickInterceptor';
 interface ModelManagerProps {
   centerCoord: CenterCoordinate;
   map: maplibregl.Map;
+  isVisible: boolean;
 }
 
 /**
  * ModelManager with basic Tile Loading (Chunking).
  * Divides the world into a grid and only renders models in visible tiles.
  */
-export const ModelManager = ({ centerCoord, map }: ModelManagerProps) => {
+export const ModelManager = ({
+  centerCoord,
+  map,
+  isVisible,
+}: ModelManagerProps) => {
   const [rawData, setRawData] = useState<ModelData[]>([]);
   const [elevations, setElevations] = useState<Record<number, number>>({});
   const [zoom, setZoom] = useState(map.getZoom());
@@ -201,7 +206,7 @@ export const ModelManager = ({ centerCoord, map }: ModelManagerProps) => {
   }, [rawData, centerCoord, elevations, bufferedBounds]);
 
   return (
-    <>
+    <group visible={isVisible}>
       <MapClickInterceptor
         map={map}
         onModelClick={(id) => {
@@ -220,6 +225,6 @@ export const ModelManager = ({ centerCoord, map }: ModelManagerProps) => {
           />
         ))}
       </Bvh>
-    </>
+    </group>
   );
 };
