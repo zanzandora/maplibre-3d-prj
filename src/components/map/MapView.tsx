@@ -169,7 +169,7 @@ const MapView = () => {
         touchZoomRotate={true}
         keyboard={true}
         doubleClickZoom={false}
-        fadeDuration={0}
+        fadeDuration={300}
         transformRequest={transformRequest}
         style={{ width: '100%', height: '100%' }}
       >
