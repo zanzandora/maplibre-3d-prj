@@ -2,7 +2,6 @@ import { useRef, useMemo, useLayoutEffect } from 'react';
 import {
   Object3D,
   type BufferGeometry,
-  type Euler,
   type InstancedMesh,
   type Material,
   type Mesh,
@@ -10,13 +9,7 @@ import {
   Color,
 } from 'three';
 import { GLBLoader } from '../loader/GLBLoader';
-
-export interface InstanceData {
-  id: string;
-  position: Vector3;
-  rotation?: Euler;
-  scale?: Vector3;
-}
+import type { InstanceData } from '../utils/types';
 
 interface InstanceProps {
   url: string;
@@ -60,91 +53,63 @@ export const InstanceRenderer = ({
   const glbRefs = useRef<(InstancedMesh | null)[]>([]);
   const boxRef = useRef<InstancedMesh>(null);
 
-  // 1. Sync Matrices & Initial Colors (Runs on data/zoom change)
+  // 1. Sync Matrices for both LODs (Only runs when data or model changes)
   useLayoutEffect(() => {
     if (instances.length === 0) return;
 
-    if (zoom >= 16) {
-      // LOD 0/1: High poly GLB
-      instances.forEach((inst, i) => {
-        DUMMY.position.copy(inst.position);
-        if (inst.rotation) DUMMY.rotation.copy(inst.rotation);
-        DUMMY.scale.copy(inst.scale || new Vector3(1, 1, 1));
-        DUMMY.updateMatrix();
+    instances.forEach((inst, i) => {
+      // Matrix for high-poly GLB
+      DUMMY.position.copy(inst.position);
+      if (inst.rotation) DUMMY.rotation.copy(inst.rotation);
+      DUMMY.scale.copy(inst.scale || new Vector3(1, 1, 1));
+      DUMMY.updateMatrix();
+      glbRefs.current.forEach((mesh) => mesh?.setMatrixAt(i, DUMMY.matrix));
 
-        glbRefs.current.forEach((mesh) => {
-          if (mesh) {
-            mesh.setMatrixAt(i, DUMMY.matrix);
-          }
-        });
-      });
+      // Matrix for low-poly Box (LOD 2)
+      const s = inst.scale ? inst.scale.x * 10 : 10;
+      DUMMY.scale.set(s, s, s);
+      DUMMY.updateMatrix();
+      boxRef.current?.setMatrixAt(i, DUMMY.matrix);
+    });
 
-      glbRefs.current.forEach((mesh) => {
-        if (mesh) {
-          mesh.instanceMatrix.needsUpdate = true;
-          if (mesh.instanceColor) mesh.instanceColor.needsUpdate = true;
-          // note: Compute bounding box and sphere to ensure correct frustum culling
-          // This prevents instances from disappearing when the "origin" is off-screen.
-          mesh.computeBoundingBox();
-          mesh.computeBoundingSphere();
-        }
-      });
-    } else {
-      // LOD 2: Simple Bounding Box
-      instances.forEach((inst, i) => {
-        DUMMY.position.copy(inst.position);
-        if (inst.rotation) DUMMY.rotation.copy(inst.rotation);
-
-        // Scale box to be visible but simple
-        const s = inst.scale ? inst.scale.x * 10 : 10;
-        DUMMY.scale.set(s, s, s);
-        DUMMY.updateMatrix();
-
-        if (boxRef.current) {
-          boxRef.current.setMatrixAt(i, DUMMY.matrix);
-        }
-      });
-
-      if (boxRef.current) {
-        boxRef.current.instanceMatrix.needsUpdate = true;
-        if (boxRef.current.instanceColor)
-          boxRef.current.instanceColor.needsUpdate = true;
-        boxRef.current.computeBoundingBox();
-        boxRef.current.computeBoundingSphere();
+    // Notify updates and compute bounding volumes for frustum culling
+    glbRefs.current.forEach((mesh) => {
+      if (mesh) {
+        mesh.instanceMatrix.needsUpdate = true;
+        mesh.computeBoundingBox();
+        mesh.computeBoundingSphere();
       }
+    });
+    if (boxRef.current) {
+      boxRef.current.instanceMatrix.needsUpdate = true;
+      boxRef.current.computeBoundingBox();
+      boxRef.current.computeBoundingSphere();
     }
-  }, [instances, meshParts, zoom]);
+  }, [instances, meshParts]);
 
-  // 2. Fast Color Update (Runs immediately on selection change)
+  // 2. Sync Colors for both LODs (Only runs on selection or data change)
   useLayoutEffect(() => {
     if (instances.length === 0) return;
 
     instances.forEach((inst, i) => {
       const color = inst.id === selectedId ? HIGHLIGHT_COLOR : DEFAULT_COLOR;
-
-      if (zoom >= 16) {
-        glbRefs.current.forEach((mesh) => {
-          if (mesh) mesh.setColorAt(i, color);
-        });
-      } else if (boxRef.current) {
-        boxRef.current.setColorAt(i, color);
-      }
+      glbRefs.current.forEach((mesh) => mesh?.setColorAt(i, color));
+      boxRef.current?.setColorAt(i, color);
     });
 
-    if (zoom >= 16) {
-      glbRefs.current.forEach((mesh) => {
-        if (mesh && mesh.instanceColor) mesh.instanceColor.needsUpdate = true;
-      });
-    } else if (boxRef.current && boxRef.current.instanceColor) {
+    glbRefs.current.forEach((mesh) => {
+      if (mesh?.instanceColor) mesh.instanceColor.needsUpdate = true;
+    });
+    if (boxRef.current?.instanceColor) {
       boxRef.current.instanceColor.needsUpdate = true;
     }
-  }, [selectedId, instances, zoom]);
+  }, [selectedId, instances]);
 
   return (
     <group>
       {/* Detail Mode (Zoom 16+) */}
-      {zoom >= 16 &&
-        meshParts.map((part, index) => (
+      <group visible={zoom >= 16}>
+        {meshParts.map((part, index) => (
           <instancedMesh
             key={`${url}-${index}`}
             ref={(el) => {
@@ -155,21 +120,21 @@ export const InstanceRenderer = ({
             frustumCulled={false}
           />
         ))}
+      </group>
 
       {/* Massing Mode (Zoom < 16) */}
-      {zoom < 16 && (
-        <instancedMesh
-          ref={(el) => {
-            boxRef.current = el;
-            if (el) el.userData.instances = instances;
-          }}
-          args={[undefined, undefined, instances.length]}
-          frustumCulled={false}
-        >
-          <boxGeometry args={[1, 1, 1]} />
-          <meshStandardMaterial color='#ffffff' transparent opacity={0.8} />
-        </instancedMesh>
-      )}
+      <instancedMesh
+        visible={zoom < 16}
+        ref={(el) => {
+          boxRef.current = el;
+          if (el) el.userData.instances = instances;
+        }}
+        args={[undefined, undefined, instances.length]}
+        frustumCulled={false}
+      >
+        <boxGeometry args={[1, 1, 1]} />
+        <meshStandardMaterial color='#ffffff' transparent opacity={0.8} />
+      </instancedMesh>
     </group>
   );
 };
