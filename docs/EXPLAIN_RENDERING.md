@@ -25,14 +25,14 @@ Khi người dùng click vào một model, hệ thống sẽ kích hoạt trạn
 - **Fast Color Update:** Sử dụng `setColorAt(index, color)` trên `InstancedMesh`. Việc cập nhật màu sắc được tách biệt khỏi việc cập nhật ma trận vị trí để đảm bảo phản hồi tức thì (Immediate Feedback).
 - **Repaint Sync:** Gọi `map.triggerRepaint()` thông qua `useEffect` sau khi React cập nhật state để ép MapLibre vẽ lại frame mới với màu sắc đã thay đổi.
 
-## 4. Tối ưu hóa Địa hình (Elevation Scanning)
+## 4. Tối ưu hóa Địa hình (Terrain Sync)
 
 Để model bám sát mặt đất nhấp nhô của MapLibre Terrain:
 
-- **Continuous Scanning:** Hệ thống thực hiện quét cao độ liên tục (`requestAnimationFrame`) cho đến khi toàn bộ model trong vùng nhìn có đủ dữ liệu elevation.
-- **Batch Processing:** Giới hạn quét tối đa 200 model mỗi frame (`MAX_SCAN_PER_FRAME`) để tránh làm treo main thread (UI Thread).
-- **Event-Driven:** Lắng nghe sự kiện `data` và `sourcedata` của MapLibre để kích hoạt quét ngay khi các ô gạch địa hình (terrain tiles) vừa được tải về.
-- **Immediate Feedback:** Model mặc định xuất hiện ở độ cao 0 và tự động "nhảy" (snap) lên đúng vị trí ngay khi quét xong dữ liệu địa hình.
+- **Query-based Elevation:** Thay vì dùng Raycasting phức tạp, `ModelManager` sử dụng `map.queryTerrainElevation([lng, lat])` để lấy cao độ chính xác từ dữ liệu Raster DEM của MapLibre.
+- **Event-Driven Update:** Hệ thống lắng nghe sự kiện `data` của MapLibre. Khi các Terrain Tiles (nguồn `maptiler-terrain`) được tải xong, một chu kỳ quét lại cao độ sẽ được kích hoạt để đảm bảo model không bị "treo lơ lửng".
+- **RAF Buffering:** Việc cập nhật state cao độ (`setElevations`) được bọc trong `requestAnimationFrame` để tránh xung đột với chu kỳ render của React và đảm bảo hiệu năng mượt mà.
+- **Immediate Snap:** Model mặc định xuất hiện ở độ cao 0 và tự động cập nhật vị trí Z ngay khi dữ liệu địa hình khả dụng.
 
 ## 5. Tối ưu hóa Tải tài nguyên (Loading & Preloading)
 

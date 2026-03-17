@@ -8,11 +8,12 @@ This project is a high-performance 3D map visualization application that integra
 - **Key Objective:** Seamlessly overlay 3D content (GLB models) onto a MapLibre map with perfect camera synchronization and high performance (40+ FPS for 1000+ models).
 - **Main Components:**
   - `MapView.tsx`: The primary map container.
-  - `MapThreeLayer.tsx`: A hybrid sync bridge that renders an R3F Canvas as an overlay and synchronizes it with MapLibre's camera state via an internal `CameraSync` component.
+  - `MapThreeLayer.tsx`: A hybrid sync bridge that renders an R3F Canvas as an overlay and synchronizes it with MapLibre's camera state directly via a Custom Layer.
   - `InstanceRenderer.tsx`: Optimized rendering using `THREE.InstancedMesh` for multiple instances of the same model.
   - `SingleModelRenderer.tsx`: Standard renderer for individual 3D objects.
   - `ModelManager.tsx`: Orchestrates the placement and loading of 3D assets.
   - `coordinate.ts`: Utilities for converting WGS84 (Lng/Lat) to Mercator units relative to a center point to prevent floating-point jitter.
+  - `CameraSync.tsx`: Legacy utility for camera synchronization (logic now moved into MapThreeLayer).
 
 ## Building and Running
 
@@ -38,6 +39,6 @@ The project uses `pnpm` as the package manager.
 
 ## Architecture Details
 
-- **Hybrid Sync:** The project uses an R3F Canvas positioned as an absolute overlay on top of the MapLibre map. A "Dummy" MapLibre Custom Layer is used to extract the camera transformation matrix, which is then injected into the R3F camera.
-- **Camera Sync:** The synchronization logic is integrated directly into `MapThreeLayer.tsx` (via an internal `CameraSync` component). It handles MapLibre v5+ projection matrices, ensuring 3D objects stay "pinned" to the map during panning, zooming, and tilting.
+- **Hybrid Sync:** The project uses an R3F Canvas positioned as an absolute overlay on top of the MapLibre map. A MapLibre Custom Layer is used to share the WebGL context and synchronize camera state.
+- **Camera Sync:** The synchronization logic is integrated directly into `MapThreeLayer.tsx`. It handles MapLibre v5+ projection matrices, ensuring 3D objects stay "pinned" to the map during panning, zooming, and tilting.
 - **Resource Management:** `ModelManager` is the central place to define which models are loaded and where they are placed.

@@ -28,9 +28,15 @@ Khi `MapThreeLayer` được thêm vào bản đồ, phương thức `onAdd` đ�
 
 Mỗi khi MapLibre vẽ một frame, nó gọi hàm `render` của Custom Layer:
 
-- **Ma trận:** MapLibre cung cấp `modelViewProjectionMatrix`. Chúng ta nhân thêm `offsetMatrix` (centerCoord) để khớp tọa độ Three.js.
-- **Camera:** Ép Camera của Three.js sử dụng ma trận này.
-- **Reset State:** Gọi `renderer.resetState()` cực kỳ quan trọng để Three.js không làm hỏng các thiết lập WebGL mà MapLibre cần để vẽ các lớp tiếp theo.
+- **Xử lý Ma trận (MapLibre v5+):** MapLibre v5 cung cấp cấu trúc matrix khác biệt. Chúng ta trích xuất `mainMatrix` từ `defaultProjectionData` nếu có:
+  ```typescript
+  const matrixArray = (matrix as any).defaultProjectionData 
+    ? (matrix as any).defaultProjectionData.mainMatrix 
+    : matrix;
+  ```
+- **Camera:** Ép Camera của Three.js sử dụng ma trận này sau khi nhân với `worldMatrix` (tính toán dựa trên `centerCoord` và `meterScale`) để đưa các model về đúng tọa độ thực tế trên bản đồ.
+- **Reset State:** Gọi `renderer.resetState()` cực kỳ quan trọng để Three.js không làm hỏng các thiết lập WebGL (viewport, depth test, v.v.) mà MapLibre cần để vẽ các lớp tiếp theo.
+- **Manual Frame Advance:** Vì dùng `frameloop: 'never'`, chúng ta chủ động gọi `r3fRoot.advance(performance.now() / 1000, true)` để cập nhật các animation và state của Three.js đồng bộ với MapLibre.
 
 ## 3. Quản lý Layering (Thứ tự hiển thị)
 
