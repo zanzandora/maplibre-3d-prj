@@ -1,43 +1,41 @@
 # Giải thích Cơ chế Render 3D và Tối ưu hóa hiệu năng
 
-Tài liệu này giải thích các kỹ thuật được sử dụng trong component `InstanceRenderer.tsx` và `ModelManager.tsx` để render hàng ngàn model 3D với hiệu năng cao (> 60 FPS).
+Tài liệu này giải thích các kỹ thuật "đột phá" giúp render 1,000+ model GLB mượt mà trên nền địa hình 3D nhấp nhô của MapLibre v5+.
 
-## 1. Instanced Rendering (Render hàng loạt)
+## 1. Cơ chế "Terrain Snapping" Đột phá
+Khác với logic cũ quét liên tục (gây lag), hệ thống hiện tại sử dụng cơ chế **Event-Driven Cache Reset**:
 
-Thay vì render từng model riêng lẻ (điều này sẽ tạo ra hàng ngàn "Draw Calls" làm nghẽn CPU/GPU), chúng ta sử dụng kỹ thuật **Instanced Rendering** thông qua `THREE.InstancedMesh`.
+### Hạn chế của Logic cũ:
+- Cache cao độ bị "kẹt" ở giá trị 0 khi terrain chưa load xong.
+- Model bị lơ lửng hoặc lún sâu khi người dùng bật/tắt 3D.
 
-- **Cơ chế:** GPU chỉ nhận dữ liệu Geometry (hình dạng) và Material (vật liệu) một lần duy nhất. Sau đó, nó sử dụng một mảng các ma trận biến đổi (Transformation Matrices) để vẽ lại hình dạng đó ở nhiều vị trí khác nhau trong một lần vẽ duy nhất.
-- **Hiệu quả:** Giảm số lượng Draw Calls từ 1000 xuống còn 1 (hoặc bằng số lượng sub-mesh của model).
+### Cách đột phá:
+1. **Force Reset:** Mỗi khi người dùng toggle nút 3D, toàn bộ cache `elevations` trong `ModelManager` bị xóa sạch (`setElevations({})`).
+2. **Data-Targeted Listening:** Lắng nghe chính xác sự kiện `data` từ MapLibre, chỉ kích hoạt tính toán khi `sourceId` chứa từ khóa `terrain`.
+3. **Idle Final Sync:** Sử dụng sự kiện `idle` để thực hiện một pass quét cuối cùng, đảm bảo độ chính xác tuyệt đối sau khi toàn bộ gạch địa hình (terrain tiles) đã ổn định.
 
-## 2. LOD (Level of Detail) & Phân cấp hiển thị
+## 2. Bảo vệ Model khỏi lớp "Drape" của MapLibre
+Trong MapLibre v5+, lớp **Drape** (dán đường giao thông, vùng xanh lên địa hình) thường chiếm quyền kiểm soát Depth Buffer, dẫn đến việc model bị biến mất sau khi bản đồ vẽ xong địa hình.
 
-Để duy trì hiệu năng khi camera ở xa, chúng ta sử dụng cơ chế LOD dựa trên mức Zoom của bản đồ:
+### Giải pháp kỹ thuật:
+Trước khi gọi R3F render frame, chúng ta "ép" trạng thái WebGL trong hàm `render` của Custom Layer:
+```typescript
+gl.enable(gl.DEPTH_TEST); // Bật lại kiểm tra độ sâu
+gl.depthMask(true);       // Cho phép ghi vào Z-buffer
+renderer.resetState();    // Reset trạng thái Three.js để không xung đột
+```
 
-- **High Detail (Zoom >= 16):** Render model GLB đầy đủ chi tiết (High poly). Duyệt qua toàn bộ cấu trúc GLB, trích xuất tất cả các cặp Geometry/Material và tạo `instancedMesh` cho từng phần.
-- **Massing Mode (Zoom < 16):** Render dưới dạng các khối hộp đơn giản (Bounding Box) sử dụng `BoxGeometry`. Điều này giúp GPU xử lý cực nhanh khi bản đồ hiển thị hàng chục ngàn công trình ở tầm nhìn rộng.
-- **Culling:** Sử dụng `frustumCulled={false}` kết hợp với việc tính toán thủ công `computeBoundingBox/Sphere` để đảm bảo model không bị mất khi tâm (origin) nằm ngoài màn hình nhưng phần thân vẫn còn hiển thị.
+## 3. Hệ trục tọa độ Y-up Đồng bộ
+Để lập trình viên Three.js không bị nhầm lẫn, chúng ta đã chuyển đổi toàn bộ logic về hệ **Y-up chuẩn**:
+- **X:** Đông (East)
+- **Y:** Độ cao (Altitude/Up)
+- **Z:** Nam (Latitude/South)
 
-## 3. Cơ chế Highlight (Chọn Model)
+Phép chuyển đổi này được thực hiện "ngầm" thông qua ma trận `WORLD_MATRIX` trong `MapThreeLayer`, giúp code trong component 3D cực kỳ trong sáng và dễ hiểu.
 
-Khi người dùng click vào một model, hệ thống sẽ kích hoạt trạng thái Highlight:
+## 4. GPU Instancing & LOD (Level of Detail)
+- **Instancing:** 1,000 model giống nhau chỉ tốn **1 Draw Call**.
+- **LOD Switching:** Tự động chuyển model GLB chi tiết sang khối Box đơn giản khi Zoom < 16, giúp GPU xử lý hàng vạn công trình ở tầm nhìn rộng mà không tụt FPS.
 
-- **State Management:** `selectedId` được quản lý tại `ModelManager` và truyền xuống `InstanceRenderer`.
-- **Fast Color Update:** Sử dụng `setColorAt(index, color)` trên `InstancedMesh`. Việc cập nhật màu sắc được tách biệt khỏi việc cập nhật ma trận vị trí để đảm bảo phản hồi tức thì (Immediate Feedback).
-- **Repaint Sync:** Gọi `map.triggerRepaint()` thông qua `useEffect` sau khi React cập nhật state để ép MapLibre vẽ lại frame mới với màu sắc đã thay đổi.
-
-## 4. Tối ưu hóa Địa hình (Terrain Sync)
-
-Để model bám sát mặt đất nhấp nhô của MapLibre Terrain:
-
-- **Query-based Elevation:** Thay vì dùng Raycasting phức tạp, `ModelManager` sử dụng `map.queryTerrainElevation([lng, lat])` để lấy cao độ chính xác từ dữ liệu Raster DEM của MapLibre.
-- **Event-Driven Update:** Hệ thống lắng nghe sự kiện `data` của MapLibre. Khi các Terrain Tiles (nguồn `maptiler-terrain`) được tải xong, một chu kỳ quét lại cao độ sẽ được kích hoạt để đảm bảo model không bị "treo lơ lửng".
-- **RAF Buffering:** Việc cập nhật state cao độ (`setElevations`) được bọc trong `requestAnimationFrame` để tránh xung đột với chu kỳ render của React và đảm bảo hiệu năng mượt mà.
-- **Immediate Snap:** Model mặc định xuất hiện ở độ cao 0 và tự động cập nhật vị trí Z ngay khi dữ liệu địa hình khả dụng.
-
-## 5. Tối ưu hóa Tải tài nguyên (Loading & Preloading)
-
-- **Parallel Preloading:** Sử dụng `GLBLoader.preloadBatch()` để tải song song tất cả các file GLB độc nhất ngay khi dữ liệu JSON được fetch, thay vì đợi đến lúc render mới tải.
-- **React Suspense:** Bọc mỗi `InstanceRenderer` trong `<Suspense fallback={null}>` để quản lý luồng render bất đồng bộ, giúp bản đồ mượt mà ngay cả khi đang tải hàng loạt model.
-
----
-*Tài liệu này được cập nhật để phản hồi các thay đổi về LOD, Highlight và Terrain Optimization.*
+## 5. Lưu ý về Async Safety
+Do MapLibre chạy các sự kiện async, `ModelManager` luôn sử dụng biến cờ `isMounted` để kiểm tra trước khi gọi `map.queryTerrainElevation`. Điều này triệt tiêu hoàn toàn lỗi `Map is null` hoặc `Promise Rejection` khi người dùng chuyển trang hoặc tắt bản đồ đột ngột.

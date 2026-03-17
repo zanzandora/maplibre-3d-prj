@@ -29,7 +29,7 @@ The project uses `pnpm` as the package manager.
 
 - **State Management:** Uses React hooks (`useState`, `useMemo`, `useRef`) for local state and synchronization.
 - **3D Assets:** Place GLB models in `public/Ivory3D/`. Use `@react-three/drei`'s `useGLTF` for loading and caching.
-- **Performance:** 
+- **Performance:**
   - Prefer `InstanceRenderer` for many identical objects (trees, lamps, etc.) to minimize draw calls.
   - Use `useMemo` for heavy calculations like coordinate conversions.
 - **Coordinate System:**
@@ -42,3 +42,9 @@ The project uses `pnpm` as the package manager.
 - **Hybrid Sync:** The project uses an R3F Canvas positioned as an absolute overlay on top of the MapLibre map. A MapLibre Custom Layer is used to share the WebGL context and synchronize camera state.
 - **Camera Sync:** The synchronization logic is integrated directly into `MapThreeLayer.tsx`. It handles MapLibre v5+ projection matrices, ensuring 3D objects stay "pinned" to the map during panning, zooming, and tilting.
 - **Resource Management:** `ModelManager` is the central place to define which models are loaded and where they are placed.
+
+## 3 Rules for Documenting Code
+
+- **Rule 1:** Naming should explain _What_ your code does.
+- **Rule 2:** The code itself should be readable and understandable so you and others can easily identify _How_ it's doing what it's doing.
+- **Rule 3:** use comments to provide all that extra information so everyone knows _Why_ the code was written the way it was.

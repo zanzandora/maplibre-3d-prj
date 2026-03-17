@@ -1,62 +1,43 @@
-# Shared WebGL Context: MapLibre + R3F Integration
+# Shared WebGL Context: Kiến trúc "Ký sinh" Cao cấp
 
-Tài liệu này giải thích kiến trúc **Shared Context**, kỹ thuật cao cấp nhất để tích hợp Three.js vào MapLibre GL JS, giúp cả hai hệ thống hoạt động trên cùng một Canvas duy nhất.
+Tài liệu này trình bày giải pháp tích hợp Three.js vào MapLibre GL JS v5+ thông qua một Custom Layer duy nhất, sử dụng chung WebGL Context và Z-buffer.
 
-## 1. Tại sao cần Shared Context?
+## 1. Hạn chế của Logic cũ (Legacy Overlay)
+- **Context Loss:** Sử dụng nhiều thẻ `<Canvas>` dẫn đến việc vượt quá giới hạn WebGL Context của trình duyệt (thường là 8-16).
+- **Z-Fighting:** Model 3D không thể bị che khuất bởi địa hình MapLibre vì dùng 2 Z-buffer độc lập.
+- **Floating-point Jitter:** Tính toán tọa độ tuyệt đối ở mức Zoom cao gây ra hiện tượng rung lắc (jittering) do sai số số thực dấu phẩy động.
 
-Trong các cách tiếp cận thông thường (Overlay), chúng ta dùng 2 Canvas đè lên nhau. Điều này dẫn đến 2 vấn đề lớn:
+## 2. Giải pháp Đột phá: Parasitic R3F Root
+Thay vì tạo một ứng dụng React mới, chúng ta "ký sinh" một React Three Fiber Root trực tiếp vào Canvas của MapLibre.
 
-- **Z-Fighting & Layering:** Model 3D luôn đè lên toàn bộ bản đồ, kể cả các nhãn (labels) tên đường.
-- **Performance:** Trình duyệt phải quản lý 2 ngữ cảnh WebGL riêng biệt, gây tốn tài nguyên và dễ bị lag (jittering) khi xoay bản đồ nhanh.
-
-**Shared Context** giải quyết bằng cách:
-
-- Three.js "mượn" WebGL Context của MapLibre.
-- Render model 3D như một lớp (Layer) nằm giữa các lớp của bản đồ.
-
-## 2. Luồng xử lý kỹ thuật (Technical Flow)
-
-### onAdd: Khởi tạo "Ký sinh"
-
-Khi `MapThreeLayer` được thêm vào bản đồ, phương thức `onAdd` được gọi:
-
-- Khởi tạo `THREE.WebGLRenderer` sử dụng canvas và context của MapLibre: `canvas: map.getCanvas(), context: gl`.
-- Sử dụng `createRoot` từ `@react-three/fiber` để tạo một R3F Root "nội bộ" quản lý Scene.
-- Đặt `frameloop: 'never'` vì chúng ta sẽ tự điều khiển việc vẽ.
-
-### render: Đồng bộ hóa tuyệt đối
-
-Mỗi khi MapLibre vẽ một frame, nó gọi hàm `render` của Custom Layer:
-
-- **Xử lý Ma trận (MapLibre v5+):** MapLibre v5 cung cấp cấu trúc matrix khác biệt. Chúng ta trích xuất `mainMatrix` từ `defaultProjectionData` nếu có:
-  ```typescript
-  const matrixArray = (matrix as any).defaultProjectionData 
-    ? (matrix as any).defaultProjectionData.mainMatrix 
-    : matrix;
-  ```
-- **Camera:** Ép Camera của Three.js sử dụng ma trận này sau khi nhân với `worldMatrix` (tính toán dựa trên `centerCoord` và `meterScale`) để đưa các model về đúng tọa độ thực tế trên bản đồ.
-- **Reset State:** Gọi `renderer.resetState()` cực kỳ quan trọng để Three.js không làm hỏng các thiết lập WebGL (viewport, depth test, v.v.) mà MapLibre cần để vẽ các lớp tiếp theo.
-- **Manual Frame Advance:** Vì dùng `frameloop: 'never'`, chúng ta chủ động gọi `r3fRoot.advance(performance.now() / 1000, true)` để cập nhật các animation và state của Three.js đồng bộ với MapLibre.
-
-## 3. Quản lý Layering (Thứ tự hiển thị)
-
-Trong `MapThreeLayer.tsx`, logic sau giúp chèn Model xuống dưới các nhãn:
-
+### Cơ chế Cache Root (`__r3fSetup`)
+Để tránh việc khởi tạo lại nặng nề mỗi khi layer bị re-mount, R3F Root và WebGLRenderer được cache trực tiếp trên đối tượng `HTMLCanvasElement`:
 ```typescript
-const layers = map.getStyle().layers;
-const labelLayerId = layers?.find((l) => l.type === 'symbol')?.id;
-map.addLayer(customLayer, labelLayerId); // Chèn layer 3D TRƯỚC lớp nhãn
+// Định nghĩa trong global.d.ts
+canvas.__r3fSetup = { renderer, scene, camera, root };
 ```
 
-Kết quả: Tên đường, địa danh sẽ hiển thị **đè lên trên** các model 3D, tạo cảm giác mô hình thực sự nằm trong không gian của bản đồ.
+### Đồng bộ Ma trận (The Y-Z Swap Breakthrough)
+MapLibre sử dụng hệ tọa độ **Z-up** (Z là độ cao), trong khi Three.js sử dụng **Y-up**. Để model không bị "lún" hay xoay sai hướng, chúng ta sử dụng một ma trận thế giới (World Matrix) thủ công để tráo đổi trục:
 
-## 4. Ưu điểm vượt trội
+```typescript
+// Ma trận Row-major để map: X->X, Y->Z, Z->Y
+WORLD_MATRIX.set(
+  s, 0, 0, cx, // X Three.js -> East Mercator
+  0, 0, s, cy, // Z Three.js -> South Mercator
+  0, s, 0, cz, // Y Three.js -> Altitude Mercator
+  0, 0, 0, 1
+);
+```
 
-1. **Zero Latency:** Không có độ trễ giữa model và bản đồ khi di chuyển.
-2. **Depth Sharing:** Nếu sử dụng đúng cách, model có thể bị che khuất bởi các tòa nhà 3D (Building) của chính MapLibre.
-3. **Raycasting mượt mà:** Sự kiện chuột được MapLibre phân phối chính xác, giúp việc click vào model nhạy hơn.
+## 3. Quản lý WebGL State (Chống lớp Drape)
+Một vấn đề nghiêm trọng là lớp **Drape** (phủ texture địa hình) của MapLibre thường ghi đè Z-buffer. Chúng ta buộc phải ép trạng thái WebGL trước mỗi frame render của Three.js:
+```typescript
+gl.enable(gl.DEPTH_TEST);
+gl.depthMask(true);
+renderer.resetState();
+```
 
-## 5. Lưu ý cho Developer
-
-- **Không dùng `<Canvas />` của R3F:** Mọi nội dung 3D phải được bỏ vào bên trong `<MapThreeLayer>...</MapThreeLayer>` trong file `MapView.tsx`.
-- **Tài nguyên:** Do dùng chung Context, hãy luôn đảm bảo dọn dẹp (dispose) tài nguyên trong `onRemove` để tránh tràn bộ nhớ WebGL.
+## 4. Lưu ý sống còn cho Developer
+- **TUYỆT ĐỐI KHÔNG** bỏ các component của `react-map-gl` (như `<Source>`, `<Layer>`) vào bên trong `<MapThreeLayer>`. Điều này gây lỗi **Context Loss** do R3F tạo ra một cây React độc lập.
+- **Asset Path:** Luôn đặt model GLB trong `public/map3d/` và truy cập qua đường dẫn tuyệt đối từ root.

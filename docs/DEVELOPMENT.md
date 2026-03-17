@@ -1,55 +1,40 @@
-# 3D WebGIS Project: MapLibre + R3F Integration
+# Hướng dẫn Phát triển 3D WebGIS (MapLibre + R3F)
 
-Tài liệu tóm tắt cấu trúc, luồng xử lý và hướng dẫn phát triển hệ thống hiển thị 1,000+ model 3D hiệu năng cao.
+Tài liệu hướng dẫn quy trình phát triển, cấu trúc và các quy tắc sống còn khi làm việc với kiến trúc Shared Context.
 
-## 1. Kiến trúc thư mục (Folder Structure)
+## 1. Cấu trúc và Quy tắc "Ngăn sông cách chợ"
+Do sử dụng `createRoot` của R3F để ký sinh vào MapLibre, chúng ta có hai "vũ trụ" React khác nhau trong cùng một ứng dụng:
 
-Dự án được tổ chức theo mô hình Modular để tách biệt logic bản đồ, logic render 3D và quản lý tài nguyên:
+### Vũ trụ 1: Map Context (Gốc)
+- Chứa các component của `react-map-gl` như `<Map>`, `<Source>`, `<Layer>`, `<TerrainControl>`.
+- **Nhiệm vụ:** Quản lý bản đồ, dữ liệu nền và giao diện 2D.
 
-- `src/components/map/`: Chứa `MapView.tsx` - Khởi tạo MapLibre GL JS & MapTiler SDK.
-- `src/components/map3d/`:
-  - `MapThreeLayer.tsx`: Lớp phủ R3F Overlay.
-  - `Lights.tsx`: Cấu hình ánh sáng tập trung cho Scene 3D.
-- `src/engine/`:
-  - `CameraSync.tsx`: Logic đồng bộ ma trận Camera (Legacy, hiện đã tích hợp vào MapThreeLayer).
-  - `InstanceRenderer.tsx`: Logic tối ưu GPU Instancing & LOD.
-  - `MapClickInterceptor.tsx`: Xử lý tương tác click model 3D.
-- `src/loader/`:
-  - `GLBLoader.ts`: Centralized cache và batch preloading.
-  - `ModelManager.tsx`: Quản lý phân bổ model và dữ liệu.
-- `src/utils/`: Chứa các hàm tiện ích về tọa độ và hằng số.
+### Vũ trụ 2: R3F Context (Ký sinh)
+- Nằm bên trong `<MapThreeLayer>`.
+- Chứa các component của Three.js như `<ambientLight>`, `<mesh>`, `<ModelManager>`.
+- **Nhiệm vụ:** Quản lý nội dung 3D.
 
-## 2. Luồng xử lý chính (Core Flow)
+**QUY TẮC SỐNG CÒN:** Không bao giờ render thẻ `<Source>` hay `<Layer>` bên trong `<MapThreeLayer>`. Điều này sẽ gây lỗi **Context Loss** và làm crash ứng dụng ngay lập tức.
 
-1.  **Khởi tạo Map:** `MapView` thiết lập MapTiler SDK, API Key và Terrain.
-2.  **Đồng bộ Camera & Render:**
-    - `MapThreeLayer` tạo một Custom Layer trong MapLibre để chia sẻ WebGL Context.
-    - Ma trận Camera được trích xuất và inject trực tiếp vào R3F Camera trong mỗi frame render của MapLibre.
-3.  **Quản lý Địa hình:** `ModelManager` sử dụng hook `useElevationScanner` để đảm bảo model luôn bám sát mặt đất ngay cả khi terrain đang tải.
-4.  **Tối ưu Render:** Sử dụng `InstancedMesh` kết hợp với hệ thống LOD (Level of Detail) tự động chuyển đổi dựa trên mức Zoom.
+## 2. Luồng xử lý Tọa độ (Standard Workflow)
+Khi thêm một model mới, hãy tuân thủ hệ trục **Y-up**:
 
-## 3. Các cập nhật quan trọng (Key Updates)
+1.  **Input:** Tọa độ WGS84 (`lng`, `lat`) và cao độ thực tế (`alt`).
+2.  **Conversion:** Sử dụng `getRelativePosition` trong `coordinate.ts`.
+    - Trục `Y` kết quả chính là độ cao (Altitude).
+    - Trục `Z` là hướng Nam (Latitude).
+3.  **Terrain Sync:** `ModelManager` sẽ tự động hỏi MapLibre về cao độ địa hình và cộng dồn vào trục `Y` của model.
 
-- **Integrated Camera Sync:** Logic đồng bộ camera v5 được đưa trực tiếp vào `MapThreeLayer`, loại bỏ sự phụ thuộc vào component `CameraSync` cũ.
-- **Efficient Terrain Mapping:** Sử dụng cơ chế query cao độ trực tiếp từ MapLibre thay vì quét liên tục, giảm tải CPU.
-- **Manual Frame Control:** Kiểm soát chính xác thời điểm render của Three.js thông qua `frameloop: 'never'`, đảm bảo đồng bộ tuyệt đối với các chuyển động của bản đồ.
+## 3. Quy trình thêm Asset mới
+1.  **File:** Bỏ file `.glb` vào `public/map3d/`.
+2.  **Metadata:** Cập nhật file JSON dữ liệu (ví dụ: `buildings.json`) với các thông số:
+    - `yaw/pitch/roll`: Xoay model (đơn vị Độ).
+    - `scale`: Tỉ lệ phóng to/thu nhỏ.
+3.  **Verify:** Kiểm tra tại mức Zoom 16 để thấy model GLB và Zoom < 16 để thấy khối Box (LOD).
 
-## 4. Hướng dẫn cho Developer
+## 4. Tối ưu hóa Hiệu năng
+- **Pre-allocation:** Tuyệt đối không dùng từ khóa `new THREE.Matrix4()` hay `new THREE.Vector3()` bên trong các hàm `render` hoặc `useFrame`. Hãy khai báo chúng ở ngoài component hoặc dùng `useMemo`.
+- **Repaint Control:** Chỉ gọi `map.triggerRepaint()` khi thực sự có thay đổi về trạng thái render 3D để tiết kiệm pin/CPU cho thiết bị người dùng.
 
-### Thêm Model mới:
-
-1. Thêm file `.glb` vào `public/map3d/`.
-2. Cập nhật `buildings.json` với thông tin tọa độ và tên file.
-3. Hệ thống sẽ tự động preload và hiển thị.
-
-### Kiểm tra hiệu năng:
-
-- Sử dụng `r3f-perf` (nếu đã bật) hoặc Chrome DevTools.
-- Đảm bảo số lượng Draw Calls được giữ ở mức thấp thông qua Instancing.
-
-## 5. Lệnh chạy dự án
-
-```bash
-pnpm install
-pnpm dev
-```
+---
+*Tài liệu được cập nhật dựa trên kiến trúc Shared Context v2 - Đồng bộ Y-up và Chống Drape Occlusion.*
