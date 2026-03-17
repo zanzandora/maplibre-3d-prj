@@ -13,7 +13,7 @@ import type {
   ModelData,
 } from '../utils/types';
 import { Bvh } from '@react-three/drei';
-import { MapClickInterceptor } from '../engine/MapClickInterceptor';
+// import { MapClickInterceptor } from '../engine/MapClickInterceptor';
 
 interface ModelManagerProps {
   centerCoord: CenterCoordinate;
@@ -68,12 +68,26 @@ export const ModelManager = ({
       .catch((err) => console.error('Error loading buildings:', err));
   }, []);
 
+  // note: Reset cache khi toggle Terrain để ép quét lại cao độ mới nhất
   useEffect(() => {
-    if (rawData.length === 0 || !map) return;
+    if (isVisible) {
+      requestAnimationFrame(() => {
+        setElevations({});
+        initializedRef.current = false;
+      });
+    }
+  }, [isVisible]);
+
+  useEffect(() => {
+    if (rawData.length === 0 || !map || !isVisible) return;
 
     let isMounted = true;
 
-    if (Object.keys(elevations).length === rawData.length) {
+    // Nếu đã quét đủ và isVisible không đổi thì không quét lại (tránh loop)
+    if (
+      Object.keys(elevations).length === rawData.length &&
+      initializedRef.current
+    ) {
       if (onLoadComplete) onLoadComplete();
       return;
     }
@@ -82,53 +96,56 @@ export const ModelManager = ({
       // note: Defensive check - if map is destroyed or unmounted, abort.
       if (!isMounted || !map || !map.getStyle || !map.getStyle()) return;
 
-      if (!map.getTerrain()) return;
+      const terrain = map.getTerrain();
+      if (!terrain) return;
 
       // note: Compute everything once and cache
-      const initialElevations: Record<number, number> = {};
+      const updatedElevations: Record<number, number> = {};
+      let hasValidData = false;
+
       rawData.forEach((model, index) => {
-        initialElevations[index] =
-          map.queryTerrainElevation([model.lng, model.lat]) || 0;
+        const alt = map.queryTerrainElevation([model.lng, model.lat]);
+        if (alt !== null && alt !== undefined) {
+          updatedElevations[index] = alt;
+          if (alt !== 0) hasValidData = true; // Đã có cao độ thực tế
+        } else {
+          updatedElevations[index] = 0;
+        }
       });
 
-      // note: Cancel previous RAF if exists
-      if (rafRef.current) cancelAnimationFrame(rafRef.current);
-
-      rafRef.current = requestAnimationFrame(() => {
-        if (!isMounted) return;
-        setElevations(initialElevations);
-        initializedRef.current = true;
-      });
+      // Chỉ cập nhật nếu thực sự có dữ liệu terrain (tránh snap về 0 quá sớm)
+      if (hasValidData || initializedRef.current) {
+        if (rafRef.current) cancelAnimationFrame(rafRef.current);
+        rafRef.current = requestAnimationFrame(() => {
+          if (!isMounted) return;
+          setElevations(updatedElevations);
+          initializedRef.current = true;
+          if (onLoadComplete) onLoadComplete();
+        });
+      }
     };
-
-    // Try immediately
-    updateAllElevations();
 
     // Terrain tiles might load later, so we listen for data events
     const handleData = (e: MapSourceDataEvent) => {
-      if (
-        !initializedRef.current &&
-        e.dataType === 'source' &&
-        e.sourceId?.includes('terrain')
-      ) {
+      if (e.dataType === 'source' && e.sourceId?.includes('terrain')) {
         updateAllElevations();
       }
     };
 
     map.on('data', handleData);
-    if (!map.isSourceLoaded('maptiler-terrain')) {
-      map.once('idle', updateAllElevations);
-    } else if (onLoadComplete) {
-      onLoadComplete();
-    }
+
+    // Thử quét ngay lập tức
+    updateAllElevations();
+
+    // Idle là sự kiện tốt để chốt hạ lần cuối
+    map.once('idle', updateAllElevations);
 
     return () => {
       isMounted = false;
       map.off('data', handleData);
-      map.off('idle', updateAllElevations);
       if (rafRef.current) cancelAnimationFrame(rafRef.current);
     };
-  }, [rawData, map, elevations, onLoadComplete, isVisible]);
+  }, [rawData, map, isVisible, onLoadComplete, elevations]);
 
   // todo: Map Event Listeners
   useEffect(() => {
@@ -213,7 +230,7 @@ export const ModelManager = ({
             url={url}
             instances={instances}
             zoom={zoom}
-            selectedId={selectedId}
+            // selectedId={selectedId}
           />
         ))}
       </Bvh>
