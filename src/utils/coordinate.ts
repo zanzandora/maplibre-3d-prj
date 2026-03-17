@@ -20,6 +20,7 @@ export const WGS84_TO_MERCATOR = (
 
 /**
  * Calculate position in METERS relative to centerCoord.
+ * Returns a Vector3 where Y is UP (altitude).
  */
 export const getRelativePosition = (
   lng: number,
@@ -29,21 +30,13 @@ export const getRelativePosition = (
 ) => {
   const coord = WGS84_TO_MERCATOR(lng, lat, alt);
 
+  // Note: Three.js uses Y-up. MapLibre uses Z-up.
+  // We map MapLibre's Z (altitude) to Three.js's Y.
   return new Vector3(
     (coord.x - center.x) / center.meterScale,
-    -(coord.y - center.y) / center.meterScale, // Flip Y for Three.js
-    (coord.z - center.z) / center.meterScale
+    (coord.z - center.z) / center.meterScale, // Z altitude -> Y up
+    (coord.y - center.y) / center.meterScale // Y latitude -> Z depth
   );
-};
-
-/**
- * Get a unique key for a tile/chunk based on coordinates.
- * TILE_SIZE roughly 0.005 is ~500m at this latitude.
- */
-export const getTileKey = (lng: number, lat: number, tileSize = 0.005) => {
-  const tx = Math.floor(lng / tileSize);
-  const ty = Math.floor(lat / tileSize);
-  return `${tx}_${ty}`;
 };
 
 /**
@@ -74,36 +67,14 @@ export const getRelativeRotation = (
   const pitchRad = (pitch * Math.PI) / 180;
   const rollRad = (roll * Math.PI) / 180;
 
+  // Trong không gian chuẩn Three.js (Y-up):
+  // - Xoay quanh trục Y = Heading/Yaw (âm để khớp với MapLibre)
+  // - Xoay quanh trục X = Pitch
+  // - Xoay quanh trục Z = Roll
   return new Euler(
-    Math.PI / 2 + pitchRad, // Trục X: Dựng đứng model + Pitch
+    pitchRad, // Trục X: Dựng đứng model + Pitch
     Math.PI / 2 + rollRad, // Trục Y: Roll (Heading)
     yawRad, // Trục Z: Yaw
-    'XZY'
+    'YXZ'
   );
-};
-
-/**
- * Augment data to reach a target count by cloning existing items with random offsets.
- */
-export const augmentData = <
-  T extends { lng: number; lat: number; yaw?: number }
->(
-  data: T[],
-  targetCount: number,
-  offsetRange: number = 0.0005 // Khoảng cách sai lệch tối đa so với vị trí gốc
-): T[] => {
-  if (data.length === 0) return [];
-  const augmented: T[] = [...data];
-  let i = 0;
-  while (augmented.length < targetCount) {
-    const original = data[i % data.length];
-    augmented.push({
-      ...original,
-      // Cộng thêm một giá trị ngẫu nhiên trong khoảng từ -offsetRange/2 đến +offsetRange/2
-      lng: original.lng + (Math.random() - 0.5) * offsetRange,
-      lat: original.lat + (Math.random() - 0.5) * offsetRange,
-    });
-    i++;
-  }
-  return augmented;
 };

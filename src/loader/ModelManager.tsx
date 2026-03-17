@@ -71,12 +71,17 @@ export const ModelManager = ({
   useEffect(() => {
     if (rawData.length === 0 || !map) return;
 
+    let isMounted = true;
+
     if (Object.keys(elevations).length === rawData.length) {
       if (onLoadComplete) onLoadComplete();
       return;
     }
 
     const updateAllElevations = () => {
+      // note: Defensive check - if map is destroyed or unmounted, abort.
+      if (!isMounted || !map || !map.getStyle || !map.getStyle()) return;
+
       if (!map.getTerrain()) return;
 
       // note: Compute everything once and cache
@@ -86,9 +91,11 @@ export const ModelManager = ({
           map.queryTerrainElevation([model.lng, model.lat]) || 0;
       });
 
-      // note: Wrap in RAF to avoid "synchronous setState within effect" warning
-      // and ensure it doesn't block the initial mount/render cycle.
+      // note: Cancel previous RAF if exists
+      if (rafRef.current) cancelAnimationFrame(rafRef.current);
+
       rafRef.current = requestAnimationFrame(() => {
+        if (!isMounted) return;
         setElevations(initialElevations);
         initializedRef.current = true;
       });
@@ -111,17 +118,17 @@ export const ModelManager = ({
     map.on('data', handleData);
     if (!map.isSourceLoaded('maptiler-terrain')) {
       map.once('idle', updateAllElevations);
-      return;
+    } else if (onLoadComplete) {
+      onLoadComplete();
     }
 
-    if (onLoadComplete) onLoadComplete();
-
     return () => {
+      isMounted = false;
       map.off('data', handleData);
       map.off('idle', updateAllElevations);
       if (rafRef.current) cancelAnimationFrame(rafRef.current);
     };
-  }, [rawData, map, elevations, onLoadComplete]);
+  }, [rawData, map, elevations, onLoadComplete, isVisible]);
 
   // todo: Map Event Listeners
   useEffect(() => {
@@ -192,13 +199,13 @@ export const ModelManager = ({
 
   return (
     <group visible={isVisible}>
-      <MapClickInterceptor
+      {/* <MapClickInterceptor
         map={map}
         onModelClick={(id) => {
           console.log('✅ ModelManager: Clicked', id);
           setSelectedId(id);
         }}
-      />
+      /> */}
       <Bvh firstHitOnly>
         {Object.entries(groupedModels).map(([url, instances]) => (
           <InstanceRenderer

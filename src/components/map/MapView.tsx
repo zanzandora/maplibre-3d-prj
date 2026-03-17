@@ -188,18 +188,22 @@ const MapView = () => {
         <IvoryLayers show3D={isTerrainActive} />
 
         {mapInstance && (
-          <MapThreeLayer
-            map={mapInstance as unknown as maplibregl.Map}
-            centerCoord={centerCoord}
-          >
-            {/* 3D Content models are visible when terrain is active */}
-            <ModelManager
-              centerCoord={centerCoord}
+          <>
+            <MapThreeLayer
               map={mapInstance as unknown as maplibregl.Map}
-              isVisible={isTerrainActive}
-              onLoadComplete={() => setIsLoading3D(false)}
-            />
+              centerCoord={centerCoord}
+              beforeId='poi_outdoor'
+            >
+              {/* COMPONENTS 3D VÀ R3F*/}
+              <ModelManager
+                centerCoord={centerCoord}
+                map={mapInstance as unknown as maplibregl.Map}
+                isVisible={isTerrainActive}
+                onLoadComplete={() => setIsLoading3D(false)}
+              />
+            </MapThreeLayer>
 
+            {/* Terrain Layer*/}
             <Source
               id='maptiler-terrain'
               type='raster-dem'
@@ -210,7 +214,7 @@ const MapView = () => {
             />
 
             <TerrainControl source='maptiler-terrain' />
-          </MapThreeLayer>
+          </>
         )}
       </Map>
     </div>

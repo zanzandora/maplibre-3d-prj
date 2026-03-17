@@ -1,6 +1,7 @@
 import { Euler, Vector3 } from 'three';
+import { createRoot } from '@react-three/fiber';
 
-//  dữ liệu gốc của model
+// dữ liệu gốc của model
 export interface ModelData {
   name: string;
   file: string;
@@ -25,10 +26,14 @@ export type InstanceData = {
 // dữ liệu Map cho việc render instancing
 export type GroupedInstances = Record<string, InstanceData[]>;
 
-// tọa độ trung tâm Mercato
+// tọa độ trung tâm Mercator
 export interface CenterCoordinate {
   x: number;
   y: number;
   z: number;
   meterScale: number;
 }
+
+// Types cho MapThreeLayer & R3F Integration
+export type R3FRoot = ReturnType<typeof createRoot>;
+export type AdvanceFn = (timestamp: number, runGlobalEffects?: boolean) => void;
