@@ -1,66 +1,60 @@
 # Báo cáo Tối ưu hóa Hiệu năng 3D WebGIS (MapLibre + Three.js)
 
-Tài liệu này phân tích chi tiết các kỹ thuật "Surgical Optimization" đã được triển khai trong project để xử lý hàng ngàn model 3D trên nền địa hình thực tế mà vẫn duy trì mức **60 FPS** và giải phóng bộ nhớ WebGL hiệu quả.
+Tài liệu này phân tích chi tiết các kỹ thuật "Surgical Optimization" v2 đã được triển khai để xử lý hàng ngàn model 3D trên nền địa hình thực tế mà vẫn duy trì mức **60 FPS** ổn định.
 
 ---
 
-## 1. Kiến trúc Giao thoa (Shared WebGL Context)
+## 1. Kiến trúc "Parasitic Root" (Shared Context v2)
 
-Thay vì sử dụng hai lớp Canvas đè lên nhau, chúng ta sử dụng **MapLibre Custom Layer** để Three.js "ký sinh" vào WebGL Context của MapLibre.
+Chúng ta sử dụng kỹ thuật "ký sinh" cao cấp để lồng ghép R3F vào MapLibre Custom Layer.
 
-- **Lợi ích:** Loại bỏ hiện tượng Z-fighting, cho phép các model 3D nằm dưới các nhãn tên đường (Label), và giảm 50% tài nguyên GPU so với việc chạy 2 Context riêng biệt.
-- **File tham chiếu:** `src/components/map3d/MapThreeLayer.tsx`
+- **Zero-Latency Sync:** Đặt `frameloop: 'never'` và chủ động gọi `r3fRoot.advance()` đồng bộ tuyệt đối với vòng lặp render của MapLibre.
+- **Root Caching (`__r3fSetup`):** Cache toàn bộ R3F Root và WebGLRenderer trên thẻ Canvas. Điều này triệt tiêu chi phí khởi tạo lại (Init Overhead) khi bật/tắt layer hoặc thay đổi style.
+- **WebGL Context Persistence:** Đảm bảo chỉ dùng 1 Context duy nhất cho cả 2 thư viện, tránh lỗi crash do giới hạn Context của trình duyệt.
 
-## 2. Chiến lược Render: GPU Instancing & Stable Capacity
+## 2. Đột phá Matrix: Y-Z Swap Breakthrough
 
-Chúng ta không vẽ 1.000 Mesh riêng lẻ mà sử dụng `THREE.InstancedMesh`.
+Thay vì thực hiện các phép tính Vector phức tạp trong vòng lặp, chúng ta sử dụng một ma trận thế giới (`WORLD_MATRIX`) thủ công.
 
-- **Kỹ thuật:** Gửi 1 lệnh vẽ duy nhất (Draw Call) cho toàn bộ các model cùng loại (ví dụ: 1.000 căn Villa).
-- **Stable Capacity (Mới):** Duy trì một dung lượng đệm (`capacity`) ổn định cho mỗi `InstancedMesh`. Dung lượng này chỉ tăng lên (kèm 20% dự phòng) và không bao giờ giảm xuống. Điều này tránh việc R3F hủy/tạo lại Mesh liên tục khi số lượng model trong viewport thay đổi nhẹ, loại bỏ hiện tượng nhấp nháy (flicker).
-- **useLayoutEffect (Mới):** Sử dụng `useLayoutEffect` thay cho `useEffect` để đồng bộ ma trận vị trí ngay trước khi trình duyệt vẽ (paint), giúp khung hình mượt mà tuyệt đối.
-- **LOD (Level of Detail) with Hysteresis:**
-  - **Zoom >= 16.2:** Vẽ model GLB chi tiết.
-  - **Zoom <= 15.8:** Chuyển sang "Massing Mode" (Box).
-  - **Hysteresis:** Khoảng đệm 0.4 zoom giúp tránh việc nhảy LOD liên tục khi người dùng zoom chậm quanh ngưỡng.
-- **File tham chiếu:** `src/engine/InstanceRenderer.tsx`
+- **Zero-Cost Projection:** Ma trận này thực hiện tráo đổi trục Y (Three.js Up) và Z (MapLibre Up) ngay trong quá trình chiếu (GPU-side).
+- **Y-up Standardization:** Lập trình viên có thể code model theo chuẩn Y-up tự nhiên của Three.js, trong khi MapLibre vẫn nhận diện đúng cao độ (Altitude).
+- **Precision:** Giảm thiểu sai số số thực dấu phẩy động bằng cách tính toán offset tương đối (`dx, dy, dz`) trước khi nhân ma trận.
 
-## 3. Tối ưu hóa Địa hình (Terrain Optimization)
+## 3. Chế ngự lớp "Drape" của MapLibre
 
-Địa hình là tác nhân gây tốn CPU/GPU nhất. Chúng ta đã "thuần hóa" nó qua 3 bước:
+Lớp **Drape** (phủ texture địa hình) của MapLibre thường ghi đè hoặc tắt Depth Buffer.
 
-- **Throttling setTerrain:** Chỉ gọi `map.setTerrain` khi camera dừng hẳn (`moveend`). Tránh việc SDK tính toán lại lưới địa hình liên tục khi đang bay.
-- **FadeDuration: 0:** Tắt hiệu ứng chuyển cảnh địa hình để CPU không phải nội suy (interpolate) độ cao giữa các frame.
-- **Tile Cache Reset:** Tự động dọn dẹp bộ nhớ đệm Tile (`TileCache.reset`) khi bắt đầu di chuyển để "dọn chỗ" cho dữ liệu mới.
+- **Explicit State Overriding:** Trước mỗi frame render 3D, chúng ta cưỡng ép trạng thái WebGL:
+  ```typescript
+  gl.enable(gl.DEPTH_TEST);
+  gl.depthMask(true);
+  renderer.resetState();
+  ```
+- **Kết quả:** Model luôn hiển thị đúng lớp (Layering) và không bị "chìm" hay biến mất sau khi bản đồ vẽ xong địa hình.
 
-## 4. Cơ chế "Viewport-Only Elevation Scanning" (Cải tiến)
+## 4. Terrain Snapping v2: Event-Driven Optimization
 
-Hàm `queryTerrainElevation` cực nặng vì nó ép CPU phải đợi GPU trả về dữ liệu độ cao.
+Tối ưu hóa việc hỏi cao độ từ MapLibre (tác vụ gây đứng hình CPU).
 
-- **Vấn đề cũ:** Gọi 1.000 lần cho toàn bộ model gây đứng hình (Jank).
-- **Giải pháp mới:**
-  - **Spatial Filter:** Chỉ quét và tính toán Elevation cho các model đang nằm trong **Viewport thực tế** (`currentBounds`).
-  - **Batched Updates:** Sử dụng `requestAnimationFrame` để chia nhỏ tác vụ nặng ra nhiều frame.
-  - **Height Caching:** Lưu cao độ vào mảng `elevations`, tránh tính toán lặp lại cho các model đã biết độ cao.
-- **File tham chiếu:** `src/loader/ModelManager.tsx`
+- **Cache Force Reset:** Xóa sạch bộ đệm cao độ ngay khi người dùng toggle 3D để ép quét lại dữ liệu mới nhất.
+- **Data-Targeted Listening:** Chỉ tính toán lại cao độ khi nhận sự kiện `data` từ nguồn `maptiler-terrain`.
+- **Idle Final Sync:** Sử dụng sự kiện `idle` để chốt chặn lần cuối, đảm bảo model "snap" chính xác 100% sau khi địa hình đã ổn định hoàn toàn.
 
-## 5. Tương tác: Manual Raycasting
+## 5. GPU Instancing & LOD Hysteresis
 
-Thay vì dựa vào hệ thống sự kiện mặc định của R3F (vốn không tương thích hoàn toàn với MapLibre overlay), chúng ta triển khai **Manual Raycasting**.
+- **InstancedMesh:** Gom 1.000 model thành 1 Draw Call duy nhất.
+- **LOD Hysteresis:** Khoảng đệm zoom (0.4) ngăn chặn hiện tượng "nháy" model (Flickering) khi người dùng zoom chậm tại ngưỡng chuyển đổi giữa model GLB và khối Box.
 
-- **Cơ chế:** Nghe sự kiện click từ MapLibre, chuyển đổi sang không gian 3D và tự bắn tia.
-- **Lợi ích:** Tránh việc component Three.js phải render thêm layer bắt sự kiện, giảm tiêu thụ CPU và tăng độ chính xác khi click trong môi trường WebGIS phức tạp.
-- **File tham chiếu:** `src/engine/MapClickInterceptor.tsx`
+## 6. Memory & Async Safety
 
-## 6. Memory & GC (Garbage Collection) Management
-
-- **Pre-allocation:** Các biến ma trận (`Matrix4`, `Vector3`, `Euler`) được khởi tạo một lần duy nhất bên ngoài vòng lặp.
-- **Tuyệt đối không dùng `new`:** Tái sử dụng bộ nhớ bằng `.copy()` hoặc `.set()`, tránh rác tích tụ gây lag định kỳ (GC spikes).
+- **Pre-allocation:** Tái sử dụng `Matrix4`, `Vector3` cố định, tránh Garbage Collection (GC) spikes.
+- **Mounted Guard:** Sử dụng biến cờ `isMounted` trong các callback async của MapLibre để triệt tiêu lỗi `Map is null` khi unmount đột ngột.
 
 ---
 
 ### Chỉ số mục tiêu (Performance KPIs)
 
-- **Render Time:** < 16.6ms (60 FPS).
-- **Draw Calls:** < 10 (cho 1.000+ objects).
-- **Main Thread Idle:** > 40% khi đang di chuyển camera (nhờ tối ưu Elevation).
-- **Zero Flickering:** Không còn hiện tượng model biến mất hoặc nháy khi pan/zoom.
+- **Frame Time:** ~16ms (Ổn định 60 FPS).
+- **Draw Calls:** < 10 (cho 1.000+ biệt thự/cây xanh).
+- **Terrain Alignment:** Độ trễ snap = 0ms ngay khi dữ liệu địa hình khả dụng.
+- **Stability:** Không còn hiện tượng model bị chìm hoặc mất sau khi bật Terrain.
