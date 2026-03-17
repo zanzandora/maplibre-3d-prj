@@ -13,7 +13,7 @@ import type {
   ModelData,
 } from '../utils/types';
 import { Bvh } from '@react-three/drei';
-// import { MapClickInterceptor } from '../engine/MapClickInterceptor';
+import { useIsMounted } from '../hooks/useIsMounted';
 
 interface ModelManagerProps {
   centerCoord: CenterCoordinate;
@@ -35,6 +35,8 @@ export const ModelManager = ({
   const [rawData, setRawData] = useState<ModelData[]>([]);
   const [elevations, setElevations] = useState<Record<number, number>>({});
   const [zoom, setZoom] = useState(map.getZoom());
+
+  const isMounted = useIsMounted();
 
   const rafRef = useRef<number>(0);
   // todo: Sync Elevation with Terrain
@@ -68,7 +70,11 @@ export const ModelManager = ({
       .catch((err) => console.error('Error loading buildings:', err));
   }, []);
 
-  // note: Reset cache khi toggle Terrain để ép quét lại cao độ mới nhất
+  /*
+    note: Tại sao phải xóa cache khi toggle Terrain?
+    Khi Terrain OFF, cao độ mặc định là 0. Khi Terrain ON, chúng ta cần quét lại 
+    để lấy giá trị Elevation thực tế từ MapLibre.
+  */
   useEffect(() => {
     if (isVisible) {
       requestAnimationFrame(() => {
@@ -78,10 +84,14 @@ export const ModelManager = ({
     }
   }, [isVisible]);
 
+  /*
+    note: CƠ CHẾ TERRAIN SNAPPING V2 (Event-Driven)
+    Tại sao không quét liên tục? 
+    Hàm queryTerrainElevation rất nặng (blocking). Chúng ta chỉ quét khi tile địa hình 
+    vừa tải xong (sự kiện 'data') hoặc bản đồ đã ổn định (sự kiện 'idle').
+  */
   useEffect(() => {
     if (rawData.length === 0 || !map || !isVisible) return;
-
-    let isMounted = true;
 
     // Nếu đã quét đủ và isVisible không đổi thì không quét lại (tránh loop)
     if (
@@ -93,8 +103,8 @@ export const ModelManager = ({
     }
 
     const updateAllElevations = () => {
-      // note: Defensive check - if map is destroyed or unmounted, abort.
-      if (!isMounted || !map || !map.getStyle || !map.getStyle()) return;
+      // note: Defensive check - if map is destroyed hoặc unmounted, dừng ngay lập tức.
+      if (!isMounted() || !map || !map.getStyle || !map.getStyle()) return;
 
       const terrain = map.getTerrain();
       if (!terrain) return;
@@ -117,7 +127,7 @@ export const ModelManager = ({
       if (hasValidData || initializedRef.current) {
         if (rafRef.current) cancelAnimationFrame(rafRef.current);
         rafRef.current = requestAnimationFrame(() => {
-          if (!isMounted) return;
+          if (!isMounted()) return;
           setElevations(updatedElevations);
           initializedRef.current = true;
           if (onLoadComplete) onLoadComplete();
@@ -134,18 +144,15 @@ export const ModelManager = ({
 
     map.on('data', handleData);
 
-    // Thử quét ngay lập tức
     updateAllElevations();
 
-    // Idle là sự kiện tốt để chốt hạ lần cuối
     map.once('idle', updateAllElevations);
 
     return () => {
-      isMounted = false;
       map.off('data', handleData);
       if (rafRef.current) cancelAnimationFrame(rafRef.current);
     };
-  }, [rawData, map, isVisible, onLoadComplete, elevations]);
+  }, [rawData, map, isVisible, onLoadComplete, elevations, isMounted]);
 
   // todo: Map Event Listeners
   useEffect(() => {
@@ -216,13 +223,6 @@ export const ModelManager = ({
 
   return (
     <group visible={isVisible}>
-      {/* <MapClickInterceptor
-        map={map}
-        onModelClick={(id) => {
-          console.log('✅ ModelManager: Clicked', id);
-          setSelectedId(id);
-        }}
-      /> */}
       <Bvh firstHitOnly>
         {Object.entries(groupedModels).map(([url, instances]) => (
           <InstanceRenderer
@@ -230,7 +230,6 @@ export const ModelManager = ({
             url={url}
             instances={instances}
             zoom={zoom}
-            // selectedId={selectedId}
           />
         ))}
       </Bvh>

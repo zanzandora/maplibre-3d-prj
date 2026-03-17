@@ -151,7 +151,7 @@ export const MapThreeLayer = ({
         );
       },
 
-      render: function (_gl, matrix) {
+      render: function (gl, matrix) {
         const renderer = rendererRef.current;
         const camera = cameraRef.current;
         const root = rootRef.current;
@@ -168,21 +168,32 @@ export const MapThreeLayer = ({
 
         const s = centerCoord.meterScale;
 
-        // Xây dựng WORLD_MATRIX thủ công để HOÁN ĐỔI TRỤC Y và Z.
-        // Điều này giúp map chính xác không gian Y-up của Three.js vào Z-up của MapLibre
+        /*
+          note: THUẬT TOÁN ĐỒNG BỘ TỌA ĐỘ (Y-up Three.js -> Z-up MapLibre)
+          
+          Tại sao cần ma trận này?
+          MapLibre sử dụng hệ tọa độ Z-up (Z là độ cao), trong khi Three.js sử dụng Y-up.
+          Thay vì xoay từng Object3D thủ công (gây tốn CPU), chúng ta tráo đổi 
+          trục Y và Z ngay tại ma trận World của Camera.
+          
+          Mapping: 
+          - Three.js X -> MapLibre X (Longitude)
+          - Three.js Y -> MapLibre Z (Altitude)
+          - Three.js Z -> MapLibre Y (Latitude)
+        */
         WORLD_MATRIX.set(
           s,
           0,
           0,
-          centerCoord.x, // Three.js X (East)  -> MapLibre X (Longitude)
+          centerCoord.x,
           0,
           0,
           s,
-          centerCoord.y, // Three.js Z (South) -> MapLibre Y (Latitude)
+          centerCoord.y,
           0,
           s,
           0,
-          centerCoord.z, // Three.js Y (Up)    -> MapLibre Z (Altitude)
+          centerCoord.z,
           0,
           0,
           0,
@@ -192,32 +203,40 @@ export const MapThreeLayer = ({
         // Gộp hai ma trận vào Camera
         camera.projectionMatrix.copy(MAP_MATRIX).multiply(WORLD_MATRIX);
 
-        // Reset trạng thái WebGL trước khi báo R3F vẽ để tránh gây hỏng các layer bản đồ khác
+        /*
+          note: PHÒNG CHỐNG HIỆN TƯỢNG "DRAPE OCCLUSION"
+          
+          Tại sao phải ép WebGL State?
+          Khi bật Terrain, pass "Drape" của MapLibre thường chiếm quyền điều khiển Z-buffer. 
+          Chúng ta phải ép bật DEPTH_TEST để model 3D không bị địa hình đè mất.
+        */
+        gl.enable(gl.DEPTH_TEST);
+        gl.depthMask(true);
         renderer.resetState();
 
         // Tiến R3F lên 1 frame - render Scene thủ công đồng bộ với MapLibre frame
         if (advanceRef.current) {
           advanceRef.current(performance.now() / 1000, true);
         } else if (sceneRef.current) {
-          // Fallback an toàn: Nếu ở frame đầu tiên AdvanceCapturer chưa kịp set ref,
-          // ta chủ động gọi render trực tiếp qua WebGLRenderer của Three.js
           renderer.render(sceneRef.current, camera);
         }
       },
 
       onRemove: function () {
-        // !QUAN TRỌNG: TUYỆT ĐỐI KHÔNG DISPOSE RENDERER Ở ĐÂY!
-        // Chỉ dọn dẹp model 3D ra khỏi màn hình bằng cách render component rỗng.
+        /*
+          note: Tại sao không dispose renderer ở đây?
+          Renderer và Root được cache trên HTMLCanvasElement (__r3fSetup) để tái sử dụng.
+          Việc dispose ở đây sẽ làm hỏng cache và gây lỗi khi người dùng toggle layer.
+          Chúng ta chỉ dọn dẹp model 3D khỏi scene bằng cách render một fragment rỗng.
+        */
         if (rootRef.current) {
           rootRef.current.render(<></>);
         }
 
-        // Reset refs để chống leak bộ nhớ bên trong Component
         rendererRef.current = null;
         cameraRef.current = null;
         sceneRef.current = null;
         advanceRef.current = null;
-        // rootRef giữ nguyên không set null, vì cache vẫn nằm trong thẻ Canvas.
       },
     };
 
