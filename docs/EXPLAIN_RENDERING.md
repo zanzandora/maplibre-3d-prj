@@ -1,6 +1,6 @@
-# Giải thích Cơ chế Render 3D và Tối ưu hóa hiệu năng
+# Giải thích Cơ chế Render 3D và Tối ưu hóa hiệu năng (MapTiler SDK)
 
-Tài liệu này giải thích các kỹ thuật "đột phá" giúp render 1,000+ model GLB mượt mà trên nền địa hình 3D nhấp nhô của MapLibre v5+.
+Tài liệu này giải thích các kỹ thuật "đột phá" giúp render 1,000+ model GLB mượt mà trên nền địa hình 3D nhấp nhô của MapTiler SDK.
 
 ## 1. Cơ chế "Terrain Snapping" Đột phá
 Khác với logic cũ quét liên tục (gây lag), hệ thống hiện tại sử dụng cơ chế **Event-Driven Cache Reset**:
@@ -11,11 +11,11 @@ Khác với logic cũ quét liên tục (gây lag), hệ thống hiện tại s�
 
 ### Cách đột phá:
 1. **Force Reset:** Mỗi khi người dùng toggle nút 3D, toàn bộ cache `elevations` trong `ModelManager` bị xóa sạch (`setElevations({})`).
-2. **Data-Targeted Listening:** Lắng nghe chính xác sự kiện `data` từ MapLibre, chỉ kích hoạt tính toán khi `sourceId` chứa từ khóa `terrain`.
+2. **Data-Targeted Listening:** Lắng nghe chính xác sự kiện `data` từ MapTiler SDK, chỉ kích hoạt tính toán khi `sourceId` chứa từ khóa `terrain`.
 3. **Idle Final Sync:** Sử dụng sự kiện `idle` để thực hiện một pass quét cuối cùng, đảm bảo độ chính xác tuyệt đối sau khi toàn bộ gạch địa hình (terrain tiles) đã ổn định.
 
-## 2. Bảo vệ Model khỏi lớp "Drape" của MapLibre
-Trong MapLibre v5+, lớp **Drape** (dán đường giao thông, vùng xanh lên địa hình) thường chiếm quyền kiểm soát Depth Buffer, dẫn đến việc model bị biến mất sau khi bản đồ vẽ xong địa hình.
+## 2. Bảo vệ Model khỏi lớp "Drape" của MapTiler SDK
+Trong MapTiler SDK (dựa trên MapLibre v5+), lớp **Drape** (dán đường giao thông, vùng xanh lên địa hình) thường chiếm quyền kiểm soát Depth Buffer, dẫn đến việc model bị biến mất sau khi bản đồ vẽ xong địa hình.
 
 ### Giải pháp kỹ thuật:
 Trước khi gọi R3F render frame, chúng ta "ép" trạng thái WebGL trong hàm `render` của Custom Layer:
@@ -38,4 +38,4 @@ Phép chuyển đổi này được thực hiện "ngầm" thông qua ma trận 
 - **LOD Switching:** Tự động chuyển model GLB chi tiết sang khối Box đơn giản khi Zoom < 16, giúp GPU xử lý hàng vạn công trình ở tầm nhìn rộng mà không tụt FPS.
 
 ## 5. Lưu ý về Async Safety
-Do MapLibre chạy các sự kiện async, `ModelManager` luôn sử dụng biến cờ `isMounted` để kiểm tra trước khi gọi `map.queryTerrainElevation`. Điều này triệt tiêu hoàn toàn lỗi `Map is null` hoặc `Promise Rejection` khi người dùng chuyển trang hoặc tắt bản đồ đột ngột.
+Do MapTiler SDK chạy các sự kiện async, `ModelManager` luôn sử dụng biến cờ `isMounted` để kiểm tra trước khi gọi `map.queryTerrainElevation`. Điều này triệt tiêu hoàn toàn lỗi `Map is null` hoặc `Promise Rejection` khi người dùng chuyển trang hoặc tắt bản đồ đột ngột.

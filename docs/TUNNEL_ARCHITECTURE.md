@@ -1,6 +1,6 @@
 # Kiến trúc Bridge & Tunnel (với tunnel-rat)
 
-Tài liệu này trình bày giải pháp kiến trúc để "ship" các vật thể 3D vào bản đồ MapLibre một cách sạch sẽ, tách biệt logic quản lý dữ liệu khỏi logic render cốt lõi của bản đồ.
+Tài liệu này trình bày giải pháp kiến trúc để "ship" các vật thể 3D vào bản đồ MapTiler SDK một cách sạch sẽ, tách biệt logic quản lý dữ liệu khỏi logic render cốt lõi của bản đồ.
 
 ## 1. Vấn đề hiện tại (The Coupling Problem)
 

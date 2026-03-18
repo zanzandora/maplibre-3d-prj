@@ -1,14 +1,14 @@
-# Shared WebGL Context: Kiến trúc "Ký sinh" Cao cấp
+# Shared WebGL Context: Kiến trúc "Ký sinh" Cao cấp (MapTiler SDK)
 
-Tài liệu này trình bày giải pháp tích hợp Three.js vào MapLibre GL JS v5+ thông qua một Custom Layer duy nhất, sử dụng chung WebGL Context và Z-buffer.
+Tài liệu này trình bày giải pháp tích hợp Three.js vào MapTiler SDK thông qua một Custom Layer duy nhất, sử dụng chung WebGL Context và Z-buffer.
 
 ## 1. Hạn chế của Logic cũ (Legacy Overlay)
 - **Context Loss:** Sử dụng nhiều thẻ `<Canvas>` dẫn đến việc vượt quá giới hạn WebGL Context của trình duyệt (thường là 8-16).
-- **Z-Fighting:** Model 3D không thể bị che khuất bởi địa hình MapLibre vì dùng 2 Z-buffer độc lập.
+- **Z-Fighting:** Model 3D không thể bị che khuất bởi địa hình MapTiler vì dùng 2 Z-buffer độc lập.
 - **Floating-point Jitter:** Tính toán tọa độ tuyệt đối ở mức Zoom cao gây ra hiện tượng rung lắc (jittering) do sai số số thực dấu phẩy động.
 
 ## 2. Giải pháp Đột phá: Parasitic R3F Root
-Thay vì tạo một ứng dụng React mới, chúng ta "ký sinh" một React Three Fiber Root trực tiếp vào Canvas của MapLibre.
+Thay vì tạo một ứng dụng React mới, chúng ta "ký sinh" một React Three Fiber Root trực tiếp vào Canvas của MapTiler SDK.
 
 ### Cơ chế Cache Root (`__r3fSetup`)
 Để tránh việc khởi tạo lại nặng nề mỗi khi layer bị re-mount, R3F Root và WebGLRenderer được cache trực tiếp trên đối tượng `HTMLCanvasElement`:
@@ -18,7 +18,7 @@ canvas.__r3fSetup = { renderer, scene, camera, root };
 ```
 
 ### Đồng bộ Ma trận (The Y-Z Swap Breakthrough)
-MapLibre sử dụng hệ tọa độ **Z-up** (Z là độ cao), trong khi Three.js sử dụng **Y-up**. Để model không bị "lún" hay xoay sai hướng, chúng ta sử dụng một ma trận thế giới (World Matrix) thủ công để tráo đổi trục:
+MapTiler SDK sử dụng hệ tọa độ **Z-up** (Z là độ cao), trong khi Three.js sử dụng **Y-up**. Để model không bị "lún" hay xoay sai hướng, chúng ta sử dụng một ma trận thế giới (World Matrix) thủ công để tráo đổi trục:
 
 ```typescript
 // Ma trận Row-major để map: X->X, Y->Z, Z->Y
@@ -31,7 +31,7 @@ WORLD_MATRIX.set(
 ```
 
 ## 3. Quản lý WebGL State (Chống lớp Drape)
-Một vấn đề nghiêm trọng là lớp **Drape** (phủ texture địa hình) của MapLibre thường ghi đè Z-buffer. Chúng ta buộc phải ép trạng thái WebGL trước mỗi frame render của Three.js:
+Một vấn đề nghiêm trọng là lớp **Drape** (phủ texture địa hình) của MapTiler SDK thường ghi đè Z-buffer. Chúng ta buộc phải ép trạng thái WebGL trước mỗi frame render của Three.js:
 ```typescript
 gl.enable(gl.DEPTH_TEST);
 gl.depthMask(true);

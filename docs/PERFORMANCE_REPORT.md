@@ -1,4 +1,4 @@
-# Báo cáo Tối ưu hóa Hiệu năng 3D WebGIS (MapLibre + Three.js)
+# Báo cáo Tối ưu hóa Hiệu năng 3D WebGIS (MapTiler SDK + Three.js)
 
 Tài liệu này phân tích chi tiết các kỹ thuật "Surgical Optimization" v2 đã được triển khai để xử lý hàng ngàn model 3D trên nền địa hình thực tế mà vẫn duy trì mức **60 FPS** ổn định.
 
@@ -6,9 +6,9 @@ Tài liệu này phân tích chi tiết các kỹ thuật "Surgical Optimization
 
 ## 1. Kiến trúc "Parasitic Root" (Shared Context v2)
 
-Chúng ta sử dụng kỹ thuật "ký sinh" cao cấp để lồng ghép R3F vào MapLibre Custom Layer.
+Chúng ta sử dụng kỹ thuật "ký sinh" cao cấp để lồng ghép R3F vào MapTiler SDK Custom Layer.
 
-- **Zero-Latency Sync:** Đặt `frameloop: 'never'` và chủ động gọi `r3fRoot.advance()` đồng bộ tuyệt đối với vòng lặp render của MapLibre.
+- **Zero-Latency Sync:** Đặt `frameloop: 'never'` và chủ động gọi `r3fRoot.advance()` đồng bộ tuyệt đối với vòng lặp render của MapTiler SDK.
 - **Root Caching (`__r3fSetup`):** Cache toàn bộ R3F Root và WebGLRenderer trên thẻ Canvas. Điều này triệt tiêu chi phí khởi tạo lại (Init Overhead) khi bật/tắt layer hoặc thay đổi style.
 - **WebGL Context Persistence:** Đảm bảo chỉ dùng 1 Context duy nhất cho cả 2 thư viện, tránh lỗi crash do giới hạn Context của trình duyệt.
 
@@ -16,13 +16,13 @@ Chúng ta sử dụng kỹ thuật "ký sinh" cao cấp để lồng ghép R3F v
 
 Thay vì thực hiện các phép tính Vector phức tạp trong vòng lặp, chúng ta sử dụng một ma trận thế giới (`WORLD_MATRIX`) thủ công.
 
-- **Zero-Cost Projection:** Ma trận này thực hiện tráo đổi trục Y (Three.js Up) và Z (MapLibre Up) ngay trong quá trình chiếu (GPU-side).
-- **Y-up Standardization:** Lập trình viên có thể code model theo chuẩn Y-up tự nhiên của Three.js, trong khi MapLibre vẫn nhận diện đúng cao độ (Altitude).
+- **Zero-Cost Projection:** Ma trận này thực hiện tráo đổi trục Y (Three.js Up) và Z (MapTiler SDK Up) ngay trong quá trình chiếu (GPU-side).
+- **Y-up Standardization:** Lập trình viên có thể code model theo chuẩn Y-up tự nhiên của Three.js, trong khi MapTiler SDK vẫn nhận diện đúng cao độ (Altitude).
 - **Precision:** Giảm thiểu sai số số thực dấu phẩy động bằng cách tính toán offset tương đối (`dx, dy, dz`) trước khi nhân ma trận.
 
-## 3. Chế ngự lớp "Drape" của MapLibre
+## 3. Chế ngự lớp "Drape" của MapTiler SDK
 
-Lớp **Drape** (phủ texture địa hình) của MapLibre thường ghi đè hoặc tắt Depth Buffer.
+Lớp **Drape** (phủ texture địa hình) của MapTiler SDK thường ghi đè hoặc tắt Depth Buffer.
 
 - **Explicit State Overriding:** Trước mỗi frame render 3D, chúng ta cưỡng ép trạng thái WebGL:
   ```typescript
@@ -34,7 +34,7 @@ Lớp **Drape** (phủ texture địa hình) của MapLibre thường ghi đè h
 
 ## 4. Terrain Snapping v2: Event-Driven Optimization
 
-Tối ưu hóa việc hỏi cao độ từ MapLibre (tác vụ gây đứng hình CPU).
+Tối ưu hóa việc hỏi cao độ từ MapTiler SDK (tác vụ gây đứng hình CPU).
 
 - **Cache Force Reset:** Xóa sạch bộ đệm cao độ ngay khi người dùng toggle 3D để ép quét lại dữ liệu mới nhất.
 - **Data-Targeted Listening:** Chỉ tính toán lại cao độ khi nhận sự kiện `data` từ nguồn `maptiler-terrain`.
@@ -48,7 +48,7 @@ Tối ưu hóa việc hỏi cao độ từ MapLibre (tác vụ gây đứng hìn
 ## 6. Memory & Async Safety
 
 - **Pre-allocation:** Tái sử dụng `Matrix4`, `Vector3` cố định, tránh Garbage Collection (GC) spikes.
-- **Mounted Guard:** Sử dụng biến cờ `isMounted` trong các callback async của MapLibre để triệt tiêu lỗi `Map is null` khi unmount đột ngột.
+- **Mounted Guard:** Sử dụng biến cờ `isMounted` trong các callback async của MapTiler SDK để triệt tiêu lỗi `Map is null` khi unmount đột ngột.
 
 ---
 

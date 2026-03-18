@@ -1,14 +1,14 @@
-# MapLibre 3D Project Context
+# MapTiler SDK 3D Project Context
 
-This project is a high-performance 3D map visualization application that integrates **MapLibre GL JS** with **Three.js** using **React Three Fiber (R3F)**. It is designed to render thousands of 3D models efficiently within a shared WebGL context.
+This project is a high-performance 3D map visualization application that integrates **MapTiler SDK** (built on MapLibre engine) with **Three.js** using **React Three Fiber (R3F)**. It is designed to render thousands of 3D models efficiently within a shared WebGL context.
 
 ## Project Overview
 
-- **Core Technology:** React 19, Vite, TypeScript, MapLibre GL JS v5, Three.js, React Three Fiber.
-- **Key Objective:** Seamlessly overlay 3D content (GLB models) onto a MapLibre map with perfect camera synchronization and high performance (40+ FPS for 1000+ models).
+- **Core Technology:** React 19, Vite, TypeScript, MapTiler SDK v3+, Three.js, React Three Fiber.
+- **Key Objective:** Seamlessly overlay 3D content (GLB models) onto a MapTiler map with perfect camera synchronization and high performance (40+ FPS for 1000+ models).
 - **Main Components:**
   - `MapView.tsx`: The primary map container.
-  - `MapThreeLayer.tsx`: A hybrid sync bridge that renders an R3F Canvas as an overlay and synchronizes it with MapLibre's camera state directly via a Custom Layer.
+  - `MapThreeLayer.tsx`: A hybrid sync bridge that renders an R3F Canvas as an overlay and synchronizes it with the map's camera state directly via a Custom Layer.
   - `InstanceRenderer.tsx`: Optimized rendering using `THREE.InstancedMesh` for multiple instances of the same model.
   - `SingleModelRenderer.tsx`: Standard renderer for individual 3D objects.
   - `ModelManager.tsx`: Orchestrates the placement and loading of 3D assets.
@@ -39,8 +39,8 @@ The project uses `pnpm` as the package manager.
 
 ## Architecture Details
 
-- **Hybrid Sync:** The project uses an R3F Canvas positioned as an absolute overlay on top of the MapLibre map. A MapLibre Custom Layer is used to share the WebGL context and synchronize camera state.
-- **Camera Sync:** The synchronization logic is integrated directly into `MapThreeLayer.tsx`. It handles MapLibre v5+ projection matrices, ensuring 3D objects stay "pinned" to the map during panning, zooming, and tilting.
+- **Hybrid Sync:** The project uses an R3F Canvas positioned as an absolute overlay on top of the MapTiler map. A Custom Layer is used to share the WebGL context and synchronize camera state.
+- **Camera Sync:** The synchronization logic is integrated directly into `MapThreeLayer.tsx`. It handles projection matrices, ensuring 3D objects stay "pinned" to the map during panning, zooming, and tilting.
 - **Resource Management:** `ModelManager` is the central place to define which models are loaded and where they are placed.
 
 ## 3 Rules for Documenting Code

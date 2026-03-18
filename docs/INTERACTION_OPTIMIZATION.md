@@ -1,4 +1,4 @@
-# Tối ưu hóa Hiệu năng Tương tác (Interaction Optimization)
+# Tối ưu hóa Hiệu năng Tương tác (Interaction Optimization) (MapTiler SDK)
 
 Tài liệu này giải thích các kỹ thuật tối ưu hóa để xử lý vấn đề nghẽn luồng chính (Main Thread) khi người dùng tương tác với hàng ngàn model 3D trên bản đồ.
 
@@ -19,7 +19,7 @@ Chúng ta thực hiện tối ưu hóa tại `src/components/map3d/MapThreeLayer
 ### B. Chặn Pointer Events ở mức DOM
 
 - Sử dụng `style={{ pointerEvents: 'none' }}` trên Canvas của R3F.
-- **Mục tiêu:** Đảm bảo trình duyệt không gửi các sự kiện di chuyển chuột liên tục (`mousemove`, `mouseover`) vào không gian 3D của Three.js khi người dùng đang thao tác trên bản đồ nền. Điều này giúp MapLibre xử lý các tác vụ như `queryRenderedFeatures` mượt mà hơn.
+- **Mục tiêu:** Đảm bảo trình duyệt không gửi các sự kiện di chuyển chuột liên tục (`mousemove`, `mouseover`) vào không gian 3D của Three.js khi người dùng đang thao tác trên bản đồ nền. Điều này giúp MapTiler SDK xử lý các tác vụ như `queryRenderedFeatures` mượt mà hơn.
 
 ### C. Cơ chế On-Demand Interaction
 
@@ -30,4 +30,4 @@ Chúng ta thực hiện tối ưu hóa tại `src/components/map3d/MapThreeLayer
 
 1. **Khi cần bắt sự kiện hover:** Nếu thực sự cần hiệu ứng hover (đổi màu model khi di chuyển chuột qua), hãy cân nhắc tạo một **Picking Proxy** (một Mesh đơn giản như Box hoặc Plane bao quanh model) thay vì tính toán trực tiếp trên Mesh chi tiết của model.
 2. **Raycasting Hierarchy:** Luôn đặt `frustumCulled={false}` trên `InstancedMesh` để giảm thiểu số lượng Draw Calls và tăng hiệu suất tính toán va chạm.
-3. **Thứ tự sự kiện:** MapLibre luôn được ưu tiên xử lý sự kiện trước. Nếu bạn muốn bắt sự kiện trong Three.js, hãy đảm bảo MapLibre không bị chặn bởi Canvas overlay.
+3. **Thứ tự sự kiện:** MapTiler SDK luôn được ưu tiên xử lý sự kiện trước. Nếu bạn muốn bắt sự kiện trong Three.js, hãy đảm bảo MapTiler SDK không bị chặn bởi Canvas overlay.
