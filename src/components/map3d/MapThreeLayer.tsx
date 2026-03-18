@@ -32,6 +32,28 @@ const AdvanceCapturer = ({
 };
 
 /**
+ * Component "Hack" để đồng bộ R3F Invalidate với MapLibre Repaint.
+ */
+const InvalidateSync = ({ map }: { map: maplibregl.Map }) => {
+  const set = useThree((state) => state.set);
+  const get = useThree((state) => state.get);
+
+  useEffect(() => {
+    const originalInvalidate = get().invalidate;
+
+    // Ghi đè hàm invalidate trong store của R3F
+    set({
+      invalidate: () => {
+        map.triggerRepaint(); // Ép MapLibre vẽ lại
+        originalInvalidate(); // Vẫn gọi hàm invalidate gốc của R3F
+      },
+    });
+  }, [map, set, get]);
+
+  return null;
+};
+
+/**
  * Custom 3D Layer: "Ký sinh" R3F vào WebGL Context của MapLibre.
  * Kỹ thuật này giúp model 3D bị che khuất tự nhiên bởi địa hình (Native Depth Occlusion)
  * và chia sẻ chung một Z-buffer duy nhất.
@@ -56,6 +78,7 @@ export const MapThreeLayer = ({
     if (rootRef.current && sceneRef.current && cameraRef.current) {
       rootRef.current.render(
         <group>
+          <InvalidateSync map={map} />
           <AdvanceCapturer advanceRef={advanceRef} />
           <Lights />
           {children}
@@ -114,7 +137,7 @@ export const MapThreeLayer = ({
             scene: scene,
             frameloop: 'never', // Frame sẽ được đẩy thủ công bên trong hàm `render` của maplibre
             events: () => ({
-              // Theo INTERACTION_OPTIMIZATION.md: Tắt event mặc định để tránh Raycaster làm đứng máy
+              // Tắt event mặc định để tránh Raycaster làm đứng máy
               enabled: false,
               priority: 0,
               connect: () => {},
@@ -144,6 +167,7 @@ export const MapThreeLayer = ({
         // Kích hoạt lần render đầu tiên
         setup.root.render(
           <group>
+            <InvalidateSync map={mapInstance} />
             <AdvanceCapturer advanceRef={advanceRef} />
             <Lights />
             {children}

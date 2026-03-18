@@ -47,7 +47,7 @@ const useTerrainLoading = (mapInstance: Map | null) => {
   // Khóa Kép: Chỉ tắt Loading khi cả Model và Terrain đều sẵn sàng
   useEffect(() => {
     if (isTerrainActive && isTerrainReady && isModelReady) {
-      const timer = setTimeout(() => setIsLoading3D(false), 200); // Flush buffer delay
+      const timer = setTimeout(() => setIsLoading3D(false), 50); // Flush buffer delay
       return () => clearTimeout(timer);
     }
   }, [isTerrainActive, isTerrainReady, isModelReady]);

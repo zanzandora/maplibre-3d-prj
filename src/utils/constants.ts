@@ -1,6 +1,8 @@
+import { SITES_LIST } from './siteList';
+
 export const MAP_CENTER = {
-  lng: 105.463556,
-  lat: 20.901976,
+  lng: SITES_LIST[0].coordinates[0],
+  lat: SITES_LIST[0].coordinates[1],
 };
 
 export const DEFAULT_VIEW_STATE = {
@@ -11,6 +13,10 @@ export const DEFAULT_VIEW_STATE = {
 };
 
 export const MAP_BOUNDS_OFFSET = 0.01; // Roughly 1km
+
+export const MAX_CAPACITY = 1000; // Maximum number of instances allowed in the scene
+
+export const MODEL_HEIGHT_OFFSET = 0.1; // Offset in meters to prevent sinking into terrain
 
 export const LAYERS_TO_HIDE = [
   'congtrinh',

@@ -6,7 +6,6 @@ import {
   type Material,
   type Mesh,
   Vector3,
-  Color,
 } from 'three';
 import { GLBLoader } from '../loader/GLBLoader';
 import type { InstanceData } from '../utils/types';
@@ -20,19 +19,12 @@ interface InstanceProps {
 
 // Reuse dummy object to avoid GC
 const DUMMY = new Object3D();
-const DEFAULT_COLOR = new Color('#ffffff');
-const HIGHLIGHT_COLOR = new Color('#ffcc00'); // Yellow-gold highlight
 
 /**
  * InstanceRenderer: Efficiently renders multiple instances of a GLB model with LOD.
  * LOD switching is handled via the 'zoom' prop passed from ModelManager.
  */
-export const InstanceRenderer = ({
-  url,
-  instances,
-  zoom,
-  selectedId,
-}: InstanceProps) => {
+export const InstanceRenderer = ({ url, instances, zoom }: InstanceProps) => {
   const { nodes } = GLBLoader.useLoad(url);
 
   // Extract geometries and materials from GLB
@@ -86,24 +78,6 @@ export const InstanceRenderer = ({
       boxRef.current.computeBoundingSphere();
     }
   }, [instances, meshParts]);
-
-  // 2. Sync Colors for both LODs (Only runs on selection or data change)
-  // useLayoutEffect(() => {
-  //   if (instances.length === 0) return;
-
-  //   instances.forEach((inst, i) => {
-  //     const color = inst.id === selectedId ? HIGHLIGHT_COLOR : DEFAULT_COLOR;
-  //     glbRefs.current.forEach((mesh) => mesh?.setColorAt(i, color));
-  //     boxRef.current?.setColorAt(i, color);
-  //   });
-
-  //   glbRefs.current.forEach((mesh) => {
-  //     if (mesh?.instanceColor) mesh.instanceColor.needsUpdate = true;
-  //   });
-  //   if (boxRef.current?.instanceColor) {
-  //     boxRef.current.instanceColor.needsUpdate = true;
-  //   }
-  // }, [selectedId, instances]);
 
   return (
     <group>

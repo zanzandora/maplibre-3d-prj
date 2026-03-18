@@ -61,7 +61,7 @@ export const IvoryLayers = ({ show3D }: IvoryLayersProps) => {
           [20, 20],
         ],
       },
-      visibility: 'visible',
+      visibility: visibility2D,
     },
     paint: {
       'text-color': 'rgba(0, 90, 129, 1)',
@@ -170,7 +170,7 @@ export const IvoryLayers = ({ show3D }: IvoryLayersProps) => {
           [20, 20],
         ],
       },
-      visibility: 'visible',
+      visibility: visibility2D,
     },
     paint: {
       'text-color': 'rgb(0, 0, 0)',
@@ -204,7 +204,7 @@ export const IvoryLayers = ({ show3D }: IvoryLayersProps) => {
           [20, 20],
         ],
       },
-      visibility: 'visible',
+      visibility: visibility2D,
     },
     paint: {
       'text-color': 'rgba(0, 90, 129, 1)',

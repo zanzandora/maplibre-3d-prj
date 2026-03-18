@@ -54,13 +54,6 @@ export const ModelManager = ({
     };
   });
 
-  // note: Đảm bảo MapLibre repaint sau khi React đã cập nhật xong trạng thái Highlight vào Three.js
-  // useEffect(() => {
-  //   if (selectedId) {
-  //     map.triggerRepaint();
-  //   }
-  // }, [selectedId, map]);
-
   // todo: Initial Data Fetch
   useEffect(() => {
     fetch('/map3d/ivory/buildings.json')
