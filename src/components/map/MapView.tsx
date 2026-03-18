@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { useState, useMemo, useCallback, useEffect } from 'react';
+import { useState, useMemo, useCallback } from 'react';
 import Map, { Source, TerrainControl } from 'react-map-gl/maplibre';
 import * as maptilersdk from '@maptiler/sdk';
 import '@maptiler/sdk/dist/maptiler-sdk.css';
@@ -12,11 +12,11 @@ import {
   MAP_CENTER,
   DEFAULT_VIEW_STATE,
   MAP_BOUNDS_OFFSET,
-  LAYERS_TO_HIDE,
-  LAYERS_TO_FORCE_SHOW,
 } from '../../utils/constants';
 import { SITES_LIST } from '../../utils/siteList';
 import Loading3D from '../Loading3D';
+import useLayerVisibility from '../../hooks/map/useLayerVisibility';
+import useTerrainLoading from '../../hooks/map/useTerrainLoading';
 
 // note: Limit workers to avoid Main Thread congestion.
 maplibregl.setWorkerCount(
@@ -34,37 +34,17 @@ maptilersdk.config.apiKey = import.meta.env.VITE_MAPTILER_API_KEY;
  */
 const MapView = () => {
   const [mapInstance, setMapInstance] = useState<maptilersdk.Map | null>(null);
-  const [isTerrainActive, setIsTerrainActive] = useState<boolean>(false);
 
-  const [isLoading3D, setIsLoading3D] = useState<boolean>(false);
+  const { isTerrainActive, isLoading3D, setIsModelReady } =
+    useTerrainLoading(mapInstance);
+
+  useLayerVisibility(mapInstance, isTerrainActive);
 
   // Center coordinate for relative positioning (Near the sample model).
   const centerCoord = useMemo(
     () => WGS84_TO_MERCATOR(MAP_CENTER.lng, MAP_CENTER.lat, 0),
     []
   );
-
-  /**
-   * todo: Sync Layer Visibility with Terrain State
-   */
-  useEffect(() => {
-    if (!mapInstance) return;
-
-    const visibilityHide = isTerrainActive ? 'none' : 'visible';
-    const visibilityShow = isTerrainActive ? 'visible' : 'none';
-
-    LAYERS_TO_HIDE.forEach((id) => {
-      if (mapInstance.getLayer(id)) {
-        mapInstance.setLayoutProperty(id, 'visibility', visibilityHide);
-      }
-    });
-
-    LAYERS_TO_FORCE_SHOW.forEach((id) => {
-      if (mapInstance.getLayer(id)) {
-        mapInstance.setLayoutProperty(id, 'visibility', visibilityShow);
-      }
-    });
-  }, [isTerrainActive, mapInstance]);
 
   /**
    * todo: Request Throttling: Prioritize critical tiles and throttle others.
@@ -138,31 +118,6 @@ const MapView = () => {
     ] as [[number, number], [number, number]];
   }, []);
 
-  // todo:
-  useEffect(() => {
-    if (!mapInstance) return;
-
-    const handleTerrainChange = () => {
-      const terrainState = mapInstance.getTerrain();
-      const isActive = !!terrainState;
-
-      if (isActive && !isTerrainActive) {
-        setIsLoading3D(true);
-      }
-
-      setIsTerrainActive(isActive);
-    };
-
-    mapInstance.on('terrain', handleTerrainChange);
-    mapInstance.on('styledata', handleTerrainChange);
-    handleTerrainChange();
-
-    return () => {
-      mapInstance.off('terrain', handleTerrainChange);
-      mapInstance.off('styledata', handleTerrainChange);
-    };
-  }, [isTerrainActive, mapInstance]);
-
   return (
     <div style={{ width: '100vw', height: '100vh', position: 'relative' }}>
       {isLoading3D && <Loading3D />}
@@ -171,6 +126,9 @@ const MapView = () => {
         mapLib={maptilersdk as any}
         initialViewState={DEFAULT_VIEW_STATE}
         maxBounds={maxBounds}
+        // note: Giới hạn Zoom để tránh nạp các tile quá xa hoặc quá chi tiết không cần thiết
+        minZoom={12}
+        maxZoom={20}
         // note: Using HYBRID_V4 style for a clean, professional aesthetic (less CPU/GPU heavy than OUTDOOR).
         mapStyle={maptilersdk.MapStyle.HYBRID_V4.DEFAULT as any}
         onLoad={onMapLoad}
@@ -199,7 +157,7 @@ const MapView = () => {
                 centerCoord={centerCoord}
                 map={mapInstance as unknown as maplibregl.Map}
                 isVisible={isTerrainActive}
-                onLoadComplete={() => setIsLoading3D(false)}
+                onLoadComplete={() => setIsModelReady(true)}
               />
             </MapThreeLayer>
 
@@ -210,7 +168,15 @@ const MapView = () => {
               url={`https://api.maptiler.com/tiles/terrain-rgb-v2/tiles.json?key=${
                 import.meta.env.VITE_MAPTILER_API_KEY
               }`}
+              // note: Giới hạn nạp DEM Tile chỉ trong khu vực maxBounds của dự án
+              bounds={[
+                maxBounds[0][0],
+                maxBounds[0][1],
+                maxBounds[1][0],
+                maxBounds[1][1],
+              ]}
               tileSize={256}
+              maxzoom={12}
             />
 
             <TerrainControl source='maptiler-terrain' />

@@ -93,11 +93,11 @@ export const ModelManager = ({
   useEffect(() => {
     if (rawData.length === 0 || !map || !isVisible) return;
 
-    // Nếu đã quét đủ và isVisible không đổi thì không quét lại (tránh loop)
-    if (
-      Object.keys(elevations).length === rawData.length &&
-      initializedRef.current
-    ) {
+    const isTerrainReady = Object.keys(elevations).length === rawData.length;
+
+    // note: DOUBLE-LOCK CHECK
+    // Chỉ báo hoàn tất khi: 1. Có rawData, 2. Terrain đã quét đủ, 3. Đã qua ít nhất 1 lần init
+    if (isTerrainReady && initializedRef.current) {
       if (onLoadComplete) onLoadComplete();
       return;
     }
@@ -130,7 +130,13 @@ export const ModelManager = ({
           if (!isMounted()) return;
           setElevations(updatedElevations);
           initializedRef.current = true;
-          if (onLoadComplete) onLoadComplete();
+
+          // Re-check double lock after state update
+          const checkReady =
+            Object.keys(updatedElevations).length === rawData.length;
+          if (checkReady && onLoadComplete) {
+            onLoadComplete();
+          }
         });
       }
     };
@@ -150,6 +156,7 @@ export const ModelManager = ({
 
     return () => {
       map.off('data', handleData);
+      map.off('idle', updateAllElevations);
       if (rafRef.current) cancelAnimationFrame(rafRef.current);
     };
   }, [rawData, map, isVisible, onLoadComplete, elevations, isMounted]);
