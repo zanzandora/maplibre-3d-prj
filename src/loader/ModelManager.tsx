@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, useRef } from 'react';
+import { useEffect, useMemo, useState, useRef, Suspense } from 'react';
 import { InstanceRenderer } from '../engine/InstanceRenderer';
 import {
   getRelativePosition,
@@ -14,6 +14,7 @@ import type {
 } from '../utils/types';
 import { Bvh } from '@react-three/drei';
 import { useIsMounted } from '../hooks/useIsMounted';
+import { MODEL_HEIGHT_OFFSET } from '../utils/constants';
 
 interface ModelManagerProps {
   centerCoord: CenterCoordinate;
@@ -53,14 +54,12 @@ export const ModelManager = ({
     };
   });
 
-  const [selectedId, setSelectedId] = useState<string | null>(null);
-
   // note: Đảm bảo MapLibre repaint sau khi React đã cập nhật xong trạng thái Highlight vào Three.js
-  useEffect(() => {
-    if (selectedId) {
-      map.triggerRepaint();
-    }
-  }, [selectedId, map]);
+  // useEffect(() => {
+  //   if (selectedId) {
+  //     map.triggerRepaint();
+  //   }
+  // }, [selectedId, map]);
 
   // todo: Initial Data Fetch
   useEffect(() => {
@@ -203,7 +202,7 @@ export const ModelManager = ({
       if (!isWithinBounds(model.lng, model.lat, bufferedBounds)) return;
 
       const terrainHeight = elevations[index] || 0;
-      const adjustedHeight = model.height + terrainHeight;
+      const adjustedHeight = model.height + terrainHeight + MODEL_HEIGHT_OFFSET;
 
       const position = getRelativePosition(
         model.lng,
@@ -231,14 +230,16 @@ export const ModelManager = ({
   return (
     <group visible={isVisible}>
       <Bvh firstHitOnly>
-        {Object.entries(groupedModels).map(([url, instances]) => (
-          <InstanceRenderer
-            key={url}
-            url={url}
-            instances={instances}
-            zoom={zoom}
-          />
-        ))}
+        <Suspense fallback={null}>
+          {Object.entries(groupedModels).map(([url, instances]) => (
+            <InstanceRenderer
+              key={url}
+              url={url}
+              instances={instances}
+              zoom={zoom}
+            />
+          ))}
+        </Suspense>
       </Bvh>
     </group>
   );

@@ -88,22 +88,22 @@ export const InstanceRenderer = ({
   }, [instances, meshParts]);
 
   // 2. Sync Colors for both LODs (Only runs on selection or data change)
-  useLayoutEffect(() => {
-    if (instances.length === 0) return;
+  // useLayoutEffect(() => {
+  //   if (instances.length === 0) return;
 
-    instances.forEach((inst, i) => {
-      const color = inst.id === selectedId ? HIGHLIGHT_COLOR : DEFAULT_COLOR;
-      glbRefs.current.forEach((mesh) => mesh?.setColorAt(i, color));
-      boxRef.current?.setColorAt(i, color);
-    });
+  //   instances.forEach((inst, i) => {
+  //     const color = inst.id === selectedId ? HIGHLIGHT_COLOR : DEFAULT_COLOR;
+  //     glbRefs.current.forEach((mesh) => mesh?.setColorAt(i, color));
+  //     boxRef.current?.setColorAt(i, color);
+  //   });
 
-    glbRefs.current.forEach((mesh) => {
-      if (mesh?.instanceColor) mesh.instanceColor.needsUpdate = true;
-    });
-    if (boxRef.current?.instanceColor) {
-      boxRef.current.instanceColor.needsUpdate = true;
-    }
-  }, [selectedId, instances]);
+  //   glbRefs.current.forEach((mesh) => {
+  //     if (mesh?.instanceColor) mesh.instanceColor.needsUpdate = true;
+  //   });
+  //   if (boxRef.current?.instanceColor) {
+  //     boxRef.current.instanceColor.needsUpdate = true;
+  //   }
+  // }, [selectedId, instances]);
 
   return (
     <group>
