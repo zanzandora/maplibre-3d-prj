@@ -150,7 +150,7 @@ const MapView = () => {
             <MapThreeLayer
               map={mapInstance as unknown as maplibregl.Map}
               centerCoord={centerCoord}
-              beforeId='poi_outdoor'
+              // beforeId='poi_outdoor'
             >
               {/* COMPONENTS 3D VÀ R3F*/}
               <ModelManager

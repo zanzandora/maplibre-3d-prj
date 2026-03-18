@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { useEffect, useRef } from 'react';
-import maplibregl from 'maplibre-gl';
+import { type CustomLayerInterface } from 'maplibre-gl';
 import * as THREE from 'three';
 import { createRoot, extend, useThree } from '@react-three/fiber';
 import { Lights } from './Lights';
@@ -69,7 +69,7 @@ export const MapThreeLayer = ({
     if (!map) return;
 
     // Định nghĩa Custom Layer theo chuẩn MapLibre GL JS
-    const customLayer: maplibregl.CustomLayerInterface = {
+    const customLayer: CustomLayerInterface = {
       id: layerId,
       type: 'custom',
       renderingMode: '3d',
