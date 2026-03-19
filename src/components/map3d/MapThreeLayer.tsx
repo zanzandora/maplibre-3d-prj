@@ -18,6 +18,9 @@ interface MapThreeLayerProps {
 
 const MAP_MATRIX = new THREE.Matrix4();
 
+/**
+ *  todo: Help MapLibre pull Three.js to run alongside it.
+ */
 const AdvanceCapturer = ({
   advanceRef,
 }: {
@@ -31,7 +34,7 @@ const AdvanceCapturer = ({
 };
 
 /**
- * Component "Hack" để đồng bộ R3F Invalidate với MapLibre Repaint.
+ * todo: Help Three.js wake up MapLibre when new data is received..
  */
 const InvalidateSync = ({ map }: { map: Map }) => {
   const set = useThree((state) => state.set);
@@ -53,7 +56,7 @@ const InvalidateSync = ({ map }: { map: Map }) => {
 };
 
 /**
- * Custom 3D Layer: "Ký sinh" R3F vào WebGL Context của MapLibre.
+ * todo: Custom 3D Layer: "Ký sinh" R3F vào WebGL Context của MapLibre.
  */
 export const MapThreeLayer = ({
   map,
@@ -151,7 +154,7 @@ export const MapThreeLayer = ({
             scene: scene,
             frameloop: 'never', // Frame sẽ được đẩy thủ công bên trong hàm `render` của maplibre
             events: () => ({
-              // Tắt event mặc định để tránh Raycaster làm đứng máy
+              // note: true when (hover/click) on 3D models
               enabled: false,
               priority: 0,
               connect: () => {},
@@ -163,7 +166,7 @@ export const MapThreeLayer = ({
               width: canvas.clientWidth,
               height: canvas.clientHeight,
             },
-            dpr: Math.min(window.devicePixelRatio, 2),
+            dpr: [1, Math.min(window.devicePixelRatio, 2)],
           });
 
           // Lưu vào Canvas để dùng lại

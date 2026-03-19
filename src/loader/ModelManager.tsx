@@ -19,7 +19,7 @@ import type {
   GroupedInstances,
   ModelData,
 } from '../utils/types';
-import { Bvh } from '@react-three/drei';
+import { Bvh, Preload } from '@react-three/drei';
 import { useIsMounted } from '../hooks/useIsMounted';
 import { MODEL_HEIGHT_OFFSET } from '../utils/constants';
 
@@ -247,6 +247,7 @@ export const ModelManager = ({
               zoom={zoom}
             />
           ))}
+          <Preload all />
         </Suspense>
       </Bvh>
     </group>
