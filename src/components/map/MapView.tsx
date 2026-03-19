@@ -46,11 +46,10 @@ const MapView = () => {
    * todo: Request Throttling: Prioritize critical tiles and throttle others.
    */
   const transformRequest = useCallback((url: string, resourceType?: string) => {
-    // Priority 1: Terrain/DEM tiles are critical for 3D alignment
+    // note: Lọc nhanh theo resourceType để tránh xử lý chuỗi dư thừa
     if (resourceType === 'Tile' && url.includes('terrain')) {
       return { url, priority: 'high' };
     }
-    // Priority 2: Standard tiles
     return { url };
   }, []);
 
@@ -158,9 +157,14 @@ const MapView = () => {
             <Source
               id='maptiler-terrain'
               type='raster-dem'
-              url={`https://api.maptiler.com/tiles/terrain-rgb-v2/tiles.json?key=${
-                import.meta.env.VITE_MAPTILER_API_KEY
-              }`}
+              // note: url prop dành cho link chứa metadata (JSON)
+              // note: tiles prop chứa Tile Template (chứa {z}/{x}/{y})
+              // url={`https://api.maptiler.com/tiles/terrain-rgb-v2/tiles.json?key=${
+              //   import.meta.env.VITE_MAPTILER_API_KEY
+              // }`}
+              tiles={[
+                `https://api.ekgis.vn/v2/maps/terrain/{z}/{x}/{y}.png?api_key=DYZSHsEqJFc58MaBhYHI9zmMMmmPn3Xg9NXSrf0V`,
+              ]}
               // note: Giới hạn nạp DEM Tile chỉ trong khu vực maxBounds của dự án
               bounds={[
                 maxBounds[0][0],

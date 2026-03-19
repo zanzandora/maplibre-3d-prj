@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { useEffect, useRef } from 'react';
+import { useEffect, useMemo, useRef } from 'react';
 import { type CustomLayerInterface, type Map } from 'maplibre-gl';
 import * as THREE from 'three';
 import { createRoot, extend, useThree } from '@react-three/fiber';
@@ -16,7 +16,6 @@ interface MapThreeLayerProps {
   beforeId?: string; // ID của layer mà 3D Layer sẽ chèn vào DƯỚI nó (ví dụ: chèn dưới layer 'poi_outdoor')
 }
 
-const WORLD_MATRIX = new THREE.Matrix4();
 const MAP_MATRIX = new THREE.Matrix4();
 
 const AdvanceCapturer = ({
@@ -55,8 +54,6 @@ const InvalidateSync = ({ map }: { map: Map }) => {
 
 /**
  * Custom 3D Layer: "Ký sinh" R3F vào WebGL Context của MapLibre.
- * Kỹ thuật này giúp model 3D bị che khuất tự nhiên bởi địa hình (Native Depth Occlusion)
- * và chia sẻ chung một Z-buffer duy nhất.
  */
 export const MapThreeLayer = ({
   map,
@@ -72,10 +69,34 @@ export const MapThreeLayer = ({
 
   const advanceRef = useRef<AdvanceFn | null>(null);
 
-  // Đồng bộ hóa việc cập nhật children (React Nodes) vào R3F Root
-  // Giúp các model mới thêm vào được render mà không cần khởi tạo lại toàn bộ WebGL.
+  // note: Đóng băng World Matrix để tránh tính toán lại mỗi frame
+  const worldMatrix = useMemo(() => {
+    const m = new THREE.Matrix4();
+    const s = centerCoord.meterScale;
+    m.set(
+      s,
+      0,
+      0,
+      centerCoord.x,
+      0,
+      0,
+      s,
+      centerCoord.y,
+      0,
+      s,
+      0,
+      centerCoord.z,
+      0,
+      0,
+      0,
+      1
+    );
+    return m;
+  }, [centerCoord]);
+
+  // Đồng bộ hóa việc cập nhật children
   useEffect(() => {
-    if (rootRef.current && sceneRef.current && cameraRef.current) {
+    if (rootRef.current) {
       rootRef.current.render(
         <group>
           <InvalidateSync map={map} />
@@ -117,18 +138,11 @@ export const MapThreeLayer = ({
           const scene = new THREE.Scene();
           sceneRef.current = scene;
 
-          const camera = new THREE.PerspectiveCamera(
-            28,
-            window.innerWidth / window.innerHeight,
-            0.01,
-            1e6
-          );
-          // Vì projection matrix được gán trực tiếp từ MapLibre, vô hiệu hóa tự động cập nhật matrix của ThreeJS.
+          const camera = new THREE.PerspectiveCamera(28, 1, 0.01, 1e6);
           camera.matrixAutoUpdate = false;
           cameraRef.current = camera;
 
-          // 3. Khởi tạo R3F Root (Thay thế cho <Canvas />)
-          const root = createRoot(mapInstance.getCanvas());
+          const root = createRoot(canvas);
           rootRef.current = root;
 
           root.configure({
@@ -146,10 +160,9 @@ export const MapThreeLayer = ({
             size: {
               top: 0,
               left: 0,
-              width: mapInstance.getCanvas().clientWidth,
-              height: mapInstance.getCanvas().clientHeight,
+              width: canvas.clientWidth,
+              height: canvas.clientHeight,
             },
-            // Giới hạn dpr theo chuẩn hiệu năng trong project
             dpr: Math.min(window.devicePixelRatio, 2),
           });
 
@@ -163,86 +176,28 @@ export const MapThreeLayer = ({
         sceneRef.current = setup.scene;
         cameraRef.current = setup.camera;
         rootRef.current = setup.root;
-
-        // Kích hoạt lần render đầu tiên
-        setup.root.render(
-          <group>
-            <InvalidateSync map={mapInstance} />
-            <AdvanceCapturer advanceRef={advanceRef} />
-            <Lights />
-            {children}
-          </group>
-        );
       },
 
       render: function (gl, matrix) {
         const renderer = rendererRef.current;
         const camera = cameraRef.current;
-        const root = rootRef.current;
+        if (!renderer || !camera) return;
 
-        if (!renderer || !camera || !root) return;
-
-        // Xử lý an toàn cho cấu trúc ma trận của MapLibre v5+
-        const matrixArray = matrix.defaultProjectionData
+        // note: Trích xuất ma trận nhanh hơn
+        const m = matrix.defaultProjectionData
           ? matrix.defaultProjectionData.mainMatrix
           : matrix;
+        MAP_MATRIX.fromArray(m as number[]);
 
-        // Khớp Projection Matrix của camera với bản đồ
-        MAP_MATRIX.fromArray(matrixArray as number[]);
+        // note: Kết hợp ma trận thế giới đã được đóng băng
+        camera.projectionMatrix.copy(MAP_MATRIX).multiply(worldMatrix);
 
-        const s = centerCoord.meterScale;
-
-        /*
-          note: THUẬT TOÁN ĐỒNG BỘ TỌA ĐỘ (Y-up Three.js -> Z-up MapLibre)
-          
-          Tại sao cần ma trận này?
-          MapLibre sử dụng hệ tọa độ Z-up (Z là độ cao), trong khi Three.js sử dụng Y-up.
-          Thay vì xoay từng Object3D thủ công (gây tốn CPU), chúng ta tráo đổi 
-          trục Y và Z ngay tại ma trận World của Camera.
-          
-          Mapping: 
-          - Three.js X -> MapLibre X (Longitude)
-          - Three.js Y -> MapLibre Z (Altitude)
-          - Three.js Z -> MapLibre Y (Latitude)
-        */
-        WORLD_MATRIX.set(
-          s,
-          0,
-          0,
-          centerCoord.x,
-          0,
-          0,
-          s,
-          centerCoord.y,
-          0,
-          s,
-          0,
-          centerCoord.z,
-          0,
-          0,
-          0,
-          1
-        );
-
-        // Gộp hai ma trận vào Camera
-        camera.projectionMatrix.copy(MAP_MATRIX).multiply(WORLD_MATRIX);
-
-        /*
-          note: PHÒNG CHỐNG HIỆN TƯỢNG "DRAPE OCCLUSION"
-          
-          Tại sao phải ép WebGL State?
-          Khi bật Terrain, pass "Drape" của MapLibre thường chiếm quyền điều khiển Z-buffer. 
-          Chúng ta phải ép bật DEPTH_TEST để model 3D không bị địa hình đè mất.
-        */
         gl.enable(gl.DEPTH_TEST);
         gl.depthMask(true);
         renderer.resetState();
 
-        // Tiến R3F lên 1 frame - render Scene thủ công đồng bộ với MapLibre frame
         if (advanceRef.current) {
           advanceRef.current(performance.now() / 1000, true);
-        } else if (sceneRef.current) {
-          renderer.render(sceneRef.current, camera);
         }
       },
 
