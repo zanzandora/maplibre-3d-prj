@@ -1,43 +1,52 @@
-# Shared WebGL Context: Kiến trúc "Ký sinh" Cao cấp (MapTiler SDK)
+# Shared WebGL Context: Kiến trúc "Ký sinh" Cao cấp (MapLibre GL JS)
 
-Tài liệu này trình bày giải pháp tích hợp Three.js vào MapTiler SDK thông qua một Custom Layer duy nhất, sử dụng chung WebGL Context và Z-buffer.
+Tài liệu này trình bày giải pháp tích hợp Three.js vào MapLibre GL JS thông qua một Custom Layer duy nhất, sử dụng chung WebGL Context và Z-buffer.
 
-## 1. Hạn chế của Logic cũ (Legacy Overlay)
-- **Context Loss:** Sử dụng nhiều thẻ `<Canvas>` dẫn đến việc vượt quá giới hạn WebGL Context của trình duyệt (thường là 8-16).
-- **Z-Fighting:** Model 3D không thể bị che khuất bởi địa hình MapTiler vì dùng 2 Z-buffer độc lập.
-- **Floating-point Jitter:** Tính toán tọa độ tuyệt đối ở mức Zoom cao gây ra hiện tượng rung lắc (jittering) do sai số số thực dấu phẩy động.
+## 1. Tại sao dùng Shared Context?
 
-## 2. Giải pháp Đột phá: Parasitic R3F Root
-Thay vì tạo một ứng dụng React mới, chúng ta "ký sinh" một React Three Fiber Root trực tiếp vào Canvas của MapTiler SDK.
+Trong ứng dụng WebGIS 3D thông thường, developer thường đặt một `<Canvas />` của Three.js đè lên trên bản đồ. Cách này gây ra hai nhược điểm chết người:
+- **Z-buffer Separation:** Model 3D không thể bị che khuất bởi địa hình (Terrain) của bản đồ.
+- **Camera Lag:** Camera của Three.js luôn bị trễ một frame so với bản đồ khi xoay/pan.
 
-### Cơ chế Cache Root (`__r3fSetup`)
-Để tránh việc khởi tạo lại nặng nề mỗi khi layer bị re-mount, R3F Root và WebGLRenderer được cache trực tiếp trên đối tượng `HTMLCanvasElement`:
+**Giải pháp:** Chúng ta "ký sinh" một React Three Fiber Root trực tiếp vào Canvas của MapLibre GL JS.
+
+## 2. Kỹ thuật "Ký sinh" (Parasitic Root)
+
+Bên trong component `MapThreeLayer`, chúng ta sử dụng `createRoot` từ `@react-three/fiber` để khởi tạo một Root không có Canvas riêng:
+
 ```typescript
-// Định nghĩa trong global.d.ts
-canvas.__r3fSetup = { renderer, scene, camera, root };
+// maplibre-gl custom layer
+onAdd: function (mapInstance, gl) {
+  const root = createRoot(mapInstance.getCanvas());
+  root.configure({
+    gl: new THREE.WebGLRenderer({ canvas: mapInstance.getCanvas(), context: gl }),
+    frameloop: 'never', // Frame được điều khiển bởi MapLibre
+  });
+}
 ```
 
-### Đồng bộ Ma trận (The Y-Z Swap Breakthrough)
-MapTiler SDK sử dụng hệ tọa độ **Z-up** (Z là độ cao), trong khi Three.js sử dụng **Y-up**. Để model không bị "lún" hay xoay sai hướng, chúng ta sử dụng một ma trận thế giới (World Matrix) thủ công để tráo đổi trục:
+## 3. Đồng bộ hóa Ma trận và Hệ tọa độ
+
+MapLibre GL JS sử dụng hệ tọa độ **Z-up** (Z là độ cao), trong khi Three.js sử dụng **Y-up**. Để model không bị "lún" hay xoay sai hướng, chúng ta sử dụng một ma trận thế giới (World Matrix) thủ công để tráo đổi trục:
 
 ```typescript
-// Ma trận Row-major để map: X->X, Y->Z, Z->Y
 WORLD_MATRIX.set(
-  s, 0, 0, cx, // X Three.js -> East Mercator
-  0, 0, s, cy, // Z Three.js -> South Mercator
-  0, s, 0, cz, // Y Three.js -> Altitude Mercator
+  s, 0, 0, centerCoord.x,
+  0, 0, s, centerCoord.y,
+  0, s, 0, centerCoord.z,
   0, 0, 0, 1
 );
+camera.projectionMatrix.copy(MAP_MATRIX).multiply(WORLD_MATRIX);
 ```
 
-## 3. Quản lý WebGL State (Chống lớp Drape)
-Một vấn đề nghiêm trọng là lớp **Drape** (phủ texture địa hình) của MapTiler SDK thường ghi đè Z-buffer. Chúng ta buộc phải ép trạng thái WebGL trước mỗi frame render của Three.js:
+## 4. Chế ngự lớp "Drape" (Depth Occlusion)
+
+Một vấn đề nghiêm trọng là lớp **Drape** (phủ texture địa hình) của MapLibre GL JS thường ghi đè Z-buffer. Chúng ta buộc phải ép trạng thái WebGL trước mỗi frame render của Three.js:
+
 ```typescript
 gl.enable(gl.DEPTH_TEST);
 gl.depthMask(true);
 renderer.resetState();
 ```
 
-## 4. Lưu ý sống còn cho Developer
-- **TUYỆT ĐỐI KHÔNG** bỏ các component của `react-map-gl` (như `<Source>`, `<Layer>`) vào bên trong `<MapThreeLayer>`. Điều này gây lỗi **Context Loss** do R3F tạo ra một cây React độc lập.
-- **Asset Path:** Luôn đặt model GLB trong `public/map3d/` và truy cập qua đường dẫn tuyệt đối từ root.
+Kỹ thuật này đảm bảo model 3D luôn được render đúng độ sâu so với núi non và công trình trong bản đồ gốc.

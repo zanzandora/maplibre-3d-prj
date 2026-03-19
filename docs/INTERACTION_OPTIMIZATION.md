@@ -1,33 +1,30 @@
-# Tối ưu hóa Hiệu năng Tương tác (Interaction Optimization) (MapTiler SDK)
+# Tối ưu hóa Hiệu năng Tương tác (Interaction Optimization) (MapLibre GL JS)
 
-Tài liệu này giải thích các kỹ thuật tối ưu hóa để xử lý vấn đề nghẽn luồng chính (Main Thread) khi người dùng tương tác với hàng ngàn model 3D trên bản đồ.
+Kiến trúc lồng ghép 3D vào bản đồ (Custom Layer) đòi hỏi sự tách biệt rõ ràng giữa tương tác của người dùng trên bản đồ 2D và tương tác với các vật thể 3D.
 
-## 1. Vấn đề: Cảnh báo `'mouseover' handler took 247ms`
+## 1. Map Click Interceptor (Nguyên lý chặn tia)
 
-### Nguyên nhân
+Để người dùng có thể click chọn model 3D, chúng ta sử dụng kỹ thuật **Raycasting** đồng bộ với hệ tọa độ bản đồ.
 
-Mặc định, React Three Fiber (R3F) sẽ thực hiện kiểm tra va chạm chuột (**Raycasting**) trên mọi vật thể 3D tại mỗi frame khi chuột di chuyển. Khi số lượng instance lớn (hàng ngàn căn nhà) và mỗi căn nhà có hàng triệu polygon, việc duyệt qua toàn bộ cấu trúc dữ liệu hình học này gây quá tải cho Main Thread, dẫn đến hiện tượng lag giật.
+1.  **Chặn sự kiện từ bản đồ:** Component `MapClickInterceptor` lắng nghe sự kiện `click` của MapLibre GL JS.
+2.  **Chuyển đổi sang NDC:** Tọa độ chuột (x, y) trên canvas bản đồ được chuyển đổi sang Normalized Device Coordinates (NDC) từ -1 đến 1.
+3.  **Bắn tia (Raycasting):**
+    - Sử dụng `projectionMatrixInverse` của camera trong Three.js để tính toán tia sáng từ tâm camera xuyên qua điểm NDC.
+    - Tìm kiếm sự va chạm với các `InstancedMesh` trong scene.
+4.  **Phản hồi chính xác:** Nếu click trúng model, chúng ta gọi `e.originalEvent.stopPropagation()` để ngăn MapLibre xử lý sự kiện click trên bản đồ nền, đảm bảo trải nghiệm tương tác mượt mà.
 
-## 2. Giải pháp: Tối ưu hóa Raycaster
+## 2. Interaction Throttling
 
-Chúng ta thực hiện tối ưu hóa tại `src/components/map3d/MapThreeLayer.tsx` để giảm tải hệ thống sự kiện:
+Để tránh lãng phí tài nguyên CPU khi người dùng di chuyển bản đồ liên tục:
 
-### A. Cấu hình Raycaster Params
+- **Mục tiêu:** Đảm bảo trình duyệt không gửi các sự kiện di chuyển chuột liên tục (`mousemove`, `mouseover`) vào không gian 3D của Three.js khi người dùng đang thao tác trên bản đồ nền. Điều này giúp MapLibre GL JS xử lý các tác vụ như `queryRenderedFeatures` mượt mà hơn.
+- **Giải pháp:** Chỉ thực hiện các phép toán va chạm (Raycasting) khi người dùng thực hiện hành động `click` thực sự.
 
-- Đặt `threshold` cho Mesh là `0.05`. Việc tăng ngưỡng này giúp giảm độ chính xác cực nhỏ không cần thiết nhưng tăng tốc độ tính toán va chạm đáng kể cho `InstancedMesh`.
+## 3. Quy tắc ưu tiên tương tác
 
-### B. Chặn Pointer Events ở mức DOM
+1. **2D Native Layers:** Luôn được MapLibre xử lý trước (ví dụ: click vào POI, Road).
+2. **3D Models:** Được xử lý thông qua `MapClickInterceptor`.
+3. **Thứ tự sự kiện:** MapLibre luôn được ưu tiên xử lý sự kiện trước. Nếu bạn muốn bắt sự kiện trong Three.js, hãy đảm bảo MapLibre không bị chặn bởi Canvas overlay.
 
-- Sử dụng `style={{ pointerEvents: 'none' }}` trên Canvas của R3F.
-- **Mục tiêu:** Đảm bảo trình duyệt không gửi các sự kiện di chuyển chuột liên tục (`mousemove`, `mouseover`) vào không gian 3D của Three.js khi người dùng đang thao tác trên bản đồ nền. Điều này giúp MapTiler SDK xử lý các tác vụ như `queryRenderedFeatures` mượt mà hơn.
-
-### C. Cơ chế On-Demand Interaction
-
-- Hệ thống được thiết kế để ưu tiên các sự kiện click (`pointerdown`) thay vì theo dõi liên tục vị trí chuột.
-- Điều này loại bỏ hoàn toàn việc tính toán Raycasting vô ích khi người dùng chỉ lướt chuột qua các khu vực có mật độ model dày đặc.
-
-## 3. Lưu ý cho Developer khi mở rộng
-
-1. **Khi cần bắt sự kiện hover:** Nếu thực sự cần hiệu ứng hover (đổi màu model khi di chuyển chuột qua), hãy cân nhắc tạo một **Picking Proxy** (một Mesh đơn giản như Box hoặc Plane bao quanh model) thay vì tính toán trực tiếp trên Mesh chi tiết của model.
-2. **Raycasting Hierarchy:** Luôn đặt `frustumCulled={false}` trên `InstancedMesh` để giảm thiểu số lượng Draw Calls và tăng hiệu suất tính toán va chạm.
-3. **Thứ tự sự kiện:** MapTiler SDK luôn được ưu tiên xử lý sự kiện trước. Nếu bạn muốn bắt sự kiện trong Three.js, hãy đảm bảo MapTiler SDK không bị chặn bởi Canvas overlay.
+---
+*Tài liệu hướng dẫn tối ưu tương tác người dùng cho dự án 3D WebGIS.*

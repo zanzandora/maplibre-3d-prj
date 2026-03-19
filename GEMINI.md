@@ -1,10 +1,10 @@
-# MapTiler SDK 3D Project Context
+# MapLibre GL JS 3D Project Context
 
-This project is a high-performance 3D map visualization application that integrates **MapTiler SDK** (built on MapLibre engine) with **Three.js** using **React Three Fiber (R3F)**. It is designed to render thousands of 3D models efficiently within a shared WebGL context.
+This project is a high-performance 3D map visualization application that integrates **MapLibre GL JS** (v5+) with **Three.js** using **React Three Fiber (R3F)**. It is designed to render thousands of 3D models efficiently within a shared WebGL context.
 
 ## Project Overview
 
-- **Core Technology:** React 19, Vite, TypeScript, MapTiler SDK v3+, Three.js, React Three Fiber.
+- **Core Technology:** React 19, Vite, TypeScript, MapLibre GL JS v5+, Three.js, React Three Fiber.
 - **Key Objective:** Seamlessly overlay 3D content (GLB models) onto a MapTiler map with perfect camera synchronization and high performance (40+ FPS for 1000+ models).
 - **Main Components:**
   - `MapView.tsx`: The primary map container.
