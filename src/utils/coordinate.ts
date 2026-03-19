@@ -1,4 +1,4 @@
-import maplibregl from 'maplibre-gl';
+import { MercatorCoordinate } from 'maplibre-gl';
 import { Euler, Vector3 } from 'three';
 
 /**
@@ -9,7 +9,7 @@ export const WGS84_TO_MERCATOR = (
   lat: number,
   alt: number = 0
 ) => {
-  const coord = maplibregl.MercatorCoordinate.fromLngLat([lng, lat], alt);
+  const coord = MercatorCoordinate.fromLngLat([lng, lat], alt);
   return {
     x: coord.x,
     y: coord.y,

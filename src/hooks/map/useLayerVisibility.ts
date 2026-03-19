@@ -1,6 +1,6 @@
 import { useEffect } from 'react';
 import { LAYERS_TO_FORCE_SHOW, LAYERS_TO_HIDE } from '../../utils/constants';
-import { type Map } from '@maptiler/sdk';
+import { type Map } from 'maplibre-gl';
 
 /**
  * Automatically synchronize the hiding/showing of 2D layers

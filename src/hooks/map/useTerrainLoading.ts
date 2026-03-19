@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { type Map } from '@maptiler/sdk';
+import { type Map } from 'maplibre-gl';
 
 /**
  * Manage the entire 3D data loading lifecycle (Terrain + Model)

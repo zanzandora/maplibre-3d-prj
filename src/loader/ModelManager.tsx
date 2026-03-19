@@ -1,4 +1,11 @@
-import { useEffect, useMemo, useState, useRef, Suspense } from 'react';
+import {
+  useEffect,
+  useMemo,
+  useState,
+  useRef,
+  useCallback,
+  Suspense,
+} from 'react';
 import { InstanceRenderer } from '../engine/InstanceRenderer';
 import {
   getRelativePosition,
@@ -6,7 +13,7 @@ import {
   isWithinBounds,
 } from '../utils/coordinate';
 import { Vector3 } from 'three';
-import maplibregl, { type MapSourceDataEvent } from 'maplibre-gl';
+import { type Map, type MapSourceDataEvent } from 'maplibre-gl';
 import type {
   CenterCoordinate,
   GroupedInstances,
@@ -18,7 +25,7 @@ import { MODEL_HEIGHT_OFFSET } from '../utils/constants';
 
 interface ModelManagerProps {
   centerCoord: CenterCoordinate;
-  map: maplibregl.Map;
+  map: Map;
   isVisible: boolean;
   onLoadComplete?: () => void;
 }
@@ -76,82 +83,84 @@ export const ModelManager = ({
     }
   }, [isVisible]);
 
-  /*
-    note: CƠ CHẾ TERRAIN SNAPPING V2 (Event-Driven)
-    Tại sao không quét liên tục? 
-    Hàm queryTerrainElevation rất nặng (blocking). Chúng ta chỉ quét khi tile địa hình 
-    vừa tải xong (sự kiện 'data') hoặc bản đồ đã ổn định (sự kiện 'idle').
-  */
-  useEffect(() => {
-    if (rawData.length === 0 || !map || !isVisible) return;
-
-    const isTerrainReady = Object.keys(elevations).length === rawData.length;
-
-    // note: DOUBLE-LOCK CHECK
-    // Chỉ báo hoàn tất khi: 1. Có rawData, 2. Terrain đã quét đủ, 3. Đã qua ít nhất 1 lần init
-    if (isTerrainReady && initializedRef.current) {
-      if (onLoadComplete) onLoadComplete();
+  /**
+   * 3. Core Elevation Logic (Throttled & Interaction-Aware)
+   */
+  const updateAllElevations = useCallback(() => {
+    // note: Throttling - Tránh tính toán nặng khi người dùng đang thao tác
+    if (
+      !isMounted() ||
+      !map ||
+      !map.getStyle ||
+      !map.getStyle() ||
+      !isVisible ||
+      map.isMoving() ||
+      map.isZooming() ||
+      map.isRotating()
+    ) {
       return;
     }
 
-    const updateAllElevations = () => {
-      // note: Defensive check - if map is destroyed hoặc unmounted, dừng ngay lập tức.
-      if (!isMounted() || !map || !map.getStyle || !map.getStyle()) return;
+    const terrain = map.getTerrain();
+    if (!terrain) return;
 
-      const terrain = map.getTerrain();
-      if (!terrain) return;
+    const updatedElevations: Record<number, number> = {};
+    let hasValidData = false;
 
-      // note: Compute everything once and cache
-      const updatedElevations: Record<number, number> = {};
-      let hasValidData = false;
+    rawData.forEach((model, index) => {
+      const alt = map.queryTerrainElevation([model.lng, model.lat]);
 
-      rawData.forEach((model, index) => {
-        const alt = map.queryTerrainElevation([model.lng, model.lat]);
-        if (alt !== null && alt !== undefined) {
-          updatedElevations[index] = alt;
-          if (alt !== 0) hasValidData = true; // Đã có cao độ thực tế
-        } else {
-          updatedElevations[index] = 0;
+      if (alt !== null && alt !== undefined) {
+        updatedElevations[index] = alt;
+        if (alt !== 0) hasValidData = true;
+      } else {
+        updatedElevations[index] = 0;
+      }
+    });
+
+    // Cập nhật state thông qua requestAnimationFrame để mượt mà
+    if (hasValidData || initializedRef.current) {
+      if (rafRef.current) cancelAnimationFrame(rafRef.current);
+
+      rafRef.current = requestAnimationFrame(() => {
+        if (!isMounted()) return;
+        setElevations(updatedElevations);
+        initializedRef.current = true;
+
+        if (onLoadComplete) {
+          onLoadComplete();
         }
       });
+    }
+  }, [rawData, map, isVisible, onLoadComplete, isMounted]);
 
-      // Chỉ cập nhật nếu thực sự có dữ liệu terrain (tránh snap về 0 quá sớm)
-      if (hasValidData || initializedRef.current) {
-        if (rafRef.current) cancelAnimationFrame(rafRef.current);
-        rafRef.current = requestAnimationFrame(() => {
-          if (!isMounted()) return;
-          setElevations(updatedElevations);
-          initializedRef.current = true;
+  // note: Listen to Map Events for Elevation Snapping
+  useEffect(() => {
+    if (rawData.length === 0 || !map || !isVisible) return;
 
-          // Re-check double lock after state update
-          const checkReady =
-            Object.keys(updatedElevations).length === rawData.length;
-          if (checkReady && onLoadComplete) {
-            onLoadComplete();
-          }
-        });
-      }
-    };
-
-    // Terrain tiles might load later, so we listen for data events
     const handleData = (e: MapSourceDataEvent) => {
-      if (e.dataType === 'source' && e.sourceId?.includes('terrain')) {
+      // Chỉ snap khi tile tới VÀ không trong lúc đang di chuyển
+      if (
+        e.dataType === 'source' &&
+        e.sourceId?.includes('terrain') &&
+        !map.isMoving()
+      ) {
         updateAllElevations();
       }
     };
 
     map.on('data', handleData);
+    map.on('idle', updateAllElevations);
 
+    // Initial check
     updateAllElevations();
-
-    map.once('idle', updateAllElevations);
 
     return () => {
       map.off('data', handleData);
       map.off('idle', updateAllElevations);
       if (rafRef.current) cancelAnimationFrame(rafRef.current);
     };
-  }, [rawData, map, isVisible, onLoadComplete, elevations, isMounted]);
+  }, [rawData, map, isVisible, updateAllElevations]);
 
   // todo: Map Event Listeners
   useEffect(() => {
@@ -172,7 +181,6 @@ export const ModelManager = ({
 
     return () => {
       map.off('moveend', updateView);
-      if (rafRef.current) cancelAnimationFrame(rafRef.current);
     };
   }, [map]);
 

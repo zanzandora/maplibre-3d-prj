@@ -551,11 +551,12 @@ export const IvoryLayers = ({ show3D }: IvoryLayersProps) => {
       <Layer {...highwayName} />
       <Layer {...waterName} />
       <Layer {...ranhGioiLine} />
-      <Layer {...matNuocFill} />
       <Layer {...viaHe} />
       <Layer {...daiPhanCach} />
       <Layer {...thamCo} />
       <Layer {...beMatNhanTao} />
+      <Layer {...matNuocFill} />
+
       <Layer {...longDuong} />
       <Layer {...longDuongDat} />
       <Layer {...baiDoXe} />

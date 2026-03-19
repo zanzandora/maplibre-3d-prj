@@ -1,11 +1,11 @@
 import { useEffect } from 'react';
 import { useThree } from '@react-three/fiber';
-import maplibregl from 'maplibre-gl';
+import { type Map, type MapMouseEvent } from 'maplibre-gl';
 import type { InstanceData } from '../utils/types';
 import { InstancedMesh, Raycaster, Vector2, Vector3 } from 'three';
 
 interface MapClickInterceptorProps {
-  map: maplibregl.Map;
+  map: Map;
   onModelClick?: (modelId: string, modelData: InstanceData) => void;
 }
 
@@ -19,7 +19,7 @@ export const MapClickInterceptor = ({
     const raycaster = new Raycaster();
     const mouse = new Vector2();
 
-    const onMapClick = (e: maplibregl.MapMouseEvent) => {
+    const onMapClick = (e: MapMouseEvent) => {
       const canvas = map.getCanvas();
       const rect = canvas.getBoundingClientRect();
 

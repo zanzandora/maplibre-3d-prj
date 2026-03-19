@@ -9,7 +9,8 @@ export const DEFAULT_VIEW_STATE = {
   longitude: MAP_CENTER.lng,
   latitude: MAP_CENTER.lat,
   zoom: 12,
-  pitch: 60,
+  pitch: SITES_LIST[0].initialPitch,
+  bearing: SITES_LIST[0].initialBearing,
 };
 
 export const MAP_BOUNDS_OFFSET = 0.01; // Roughly 1km

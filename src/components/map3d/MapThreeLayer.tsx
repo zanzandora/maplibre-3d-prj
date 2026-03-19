@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { useEffect, useRef } from 'react';
-import { type CustomLayerInterface } from 'maplibre-gl';
+import { type CustomLayerInterface, type Map } from 'maplibre-gl';
 import * as THREE from 'three';
 import { createRoot, extend, useThree } from '@react-three/fiber';
 import { Lights } from './Lights';
@@ -9,7 +9,7 @@ import type { AdvanceFn, R3FRoot } from '../../utils/types';
 extend(THREE as any);
 
 interface MapThreeLayerProps {
-  map: maplibregl.Map;
+  map: Map;
   centerCoord: { x: number; y: number; z: number; meterScale: number };
   children: React.ReactNode;
   layerId?: string;
@@ -34,7 +34,7 @@ const AdvanceCapturer = ({
 /**
  * Component "Hack" để đồng bộ R3F Invalidate với MapLibre Repaint.
  */
-const InvalidateSync = ({ map }: { map: maplibregl.Map }) => {
+const InvalidateSync = ({ map }: { map: Map }) => {
   const set = useThree((state) => state.set);
   const get = useThree((state) => state.get);
 
@@ -120,7 +120,7 @@ export const MapThreeLayer = ({
           const camera = new THREE.PerspectiveCamera(
             28,
             window.innerWidth / window.innerHeight,
-            0.1,
+            0.01,
             1e6
           );
           // Vì projection matrix được gán trực tiếp từ MapLibre, vô hiệu hóa tự động cập nhật matrix của ThreeJS.
@@ -183,12 +183,12 @@ export const MapThreeLayer = ({
         if (!renderer || !camera || !root) return;
 
         // Xử lý an toàn cho cấu trúc ma trận của MapLibre v5+
-        const matrixArray = (matrix as any).defaultProjectionData
-          ? (matrix as any).defaultProjectionData.mainMatrix
+        const matrixArray = matrix.defaultProjectionData
+          ? matrix.defaultProjectionData.mainMatrix
           : matrix;
 
         // Khớp Projection Matrix của camera với bản đồ
-        MAP_MATRIX.fromArray(matrixArray);
+        MAP_MATRIX.fromArray(matrixArray as number[]);
 
         const s = centerCoord.meterScale;
 

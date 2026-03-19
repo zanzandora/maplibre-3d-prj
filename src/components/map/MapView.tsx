@@ -1,12 +1,11 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { useState, useMemo, useCallback } from 'react';
 import Map, { Source, TerrainControl } from 'react-map-gl/maplibre';
-import * as maptilersdk from '@maptiler/sdk';
-import '@maptiler/sdk/dist/maptiler-sdk.css';
+import 'maplibre-gl/dist/maplibre-gl.css';
 import { MapThreeLayer } from '../map3d/MapThreeLayer';
 import { ModelManager } from '../../loader/ModelManager';
 import { WGS84_TO_MERCATOR } from '../../utils/coordinate';
-import maplibregl, { type ResourceType } from 'maplibre-gl';
+import maplibregl, { Map as MapLibreMap } from 'maplibre-gl';
 import { IvoryLayers } from './IvoryLayers';
 import {
   MAP_CENTER,
@@ -26,14 +25,11 @@ maplibregl.setWorkerCount(
 // note: Request Throttling: Limit parallel image/DEM requests (default is 16).
 maplibregl.setMaxParallelImageRequests(10);
 
-maptilersdk.config.apiKey = import.meta.env.VITE_MAPTILER_API_KEY;
-
 /**
  * Main Viewport: MapLibre managed by react-map-gl with R3F Overlay.
- * Optimized with MapTiler SDK for simplified 3D terrain.
  */
 const MapView = () => {
-  const [mapInstance, setMapInstance] = useState<maptilersdk.Map | null>(null);
+  const [mapInstance, setMapInstance] = useState<MapLibreMap | null>(null);
 
   const { isTerrainActive, isLoading3D, setIsModelReady } =
     useTerrainLoading(mapInstance);
@@ -49,25 +45,21 @@ const MapView = () => {
   /**
    * todo: Request Throttling: Prioritize critical tiles and throttle others.
    */
-  const transformRequest = useCallback(
-    (url: string, resourceType?: ResourceType) => {
-      // Priority 1: Terrain/DEM tiles are critical for 3D alignment
-      if (resourceType === 'Tile' && url.includes('terrain')) {
-        return { url, priority: 'high' };
-      }
-      // Priority 2: Standard tiles
-      return { url };
-    },
-    []
-  );
+  const transformRequest = useCallback((url: string, resourceType?: string) => {
+    // Priority 1: Terrain/DEM tiles are critical for 3D alignment
+    if (resourceType === 'Tile' && url.includes('terrain')) {
+      return { url, priority: 'high' };
+    }
+    // Priority 2: Standard tiles
+    return { url };
+  }, []);
 
   const onMapLoad = useCallback((e: any) => {
-    const map = e.target as maptilersdk.Map;
+    const map = e.target as MapLibreMap;
 
-    // note: add sprite
+    // note: add sprite (MapLibre style: loadImage + addImage)
     const ivorySite = SITES_LIST.find((s) => s.site_id === 10);
     if (ivorySite && ivorySite.sprite) {
-      // Lấy URL sạch (bỏ query param nếu cần, hoặc giữ nguyên)
       const spriteUrl = ivorySite.sprite.split('?')[0];
 
       map.addSprite('ivory-sprite', spriteUrl);
@@ -118,26 +110,27 @@ const MapView = () => {
     ] as [[number, number], [number, number]];
   }, []);
 
+  const MAPTILER_STYLE_URL = `https://api.maptiler.com/maps/satellite/style.json?key=${
+    import.meta.env.VITE_MAPTILER_API_KEY
+  }`;
   return (
     <div style={{ width: '100vw', height: '100vh', position: 'relative' }}>
       {isLoading3D && <Loading3D />}
 
       <Map
-        mapLib={maptilersdk as any}
+        mapLib={maplibregl}
         initialViewState={DEFAULT_VIEW_STATE}
         maxBounds={maxBounds}
         // note: Giới hạn Zoom để tránh nạp các tile quá xa hoặc quá chi tiết không cần thiết
         minZoom={12}
         maxZoom={20}
         // note: Using HYBRID_V4 style for a clean, professional aesthetic (less CPU/GPU heavy than OUTDOOR).
-        mapStyle={maptilersdk.MapStyle.HYBRID_V4.DEFAULT as any}
+        mapStyle={MAPTILER_STYLE_URL}
         onLoad={onMapLoad}
-        maxPitch={85}
+        maxPitch={75}
         hash={true}
         dragRotate={true}
-        touchZoomRotate={true}
         keyboard={true}
-        doubleClickZoom={false}
         fadeDuration={300}
         transformRequest={transformRequest}
         style={{ width: '100%', height: '100%' }}
@@ -148,14 +141,14 @@ const MapView = () => {
         {mapInstance && (
           <>
             <MapThreeLayer
-              map={mapInstance as unknown as maplibregl.Map}
+              map={mapInstance}
               centerCoord={centerCoord}
               // beforeId='poi_outdoor'
             >
               {/* COMPONENTS 3D VÀ R3F*/}
               <ModelManager
                 centerCoord={centerCoord}
-                map={mapInstance as unknown as maplibregl.Map}
+                map={mapInstance}
                 isVisible={isTerrainActive}
                 onLoadComplete={() => setIsModelReady(true)}
               />

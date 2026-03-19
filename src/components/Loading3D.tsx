@@ -9,7 +9,7 @@ const Loading3D = () => {
         right: 0,
         bottom: 0,
         backgroundColor: 'rgba(0,0,0)',
-        opacity: 0.5,
+        opacity: 1,
         display: 'flex',
         flexDirection: 'column',
         justifyContent: 'center',
