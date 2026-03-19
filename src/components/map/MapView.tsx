@@ -31,6 +31,12 @@ maplibregl.setMaxParallelImageRequests(10);
 const MapView = () => {
   const [mapInstance, setMapInstance] = useState<MapLibreMap | null>(null);
 
+  // note: Phát hiện thiết bị di động để tối ưu tài nguyên (CPU/GPU/Battery)
+  const isMobile = useMemo(
+    () => /iPhone|iPad|iPod|Android/i.test(window.navigator.userAgent),
+    []
+  );
+
   const { isTerrainActive, isLoading3D, setIsModelReady } =
     useTerrainLoading(mapInstance);
 
@@ -43,15 +49,29 @@ const MapView = () => {
   );
 
   /**
-   * todo: Request Throttling: Prioritize critical tiles and throttle others.
+   * note: Request Throttling: Prioritize critical tiles and throttle others.
    */
-  const transformRequest = useCallback((url: string, resourceType?: string) => {
-    // note: Lọc nhanh theo resourceType để tránh xử lý chuỗi dư thừa
-    if (resourceType === 'Tile' && url.includes('terrain')) {
-      return { url, priority: 'high' };
-    }
-    return { url };
-  }, []);
+  const transformRequest = useCallback(
+    (url: string, resourceType?: string) => {
+      if (resourceType === 'Tile') {
+        // Ưu tiên nạp Terrain và Vector Source nội bộ để tránh lag render 3D
+        if (
+          url.includes('terrain') ||
+          url.includes('maps.vgm.ai') ||
+          url.includes('ekgis.vn')
+        ) {
+          return { url, priority: 'high' };
+        }
+
+        // Tối ưu cho mobile: Nếu URL yêu cầu tile độ phân giải cao (@2x), có thể hạ cấp để tiết kiệm băng thông
+        if (isMobile && url.includes('@2x')) {
+          return { url: url.replace('@2x', '') };
+        }
+      }
+      return { url };
+    },
+    [isMobile]
+  );
 
   const onMapLoad = useCallback((e: any) => {
     const map = e.target as MapLibreMap;
@@ -86,17 +106,6 @@ const MapView = () => {
     });
 
     setMapInstance(map);
-
-    // map.on('click', 'poi_outdoor', (e) => {
-    //   if (e.features && e.features.length > 0) {
-    //     const properties = e.features[0].properties;
-    //     console.log('Dữ liệu thực tế tại đây:', {
-    //       name: properties.name,
-    //       category: properties.category,
-    //       type: properties.type,
-    //     });
-    //   }
-    // });
   }, []);
 
   // todo: Calculate bounds: ~1km around center
@@ -120,17 +129,17 @@ const MapView = () => {
         mapLib={maplibregl}
         initialViewState={DEFAULT_VIEW_STATE}
         maxBounds={maxBounds}
-        // note: Giới hạn Zoom để tránh nạp các tile quá xa hoặc quá chi tiết không cần thiết
         minZoom={12}
         maxZoom={20}
         // note: Using HYBRID_V4 style for a clean, professional aesthetic (less CPU/GPU heavy than OUTDOOR).
         mapStyle={MAPTILER_STYLE_URL}
         onLoad={onMapLoad}
-        maxPitch={75}
+        // note: Giới hạn pitch trên mobile để tránh nạp quá nhiều tile chân trời
+        maxPitch={isMobile ? 65 : 75}
         hash={true}
         dragRotate={true}
         keyboard={true}
-        fadeDuration={300}
+        fadeDuration={isMobile ? 100 : 300} // Transition nhanh hơn trên mobile
         transformRequest={transformRequest}
         style={{ width: '100%', height: '100%' }}
       >
@@ -174,6 +183,7 @@ const MapView = () => {
               ]}
               tileSize={256}
               maxzoom={12}
+              volatile={true}
             />
 
             <TerrainControl source='maptiler-terrain' />

@@ -1,13 +1,32 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
 import { useEffect, useMemo, useRef } from 'react';
 import { type CustomLayerInterface, type Map } from 'maplibre-gl';
-import * as THREE from 'three';
+import {
+  Mesh,
+  InstancedMesh,
+  BoxGeometry,
+  MeshStandardMaterial,
+  Matrix4,
+  WebGLRenderer,
+  Scene,
+  PerspectiveCamera,
+  AmbientLight,
+  Group,
+  DirectionalLight,
+} from 'three';
 import { createRoot, extend, useThree } from '@react-three/fiber';
 import { Lights } from './Lights';
 import type { AdvanceFn, R3FRoot } from '../../utils/types';
 
-extend(THREE as any);
-
+// extend(THREE as any);
+extend({
+  Mesh,
+  InstancedMesh,
+  BoxGeometry,
+  MeshStandardMaterial,
+  AmbientLight,
+  Group,
+  DirectionalLight,
+});
 interface MapThreeLayerProps {
   map: Map;
   centerCoord: { x: number; y: number; z: number; meterScale: number };
@@ -16,7 +35,7 @@ interface MapThreeLayerProps {
   beforeId?: string; // ID của layer mà 3D Layer sẽ chèn vào DƯỚI nó (ví dụ: chèn dưới layer 'poi_outdoor')
 }
 
-const MAP_MATRIX = new THREE.Matrix4();
+const MAP_MATRIX = new Matrix4();
 
 /**
  *  todo: Help MapLibre pull Three.js to run alongside it.
@@ -66,15 +85,15 @@ export const MapThreeLayer = ({
   beforeId,
 }: MapThreeLayerProps) => {
   const rootRef = useRef<R3FRoot | null>(null);
-  const rendererRef = useRef<THREE.WebGLRenderer | null>(null);
-  const cameraRef = useRef<THREE.PerspectiveCamera | null>(null);
-  const sceneRef = useRef<THREE.Scene | null>(null);
+  const rendererRef = useRef<WebGLRenderer | null>(null);
+  const cameraRef = useRef<PerspectiveCamera | null>(null);
+  const sceneRef = useRef<Scene | null>(null);
 
   const advanceRef = useRef<AdvanceFn | null>(null);
 
   // note: Đóng băng World Matrix để tránh tính toán lại mỗi frame
   const worldMatrix = useMemo(() => {
-    const m = new THREE.Matrix4();
+    const m = new Matrix4();
     const s = centerCoord.meterScale;
     m.set(
       s,
@@ -126,7 +145,7 @@ export const MapThreeLayer = ({
 
         // 1. Khởi tạo WebGLRenderer sử dụng chung Canvas và WebGLContext của MapLibre
         if (!canvas.__r3fSetup) {
-          const renderer = new THREE.WebGLRenderer({
+          const renderer = new WebGLRenderer({
             canvas: canvas,
             context: gl,
             antialias: true,
@@ -138,10 +157,10 @@ export const MapThreeLayer = ({
           rendererRef.current = renderer;
 
           // 2. Khởi tạo Scene và Camera
-          const scene = new THREE.Scene();
+          const scene = new Scene();
           sceneRef.current = scene;
 
-          const camera = new THREE.PerspectiveCamera(28, 1, 0.01, 1e6);
+          const camera = new PerspectiveCamera(28, 1, 0.01, 1e6);
           camera.matrixAutoUpdate = false;
           cameraRef.current = camera;
 
