@@ -7,7 +7,8 @@
     "dev": "vite",
     "build": "tsc -b && vite build",
     "lint": "eslint .",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "export-js": "rm -rf converted-js && npx detype src converted-js && robocopy src converted-jsx /E /XF *.ts *.tsx"
   },
   "dependencies": {
     "@react-three/drei": "^10.7.7",
