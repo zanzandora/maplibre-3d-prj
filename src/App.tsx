@@ -1,6 +1,6 @@
 import './App.css';
 import BIMViewer from './components/BIMViewer';
-import { BIMProvider } from './context/BIMContext';
+import { BIMProvider } from './context/BIMProvider';
 
 function App() {
   return (

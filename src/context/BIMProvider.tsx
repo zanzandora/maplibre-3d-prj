@@ -8,7 +8,7 @@ import {
 } from 'react';
 import * as OBC from '@thatopen/components';
 import * as THREE from 'three';
-import { BIMContext } from '../hooks/useBIMEngine';
+import { BIMContext } from './BIMContext';
 
 export type BIMWorld = OBC.World;
 
@@ -106,8 +106,13 @@ export const BIMProvider: FC<{ children: ReactNode }> = ({ children }) => {
         fragments.core.update(true);
       });
 
+      // Grid Setup
       const grids = components.get(OBC.Grids);
-      grids.create(world);
+      const grid = grids.create(world);
+      grid.three.material.transparent = true;
+      grid.three.material.opacity = 0.5;
+      grid.three.material.color.set('#555555');
+      grid.three.position.y = -0.01; // Slightly below ground to avoid Z-fighting
       world.camera.controls.setLookAt(68, 23, -8.5, 21.5, -5.5, 23);
 
       setIsReady(true);

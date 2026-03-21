@@ -1,9 +1,9 @@
 import { useEffect, useRef } from 'react';
-import { useBIMEngine } from '../hooks/useBIMEngine';
+import { useBIMContext } from '../context/BIMContext';
 
 export default function BIMViewer() {
   const containerRef = useRef<HTMLDivElement>(null);
-  const { mount, fragments, isReady } = useBIMEngine();
+  const { mount, fragments, isReady } = useBIMContext();
 
   useEffect(() => {
     if (!containerRef.current) return;
