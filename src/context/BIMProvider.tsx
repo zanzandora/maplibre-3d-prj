@@ -75,17 +75,6 @@ export const BIMProvider: FC<{ children: ReactNode }> = ({ children }) => {
     const casters = components.get(OBC.Raycasters);
     casters.get(world);
 
-    const highlighter = components.get(OBF.Highlighter);
-    highlighter.setup({
-      world,
-      selectMaterialDefinition: {
-        color: new THREE.Color('#bcf124'),
-        opacity: 1,
-        transparent: false,
-        renderedFaces: 0,
-      },
-    });
-
     try {
       const githubUrl =
         'https://thatopen.github.io/engine_fragment/resources/worker.mjs';
@@ -122,7 +111,7 @@ export const BIMProvider: FC<{ children: ReactNode }> = ({ children }) => {
         fragments.core.update(true);
       });
 
-      // Grid Setup
+      // todo: Grid Setup
       const grids = components.get(OBC.Grids);
       const grid = grids.create(world);
 
@@ -144,23 +133,55 @@ export const BIMProvider: FC<{ children: ReactNode }> = ({ children }) => {
       // });
 
       // todo: Highligh event
-      highlighter.events.select.onHighlight.add(async (modelIdMap) => {
-        console.log('Something was selected');
+      // const highlighter = components.get(OBF.Highlighter);
+      // highlighter.setup({
+      //   world,
+      //   selectMaterialDefinition: {
+      //     color: new THREE.Color('#bcf124'),
+      //     opacity: 1,
+      //     transparent: false,
+      //     renderedFaces: 0,
+      //   },
+      // });
 
-        const promises = [];
-        for (const [modelId, localIds] of Object.entries(modelIdMap)) {
-          const model = fragments.list.get(modelId);
-          if (!model) continue;
-          promises.push(model.getItemsData([...localIds]));
-        }
+      // highlighter.events.select.onHighlight.add(async (modelIdMap) => {
+      //   console.log('Something was selected');
 
-        const data = (await Promise.all(promises)).flat();
-        console.log(data);
-      });
+      //   const promises = [];
+      //   for (const [modelId, localIds] of Object.entries(modelIdMap)) {
+      //     const model = fragments.list.get(modelId);
+      //     if (!model) continue;
+      //     promises.push(model.getItemsData([...localIds]));
+      //   }
 
-      highlighter.events.select.onClear.add(() => {
-        console.log('Selection was cleared');
-      });
+      //   const data = (await Promise.all(promises)).flat();
+      //   console.log(data);
+      // });
+
+      // highlighter.events.select.onClear.add(() => {
+      //   console.log('Selection was cleared');
+      // });
+
+      // todo: Clipper event
+      // const clipper = components.get(OBC.Clipper);
+      // clipper.enabled = true;
+
+      // container.ondblclick = () => {
+      //   if (clipper.enabled) {
+      //     clipper.create(world);
+      //   }
+      // };
+
+      // window.addEventListener('keydown', (event) => {
+      //   if (event.code === 'Delete' || event.code === 'Backspace') {
+      //     console.log('trigger delete clipper');
+      //     if (clipper.enabled) {
+      //       console.log('delete clipper');
+      //       clipper.delete(world);
+      //       fragments.core.update(true);
+      //     }
+      //   }
+      // });
 
       setIsReady(true);
     } catch (error) {
