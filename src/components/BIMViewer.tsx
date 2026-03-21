@@ -23,17 +23,5 @@ export default function BIMViewer() {
     }
   }, [isReady, fragments]);
 
-  return (
-    <div
-      ref={containerRef}
-      style={{
-        width: '100vw',
-        height: '100vh',
-        position: 'fixed',
-        top: 0,
-        left: 0,
-        backgroundColor: '#111',
-      }}
-    />
-  );
+  return <div ref={containerRef} className='absolute top-0 left-0 h-dvh ' />;
 }

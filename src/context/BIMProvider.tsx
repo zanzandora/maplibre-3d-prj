@@ -7,6 +7,7 @@ import {
   useEffect,
 } from 'react';
 import * as OBC from '@thatopen/components';
+import * as OBF from '@thatopen/components-front';
 import * as THREE from 'three';
 import { BIMContext } from './BIMContext';
 
@@ -48,6 +49,7 @@ export const BIMProvider: FC<{ children: ReactNode }> = ({ children }) => {
   const mount = useCallback(async (container: HTMLElement) => {
     if (componentsRef.current) return;
 
+    // init OBC
     const components = new OBC.Components();
     componentsRef.current = components;
 
@@ -55,12 +57,12 @@ export const BIMProvider: FC<{ children: ReactNode }> = ({ children }) => {
     const world = worlds.create<
       OBC.SimpleScene,
       OBC.OrthoPerspectiveCamera,
-      OBC.SimpleRenderer
+      OBF.PostproductionRenderer
     >();
     worldRef.current = world;
 
     world.scene = new OBC.SimpleScene(components);
-    world.renderer = new OBC.SimpleRenderer(components, container);
+    world.renderer = new OBF.PostproductionRenderer(components, container);
     world.camera = new OBC.OrthoPerspectiveCamera(components);
 
     components.init();
@@ -69,6 +71,20 @@ export const BIMProvider: FC<{ children: ReactNode }> = ({ children }) => {
 
     const fragments = components.get(OBC.FragmentsManager);
     fragmentsRef.current = fragments;
+
+    const casters = components.get(OBC.Raycasters);
+    casters.get(world);
+
+    const highlighter = components.get(OBF.Highlighter);
+    highlighter.setup({
+      world,
+      selectMaterialDefinition: {
+        color: new THREE.Color('#bcf124'),
+        opacity: 1,
+        transparent: false,
+        renderedFaces: 0,
+      },
+    });
 
     try {
       const githubUrl =
@@ -109,11 +125,42 @@ export const BIMProvider: FC<{ children: ReactNode }> = ({ children }) => {
       // Grid Setup
       const grids = components.get(OBC.Grids);
       const grid = grids.create(world);
-      grid.three.material.transparent = true;
-      grid.three.material.opacity = 0.5;
-      grid.three.material.color.set('#555555');
+
       grid.three.position.y = -0.01; // Slightly below ground to avoid Z-fighting
       world.camera.controls.setLookAt(68, 23, -8.5, 21.5, -5.5, 23);
+
+      // todo: Raycaster event
+      // container.addEventListener('dblclick', async () => {
+      //   const result = await caster.castRay();
+      //   if (result) {
+      //     console.log('Raycast result:', result);
+      //     const { object, faceIndex, point } = result;
+      //     console.log('Hit object:', object);
+      //     console.log('Face index:', faceIndex);
+      //     console.log('Hit point:', point);
+      //   } else {
+      //     console.log('No object hit.');
+      //   }
+      // });
+
+      // todo: Highligh event
+      highlighter.events.select.onHighlight.add(async (modelIdMap) => {
+        console.log('Something was selected');
+
+        const promises = [];
+        for (const [modelId, localIds] of Object.entries(modelIdMap)) {
+          const model = fragments.list.get(modelId);
+          if (!model) continue;
+          promises.push(model.getItemsData([...localIds]));
+        }
+
+        const data = (await Promise.all(promises)).flat();
+        console.log(data);
+      });
+
+      highlighter.events.select.onClear.add(() => {
+        console.log('Selection was cleared');
+      });
 
       setIsReady(true);
     } catch (error) {
