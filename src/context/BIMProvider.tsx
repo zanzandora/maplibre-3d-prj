@@ -75,17 +75,7 @@ export const BIMProvider: FC<{ children: ReactNode }> = ({ children }) => {
     const casters = components.get(OBC.Raycasters);
     casters.get(world);
 
-    const highlighter = components.get(OBF.Highlighter);
-    highlighter.setup({
-      world,
-      selectMaterialDefinition: {
-        color: new THREE.Color('#bcf124'),
-        opacity: 1,
-        transparent: false,
-        renderedFaces: 0,
-      },
-    });
-
+    // todo: load fragment
     try {
       const githubUrl =
         'https://thatopen.github.io/engine_fragment/resources/worker.mjs';
@@ -122,50 +112,82 @@ export const BIMProvider: FC<{ children: ReactNode }> = ({ children }) => {
         fragments.core.update(true);
       });
 
-      // Grid Setup
-      const grids = components.get(OBC.Grids);
-      const grid = grids.create(world);
-
-      grid.three.position.y = -0.01; // Slightly below ground to avoid Z-fighting
-      world.camera.controls.setLookAt(68, 23, -8.5, 21.5, -5.5, 23);
-
-      // todo: Raycaster event
-      // container.addEventListener('dblclick', async () => {
-      //   const result = await caster.castRay();
-      //   if (result) {
-      //     console.log('Raycast result:', result);
-      //     const { object, faceIndex, point } = result;
-      //     console.log('Hit object:', object);
-      //     console.log('Face index:', faceIndex);
-      //     console.log('Hit point:', point);
-      //   } else {
-      //     console.log('No object hit.');
-      //   }
-      // });
-
-      // todo: Highligh event
-      highlighter.events.select.onHighlight.add(async (modelIdMap) => {
-        console.log('Something was selected');
-
-        const promises = [];
-        for (const [modelId, localIds] of Object.entries(modelIdMap)) {
-          const model = fragments.list.get(modelId);
-          if (!model) continue;
-          promises.push(model.getItemsData([...localIds]));
-        }
-
-        const data = (await Promise.all(promises)).flat();
-        console.log(data);
-      });
-
-      highlighter.events.select.onClear.add(() => {
-        console.log('Selection was cleared');
-      });
-
       setIsReady(true);
     } catch (error) {
       console.error('BIM Provider initialization error:', error);
     }
+
+    // todo: Grid Setup
+    const grids = components.get(OBC.Grids);
+    const grid = grids.create(world);
+
+    grid.three.position.y = -0.01; // Slightly below ground to avoid Z-fighting
+    world.camera.controls.setLookAt(68, 23, -8.5, 21.5, -5.5, 23);
+
+    // todo: Raycaster event
+    // container.addEventListener('dblclick', async () => {
+    //   const result = await caster.castRay();
+    //   if (result) {
+    //     console.log('Raycast result:', result);
+    //     const { object, faceIndex, point } = result;
+    //     console.log('Hit object:', object);
+    //     console.log('Face index:', faceIndex);
+    //     console.log('Hit point:', point);
+    //   } else {
+    //     console.log('No object hit.');
+    //   }
+    // });
+
+    // todo: Highligh event
+    // const highlighter = components.get(OBF.Highlighter);
+    // highlighter.setup({
+    //   world,
+    //   selectMaterialDefinition: {
+    //     color: new THREE.Color('#bcf124'),
+    //     opacity: 1,
+    //     transparent: false,
+    //     renderedFaces: 0,
+    //   },
+    // });
+
+    // highlighter.events.select.onHighlight.add(async (modelIdMap) => {
+    //   console.log('Something was selected');
+
+    //   const promises = [];
+    //   for (const [modelId, localIds] of Object.entries(modelIdMap)) {
+    //     const model = fragments.list.get(modelId);
+    //     if (!model) continue;
+    //     promises.push(model.getItemsData([...localIds]));
+    //   }
+
+    //   const data = (await Promise.all(promises)).flat();
+    //   console.log(data);
+    // });
+
+    // highlighter.events.select.onClear.add(() => {
+    //   console.log('Selection was cleared');
+    // });
+
+    // todo: Clipper event
+    // const clipper = components.get(OBC.Clipper);
+    // clipper.enabled = true;
+
+    // container.ondblclick = () => {
+    //   if (clipper.enabled) {
+    //     clipper.create(world);
+    //   }
+    // };
+
+    // window.addEventListener('keydown', (event) => {
+    //   if (event.code === 'Delete' || event.code === 'Backspace') {
+    //     console.log('trigger delete clipper');
+    //     if (clipper.enabled) {
+    //       console.log('delete clipper');
+    //       clipper.delete(world);
+    //       fragments.core.update(true);
+    //     }
+    //   }
+    // });
   }, []);
 
   const value = {
