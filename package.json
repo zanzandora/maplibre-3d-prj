@@ -10,13 +10,16 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@tailwindcss/vite": "^4.2.2",
     "@thatopen/components": "^3.3.3",
+    "@thatopen/components-front": "^3.3.3",
     "@thatopen/fragments": "^3.3.6",
     "maplibre-gl": "^5.19.0",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
     "react-map-gl": "^8.1.0",
     "stats.js": "^0.17.0",
+    "tailwindcss": "^4.2.2",
     "three": "^0.183.2",
     "zustand": "^5.0.12"
   },
