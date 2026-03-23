@@ -1,11 +1,12 @@
 import React from 'react';
-import { Share2, Edit3, LucideLayoutPanelLeft } from 'lucide-react';
+import { Share2, Edit3, LucideLayoutPanelLeft, Loader2 } from 'lucide-react';
 import { Button } from './Button';
 import { useBIMStore, type SelectedElement } from '../store/useBIMStore';
 
 export const RightPanel: React.FC = () => {
   const rightPanelOpen = useBIMStore((s) => s.rightPanelOpen);
   const selectedElement = useBIMStore((s) => s.selectedElement);
+  const isHighlighting = useBIMStore((s) => s.isHighlighting);
   const toggleRightPanel = useBIMStore((s) => s.toggleRightPanel);
 
   if (!rightPanelOpen) {
@@ -53,7 +54,15 @@ export const RightPanel: React.FC = () => {
         </Button>
       </div>
 
-      <div className='flex-1 overflow-y-auto p-4 space-y-6'>
+      <div className='flex-1 overflow-y-auto p-4 space-y-6 relative'>
+        {isHighlighting && (
+          <div className='absolute inset-0 z-10 bg-slate-900/60 backdrop-blur-[2px] flex flex-col items-center justify-center space-y-3'>
+            <Loader2 className='w-8 h-8 text-blue-500 animate-spin' />
+            <span className='text-[10px] font-bold text-blue-400 uppercase tracking-widest'>
+              Loading Data...
+            </span>
+          </div>
+        )}
         {selectedElement ? (
           <>
             <section>

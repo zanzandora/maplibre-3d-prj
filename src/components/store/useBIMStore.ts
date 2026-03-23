@@ -19,6 +19,7 @@ interface BIMState {
   leftPanelOpen: boolean;
   rightPanelOpen: boolean;
   selectedElement: SelectedElement | null;
+  isHighlighting: boolean;
 
   // Actions
   setBIMVisible: (visible: boolean) => void;
@@ -26,6 +27,7 @@ interface BIMState {
   toggleLeftPanel: () => void;
   toggleRightPanel: () => void;
   setSelectedElement: (element: SelectedElement | null) => void;
+  setIsHighlighting: (loading: boolean) => void;
 }
 
 export const useBIMStore = create<BIMState>((set) => ({
@@ -34,6 +36,7 @@ export const useBIMStore = create<BIMState>((set) => ({
   leftPanelOpen: true,
   rightPanelOpen: true,
   selectedElement: null,
+  isHighlighting: false,
 
   setBIMVisible: (visible) => set({ isBIMVisible: visible }),
   setActiveTool: (tool) => set({ activeTool: tool }),
@@ -42,4 +45,5 @@ export const useBIMStore = create<BIMState>((set) => ({
   toggleRightPanel: () =>
     set((state) => ({ rightPanelOpen: !state.rightPanelOpen })),
   setSelectedElement: (element) => set({ selectedElement: element }),
+  setIsHighlighting: (loading) => set({ isHighlighting: loading }),
 }));

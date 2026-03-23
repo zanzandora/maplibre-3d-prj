@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
 import {
   useState,
   type ReactNode,
@@ -12,6 +11,8 @@ import * as OBF from '@thatopen/components-front';
 import * as THREE from 'three';
 import { BIMContext } from './BIMContext';
 import { useBIMStore } from '../components/store/useBIMStore';
+import { setupHighlighter } from '../components/engine/Highlighter';
+import { setupClipper } from '../components/engine/Clipper';
 
 export type BIMWorld = OBC.World;
 
@@ -35,6 +36,7 @@ export const BIMProvider: FC<{ children: ReactNode }> = ({ children }) => {
 
   const activeTool = useBIMStore((s) => s.activeTool);
   const setSelectedElement = useBIMStore((s) => s.setSelectedElement);
+  const setIsHighlighting = useBIMStore((s) => s.setIsHighlighting);
 
   const isMountedRef = useRef(true);
 
@@ -54,144 +56,6 @@ export const BIMProvider: FC<{ children: ReactNode }> = ({ children }) => {
     };
   }, []);
 
-  // todo: Highligh event
-  const setupHighlighter = useCallback(
-    (
-      components: OBC.Components,
-      world: OBC.World,
-      fragments: OBC.FragmentsManager
-    ) => {
-      const highlighter = components.get(OBF.Highlighter);
-      highlighter.setup({
-        world,
-        selectMaterialDefinition: {
-          color: new THREE.Color('#bcf124'),
-          opacity: 1,
-          transparent: false,
-          renderedFaces: 0,
-        },
-      });
-
-      const onHighlight = async (modelIdMap: OBC.ModelIdMap) => {
-        const promises = [];
-        for (const [modelId, localIds] of Object.entries(modelIdMap)) {
-          const model = fragments.list.get(modelId);
-          if (!model) continue;
-
-          // Request attributes and Property Set relations
-          promises.push(
-            model.getItemsData([...localIds], {
-              attributesDefault: true,
-              relations: {
-                IsDefinedBy: {
-                  attributes: true,
-                  relations: true,
-                },
-                HasProperties: {
-                  attributes: true,
-                  relations: true,
-                },
-              },
-            })
-          );
-        }
-
-        const data = (await Promise.all(promises)).flat();
-
-        if (data.length > 0) {
-          const item = data[0];
-
-          // 1. Process Property Sets (Psets)
-          const psets: Record<string, any> = {};
-          if (item.IsDefinedBy && Array.isArray(item.IsDefinedBy)) {
-            for (const pset of item.IsDefinedBy) {
-              const psetName: string =
-                (pset.Name as any)?.value || 'Common Properties';
-              const props: Record<string, any> = {};
-              if (pset.HasProperties && Array.isArray(pset.HasProperties)) {
-                for (const prop of pset.HasProperties) {
-                  const name = (prop.Name as any)?.value;
-                  const val = (prop.NominalValue as any)?.value;
-                  if (name && val !== undefined) {
-                    props[name] = val;
-                  }
-                }
-              }
-              psets[psetName] = props;
-            }
-          }
-          // console.log('pset: ', psets);
-
-          // 2. Flatten and spread direct attributes
-          const flatAttributes: Record<string, any> = {};
-          for (const [key, val] of Object.entries(item)) {
-            if (key === 'IsDefinedBy') continue; // Handled separately
-
-            // Extract .value if it exists (common pattern in That Open fragments)
-            if (val && typeof val === 'object' && 'value' in val) {
-              flatAttributes[key] = val.value;
-            } else {
-              flatAttributes[key] = val;
-            }
-          }
-          // console.log('flatAttributes: ', flatAttributes);
-
-          setSelectedElement({
-            ...flatAttributes,
-            psets,
-          });
-        }
-      };
-
-      const onClear = () => {
-        setSelectedElement(null);
-      };
-
-      highlighter.events.select.onHighlight.add(onHighlight);
-      highlighter.events.select.onClear.add(onClear);
-
-      return () => {
-        highlighter.clear('select');
-        highlighter.events.select.onHighlight.remove(onHighlight);
-        highlighter.events.select.onClear.remove(onClear);
-      };
-    },
-    [setSelectedElement]
-  );
-
-  // todo: Clipper event
-  const setupClipper = useCallback(
-    (components: OBC.Components, world: OBC.World, container: HTMLElement) => {
-      const clipper = components.get(OBC.Clipper);
-      clipper.enabled = true;
-      clipper.visible = true;
-
-      const handleDblClick = () => {
-        if (clipper.enabled) clipper.create(world);
-      };
-
-      const handleKeyDown = (event: KeyboardEvent) => {
-        if (
-          (event.code === 'Delete' || event.code === 'Backspace') &&
-          clipper.enabled
-        ) {
-          clipper.delete(world);
-        }
-      };
-
-      container.addEventListener('dblclick', handleDblClick);
-      window.addEventListener('keydown', handleKeyDown);
-
-      return () => {
-        clipper.enabled = false;
-        clipper.visible = false;
-        container.removeEventListener('dblclick', handleDblClick);
-        window.removeEventListener('keydown', handleKeyDown);
-      };
-    },
-    []
-  );
-
   // Tool Controller (Switch statement for better scalability)
   useEffect(() => {
     const components = componentsRef.current;
@@ -202,15 +66,22 @@ export const BIMProvider: FC<{ children: ReactNode }> = ({ children }) => {
     if (!isReady || !components || !world || !containerEl || !fragments) return;
 
     const clipper = components.get(OBC.Clipper);
+    const highlighter = components.get(OBF.Highlighter);
 
     let cleanup: (() => void) | undefined;
 
     switch (activeTool) {
       case 'select':
-        cleanup = setupHighlighter(components, world, fragments);
+        cleanup = setupHighlighter(
+          highlighter,
+          world,
+          fragments,
+          setSelectedElement,
+          setIsHighlighting
+        );
         break;
       case 'clip':
-        cleanup = setupClipper(components, world, containerEl);
+        cleanup = setupClipper(clipper, world, containerEl);
         break;
       default:
         // By default, disable specialized tools
@@ -222,7 +93,7 @@ export const BIMProvider: FC<{ children: ReactNode }> = ({ children }) => {
     return () => {
       if (cleanup) cleanup();
     };
-  }, [activeTool, container, isReady, setupClipper, setupHighlighter]);
+  }, [activeTool, container, isReady, setSelectedElement, setIsHighlighting]);
 
   const mount = useCallback(async (container: HTMLElement) => {
     if (componentsRef.current) return;
