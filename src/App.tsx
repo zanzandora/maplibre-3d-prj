@@ -1,15 +1,30 @@
 import BIMViewer from './components/BIMViewer';
 import { BIMProvider } from './context/BIMProvider';
+import { Button } from './components/ui/Button';
+import { useBIMStore } from './components/store/useBIMStore';
 
 function App() {
+  const isBIMVisible = useBIMStore((state) => state.isBIMVisible);
+  const setBIMVisible = useBIMStore((state) => state.setBIMVisible);
+
   return (
     <div
       id='app-container'
-      className='min-w-full overflow-hidden relative bg-black'
+      className='min-w-full h-screen overflow-hidden relative bg-slate-950 flex items-center justify-center'
     >
-      <BIMProvider>
-        <BIMViewer />
-      </BIMProvider>
+      {!isBIMVisible ? (
+        <div className='text-center space-y-4'>
+          <h1 className='text-3xl font-bold text-slate-100'>MapLibre 3D Project</h1>
+          <p className='text-slate-400'>Click the button below to launch the BIM Viewer</p>
+          <Button size='lg' onClick={() => setBIMVisible(true)}>
+            Enable BIM Viewer
+          </Button>
+        </div>
+      ) : (
+        <BIMProvider>
+          <BIMViewer />
+        </BIMProvider>
+      )}
     </div>
   );
 }

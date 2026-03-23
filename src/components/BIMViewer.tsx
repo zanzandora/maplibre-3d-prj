@@ -1,5 +1,6 @@
 import { useEffect, useRef } from 'react';
 import { useBIMContext } from '../context/BIMContext';
+import { BIMViewerLayout } from './ui/BIMViewerLayout';
 
 export default function BIMViewer() {
   const containerRef = useRef<HTMLDivElement>(null);
@@ -23,5 +24,9 @@ export default function BIMViewer() {
     }
   }, [isReady, fragments]);
 
-  return <div ref={containerRef} className='absolute top-0 left-0 h-dvh ' />;
+  return (
+    <BIMViewerLayout>
+      <div ref={containerRef} className='w-full h-full' />
+    </BIMViewerLayout>
+  );
 }

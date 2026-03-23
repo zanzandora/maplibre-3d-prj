@@ -110,6 +110,8 @@ export const BIMProvider: FC<{ children: ReactNode }> = ({ children }) => {
         model.useCamera(world.camera.three);
         world.scene.three.add(model.object);
         fragments.core.update(true);
+
+        world.camera.controls.fitToSphere(model.object, true);
       });
 
       setIsReady(true);
@@ -122,7 +124,6 @@ export const BIMProvider: FC<{ children: ReactNode }> = ({ children }) => {
     const grid = grids.create(world);
 
     grid.three.position.y = -0.01; // Slightly below ground to avoid Z-fighting
-    world.camera.controls.setLookAt(68, 23, -8.5, 21.5, -5.5, 23);
 
     // todo: Raycaster event
     // container.addEventListener('dblclick', async () => {
