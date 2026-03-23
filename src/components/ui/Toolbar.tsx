@@ -11,7 +11,8 @@ import { Button } from './Button';
 import { useBIMStore } from '../store/useBIMStore';
 
 export const Toolbar: React.FC = () => {
-  const { activeTool, setActiveTool } = useBIMStore();
+  const activeTool = useBIMStore((s) => s.activeTool);
+  const setActiveTool = useBIMStore((s) => s.setActiveTool);
 
   const tools = [
     { id: 'orbit', icon: Orbit, label: 'Orbit' },

@@ -10,6 +10,7 @@ import * as OBC from '@thatopen/components';
 import * as OBF from '@thatopen/components-front';
 import * as THREE from 'three';
 import { BIMContext } from './BIMContext';
+import { useBIMStore } from '../components/store/useBIMStore';
 
 export type BIMWorld = OBC.World;
 
@@ -17,16 +18,21 @@ export interface BIMContextType {
   components: OBC.Components | null;
   world: BIMWorld | null;
   fragments: OBC.FragmentsManager | null;
+  container: HTMLElement | null;
   mount: (container: HTMLElement) => Promise<void>;
   isReady: boolean;
 }
 
 export const BIMProvider: FC<{ children: ReactNode }> = ({ children }) => {
   const [isReady, setIsReady] = useState(false);
+  const [container, setContainer] = useState<HTMLElement | null>(null);
+
   const componentsRef = useRef<OBC.Components | null>(null);
   const worldRef = useRef<BIMWorld | null>(null);
   const fragmentsRef = useRef<OBC.FragmentsManager | null>(null);
   const workerUrlRef = useRef<string | null>(null);
+
+  const activeTool = useBIMStore((s) => s.activeTool);
 
   const isMountedRef = useRef(true);
 
@@ -46,8 +52,72 @@ export const BIMProvider: FC<{ children: ReactNode }> = ({ children }) => {
     };
   }, []);
 
+  // todo: clipper event
+  const setupClipper = useCallback(
+    (components: OBC.Components, world: OBC.World, container: HTMLElement) => {
+      const clipper = components.get(OBC.Clipper);
+      clipper.enabled = true;
+      clipper.visible = true;
+
+      const handleDblClick = () => {
+        container.ondblclick = () => {
+          if (clipper.enabled) {
+            clipper.create(world);
+          }
+        };
+      };
+
+      const handleKeyDown = (event: KeyboardEvent) => {
+        if (event.code === 'Delete' || event.code === 'Backspace') {
+          if (clipper.enabled) {
+            console.log('delete clipper');
+            clipper.delete(world);
+          }
+        }
+      };
+
+      container.addEventListener('dblclick', handleDblClick);
+      window.addEventListener('keydown', handleKeyDown);
+
+      return () => {
+        clipper.enabled = false;
+        clipper.visible = false;
+        container.removeEventListener('dblclick', handleDblClick);
+        window.removeEventListener('keydown', handleKeyDown);
+      };
+    },
+    []
+  );
+
+  // Tool Controller (Switch statement for better scalability)
+  useEffect(() => {
+    const components = componentsRef.current;
+    const world = worldRef.current;
+    if (!components || !world || !container) return;
+
+    let cleanup: (() => void) | undefined;
+
+    const clipper = components.get(OBC.Clipper);
+
+    switch (activeTool) {
+      case 'clip':
+        cleanup = setupClipper(components, world, container);
+        break;
+      default:
+        // By default, disable specialized tools
+        clipper.enabled = false;
+        clipper.visible = false;
+        break;
+    }
+
+    return () => {
+      if (cleanup) cleanup();
+    };
+  }, [activeTool, container, setupClipper]);
+
   const mount = useCallback(async (container: HTMLElement) => {
     if (componentsRef.current) return;
+    setContainer(container);
 
     // init OBC
     const components = new OBC.Components();
@@ -168,33 +238,13 @@ export const BIMProvider: FC<{ children: ReactNode }> = ({ children }) => {
     // highlighter.events.select.onClear.add(() => {
     //   console.log('Selection was cleared');
     // });
-
-    // todo: Clipper event
-    // const clipper = components.get(OBC.Clipper);
-    // clipper.enabled = true;
-
-    // container.ondblclick = () => {
-    //   if (clipper.enabled) {
-    //     clipper.create(world);
-    //   }
-    // };
-
-    // window.addEventListener('keydown', (event) => {
-    //   if (event.code === 'Delete' || event.code === 'Backspace') {
-    //     console.log('trigger delete clipper');
-    //     if (clipper.enabled) {
-    //       console.log('delete clipper');
-    //       clipper.delete(world);
-    //       fragments.core.update(true);
-    //     }
-    //   }
-    // });
   }, []);
 
   const value = {
     components: componentsRef.current,
     world: worldRef.current,
     fragments: fragmentsRef.current,
+    container,
     mount,
     isReady,
   };

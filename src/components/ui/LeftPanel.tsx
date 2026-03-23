@@ -8,7 +8,8 @@ import { Button } from './Button';
 import { useBIMStore } from '../store/useBIMStore';
 
 export const LeftPanel: React.FC = () => {
-  const { leftPanelOpen, toggleLeftPanel } = useBIMStore();
+  const leftPanelOpen = useBIMStore((s) => s.leftPanelOpen);
+  const toggleLeftPanel = useBIMStore((s) => s.toggleLeftPanel);
 
   if (!leftPanelOpen) {
     return (
@@ -37,7 +38,7 @@ export const LeftPanel: React.FC = () => {
             variant='ghost'
             size='icon'
             onClick={toggleLeftPanel}
-            className='w-5 h-5 h-auto p-0 hover:bg-transparent'
+            className='w-5 h-auto p-0 hover:bg-transparent'
           >
             <LayoutPanelLeft className='w-3.5 h-3.5' />
           </Button>
