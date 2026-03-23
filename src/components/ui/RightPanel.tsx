@@ -1,6 +1,7 @@
+import React from 'react';
 import { Share2, Edit3, LucideLayoutPanelLeft } from 'lucide-react';
 import { Button } from './Button';
-import { useBIMStore } from '../store/useBIMStore';
+import { useBIMStore, type SelectedElement } from '../store/useBIMStore';
 
 export const RightPanel: React.FC = () => {
   const rightPanelOpen = useBIMStore((s) => s.rightPanelOpen);
@@ -21,6 +22,20 @@ export const RightPanel: React.FC = () => {
       </div>
     );
   }
+
+  // Helper to filter out internal or handled properties and null/undefined/empty values
+  const getDisplayAttributes = (element: SelectedElement) => {
+    const skip = ['psets'];
+    return Object.entries(element).filter(
+      ([key, val]) =>
+        !skip.includes(key) &&
+        !key.startsWith('_') &&
+        typeof val !== 'object' &&
+        val !== null &&
+        val !== undefined &&
+        val !== ''
+    );
+  };
 
   return (
     <aside className='absolute right-4 top-20 bottom-12 w-80 flex flex-col bg-slate-900/90 backdrop-blur-md border border-slate-700 rounded-lg overflow-hidden pointer-events-auto shadow-2xl transition-all'>
@@ -43,76 +58,71 @@ export const RightPanel: React.FC = () => {
           <>
             <section>
               <h3 className='text-sm font-bold text-blue-400 mb-0.5'>
-                {selectedElement.name}
+                {selectedElement.Name ||
+                  selectedElement.name ||
+                  'Unknown Element'}
               </h3>
               <p className='text-[10px] text-slate-500 uppercase tracking-wider'>
-                ID: {selectedElement.id}
+                GUID: {selectedElement._guid || 'N/A'}
+              </p>
+              <p className='text-[10px] text-slate-500 uppercase tracking-wider'>
+                LocalId: {selectedElement._localId}
               </p>
             </section>
 
-            <section className='space-y-2'>
-              <h4 className='text-[10px] font-bold text-slate-500 uppercase tracking-wider border-b border-slate-800 pb-1'>
-                Geometry
-              </h4>
-              <div className='grid grid-cols-2 gap-y-1.5 text-xs'>
-                <span className='text-slate-500'>Length</span>
-                <span className='text-right text-slate-300 font-mono'>
-                  {selectedElement.geometry.length}
-                </span>
-                <span className='text-slate-500'>Width</span>
-                <span className='text-right text-slate-300 font-mono'>
-                  {selectedElement.geometry.width}
-                </span>
-                <span className='text-slate-500'>Height</span>
-                <span className='text-right text-slate-300 font-mono'>
-                  {selectedElement.geometry.height}
-                </span>
-                <span className='text-slate-500'>Volume</span>
-                <span className='text-right text-slate-300 font-mono'>
-                  {selectedElement.geometry.volume}
-                </span>
-              </div>
-            </section>
+            {/* Base Attributes Section */}
+            {getDisplayAttributes(selectedElement).length > 0 && (
+              <section className='space-y-2'>
+                <h4 className='text-[10px] font-bold text-blue-500/70 uppercase tracking-wider border-b border-slate-800 pb-1'>
+                  General Attributes
+                </h4>
+                <div className='grid grid-cols-2 gap-y-1.5 text-xs'>
+                  {getDisplayAttributes(selectedElement).map(([key, val]) => (
+                    <React.Fragment key={key}>
+                      <span className='text-slate-500'>{key}</span>
+                      <span
+                        className='text-right text-slate-300 truncate pl-2'
+                        title={String(val)}
+                      >
+                        {String(val)}
+                      </span>
+                    </React.Fragment>
+                  ))}
+                </div>
+              </section>
+            )}
 
-            <section className='space-y-2'>
-              <h4 className='text-[10px] font-bold text-slate-500 uppercase tracking-wider border-b border-slate-800 pb-1'>
-                BIM Attributes
-              </h4>
-              <div className='grid grid-cols-2 gap-y-1.5 text-xs'>
-                <span className='text-slate-500'>Material</span>
-                <span className='text-right text-slate-300'>
-                  {selectedElement.attributes.material}
-                </span>
-                <span className='text-slate-500'>Phasing</span>
-                <span className='text-right text-emerald-400 text-[10px] font-bold uppercase'>
-                  {selectedElement.attributes.phasing}
-                </span>
-                <span className='text-slate-500'>Fire Rating</span>
-                <span className='text-right text-slate-300'>
-                  {selectedElement.attributes.fireRating}
-                </span>
-                <span className='text-slate-500'>U-Value</span>
-                <span className='text-right text-slate-300'>
-                  {selectedElement.attributes.uValue}
-                </span>
-              </div>
-            </section>
+            {/* Property Sets Sections */}
+            {Object.entries(selectedElement.psets || {}).map(
+              ([psetName, props]) => {
+                const validProps = Object.entries(props).filter(
+                  ([_, v]) => v !== null && v !== undefined && v !== ''
+                );
 
-            <section className='space-y-2'>
-              <h4 className='text-[10px] font-bold text-slate-500 uppercase tracking-wider border-b border-slate-800 pb-1'>
-                Lifecycle
-              </h4>
-              <div className='grid grid-cols-2 gap-y-1.5 text-xs'>
-                <span className='text-slate-500'>Status</span>
-                <span className='text-right text-amber-500 font-bold'>
-                  {selectedElement.lifecycle.status}
-                </span>
-                <span className='text-slate-500'>Cost Est.</span>
-                <span className='text-right text-slate-100 font-bold'>
-                  {selectedElement.lifecycle.costEst}
-                </span>
-              </div>
-            </section>
+                if (validProps.length === 0) return null;
+
+                return (
+                  <section key={psetName} className='space-y-2'>
+                    <h4 className='text-[10px] font-bold text-blue-500/70 uppercase tracking-wider border-b border-slate-800 pb-1'>
+                      {psetName}
+                    </h4>
+                    <div className='grid grid-cols-2 gap-y-1.5 text-xs'>
+                      {validProps.map(([propName, val]) => (
+                        <React.Fragment key={propName}>
+                          <span className='text-slate-500'>{propName}</span>
+                          <span
+                            className='text-right text-slate-300 font-mono truncate pl-2'
+                            title={String(val)}
+                          >
+                            {String(val)}
+                          </span>
+                        </React.Fragment>
+                      ))}
+                    </div>
+                  </section>
+                );
+              }
+            )}
           </>
         ) : (
           <div className='h-full flex flex-col items-center justify-center text-slate-600 space-y-2'>

@@ -1,38 +1,31 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { create } from 'zustand';
+
+export interface SelectedElement {
+  [key: string]: any;
+  psets: Record<string, Record<string, any>>;
+}
 
 interface BIMState {
   isBIMVisible: boolean;
-  activeTool: 'select' | 'clip' | 'measure' | 'orbit' | 'isolate' | 'hide' | null;
+  activeTool:
+    | 'select'
+    | 'clip'
+    | 'measure'
+    | 'orbit'
+    | 'isolate'
+    | 'hide'
+    | null;
   leftPanelOpen: boolean;
   rightPanelOpen: boolean;
-  selectedElement: {
-    id: string;
-    name: string;
-    category: string;
-    geometry: {
-      length: string;
-      width: string;
-      height: string;
-      volume: string;
-    };
-    attributes: {
-      material: string;
-      phasing: string;
-      fireRating: string;
-      uValue: string;
-    };
-    lifecycle: {
-      status: string;
-      costEst: string;
-    };
-  } | null;
-  
+  selectedElement: SelectedElement | null;
+
   // Actions
   setBIMVisible: (visible: boolean) => void;
   setActiveTool: (tool: BIMState['activeTool']) => void;
   toggleLeftPanel: () => void;
   toggleRightPanel: () => void;
-  setSelectedElement: (element: BIMState['selectedElement']) => void;
+  setSelectedElement: (element: SelectedElement | null) => void;
 }
 
 export const useBIMStore = create<BIMState>((set) => ({
@@ -40,31 +33,13 @@ export const useBIMStore = create<BIMState>((set) => ({
   activeTool: 'select',
   leftPanelOpen: true,
   rightPanelOpen: true,
-  selectedElement: {
-    id: '4829-AF-0012',
-    name: 'CW-02 Mullion System',
-    category: 'Exterior Walls',
-    geometry: {
-      length: '4,200.00 mm',
-      width: '150.00 mm',
-      height: '3,500.00 mm',
-      volume: '2.205 m³',
-    },
-    attributes: {
-      material: 'Aluminum 6061-T6',
-      phasing: 'NEW CONSTRUCTION',
-      fireRating: '60 min',
-      uValue: '1.4 W/m²K',
-    },
-    lifecycle: {
-      status: 'Awaiting Install',
-      costEst: '$1,240.00',
-    },
-  },
+  selectedElement: null,
 
   setBIMVisible: (visible) => set({ isBIMVisible: visible }),
   setActiveTool: (tool) => set({ activeTool: tool }),
-  toggleLeftPanel: () => set((state) => ({ leftPanelOpen: !state.leftPanelOpen })),
-  toggleRightPanel: () => set((state) => ({ rightPanelOpen: !state.rightPanelOpen })),
+  toggleLeftPanel: () =>
+    set((state) => ({ leftPanelOpen: !state.leftPanelOpen })),
+  toggleRightPanel: () =>
+    set((state) => ({ rightPanelOpen: !state.rightPanelOpen })),
   setSelectedElement: (element) => set({ selectedElement: element }),
 }));

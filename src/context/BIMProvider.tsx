@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import {
   useState,
   type ReactNode,
@@ -33,6 +34,7 @@ export const BIMProvider: FC<{ children: ReactNode }> = ({ children }) => {
   const workerUrlRef = useRef<string | null>(null);
 
   const activeTool = useBIMStore((s) => s.activeTool);
+  const setSelectedElement = useBIMStore((s) => s.setSelectedElement);
 
   const isMountedRef = useRef(true);
 
@@ -52,7 +54,111 @@ export const BIMProvider: FC<{ children: ReactNode }> = ({ children }) => {
     };
   }, []);
 
-  // todo: clipper event
+  // todo: Highligh event
+  const setupHighlighter = useCallback(
+    (
+      components: OBC.Components,
+      world: OBC.World,
+      fragments: OBC.FragmentsManager
+    ) => {
+      const highlighter = components.get(OBF.Highlighter);
+      highlighter.setup({
+        world,
+        selectMaterialDefinition: {
+          color: new THREE.Color('#bcf124'),
+          opacity: 1,
+          transparent: false,
+          renderedFaces: 0,
+        },
+      });
+
+      const onHighlight = async (modelIdMap: OBC.ModelIdMap) => {
+        const promises = [];
+        for (const [modelId, localIds] of Object.entries(modelIdMap)) {
+          const model = fragments.list.get(modelId);
+          if (!model) continue;
+
+          // Request attributes and Property Set relations
+          promises.push(
+            model.getItemsData([...localIds], {
+              attributesDefault: true,
+              relations: {
+                IsDefinedBy: {
+                  attributes: true,
+                  relations: true,
+                },
+                HasProperties: {
+                  attributes: true,
+                  relations: true,
+                },
+              },
+            })
+          );
+        }
+
+        const data = (await Promise.all(promises)).flat();
+
+        if (data.length > 0) {
+          const item = data[0];
+
+          // 1. Process Property Sets (Psets)
+          const psets: Record<string, any> = {};
+          if (item.IsDefinedBy && Array.isArray(item.IsDefinedBy)) {
+            for (const pset of item.IsDefinedBy) {
+              const psetName: string = pset.Name?.value || 'Common Properties';
+              const props: Record<string, any> = {};
+              if (pset.HasProperties && Array.isArray(pset.HasProperties)) {
+                for (const prop of pset.HasProperties) {
+                  const name = prop.Name?.value;
+                  const val = prop.NominalValue?.value;
+                  if (name && val !== undefined) {
+                    props[name] = val;
+                  }
+                }
+              }
+              psets[psetName] = props;
+            }
+          }
+          console.log('pset: ', psets);
+
+          // 2. Flatten and spread direct attributes
+          const flatAttributes: Record<string, any> = {};
+          for (const [key, val] of Object.entries(item)) {
+            if (key === 'IsDefinedBy') continue; // Handled separately
+
+            // Extract .value if it exists (common pattern in That Open fragments)
+            if (val && typeof val === 'object' && 'value' in val) {
+              flatAttributes[key] = val.value;
+            } else {
+              flatAttributes[key] = val;
+            }
+          }
+          console.log('flatAttributes: ', flatAttributes);
+
+          setSelectedElement({
+            ...flatAttributes,
+            psets,
+          });
+        }
+      };
+
+      const onClear = () => {
+        setSelectedElement(null);
+      };
+
+      highlighter.events.select.onHighlight.add(onHighlight);
+      highlighter.events.select.onClear.add(onClear);
+
+      return () => {
+        highlighter.clear('select');
+        highlighter.events.select.onHighlight.remove(onHighlight);
+        highlighter.events.select.onClear.remove(onClear);
+      };
+    },
+    [setSelectedElement]
+  );
+
+  // todo: Clipper event
   const setupClipper = useCallback(
     (components: OBC.Components, world: OBC.World, container: HTMLElement) => {
       const clipper = components.get(OBC.Clipper);
@@ -60,19 +166,15 @@ export const BIMProvider: FC<{ children: ReactNode }> = ({ children }) => {
       clipper.visible = true;
 
       const handleDblClick = () => {
-        container.ondblclick = () => {
-          if (clipper.enabled) {
-            clipper.create(world);
-          }
-        };
+        if (clipper.enabled) clipper.create(world);
       };
 
       const handleKeyDown = (event: KeyboardEvent) => {
-        if (event.code === 'Delete' || event.code === 'Backspace') {
-          if (clipper.enabled) {
-            console.log('delete clipper');
-            clipper.delete(world);
-          }
+        if (
+          (event.code === 'Delete' || event.code === 'Backspace') &&
+          clipper.enabled
+        ) {
+          clipper.delete(world);
         }
       };
 
@@ -93,15 +195,21 @@ export const BIMProvider: FC<{ children: ReactNode }> = ({ children }) => {
   useEffect(() => {
     const components = componentsRef.current;
     const world = worldRef.current;
-    if (!components || !world || !container) return;
+    const fragments = fragmentsRef.current;
 
-    let cleanup: (() => void) | undefined;
+    const containerEl = container;
+    if (!isReady || !components || !world || !containerEl || !fragments) return;
 
     const clipper = components.get(OBC.Clipper);
 
+    let cleanup: (() => void) | undefined;
+
     switch (activeTool) {
+      case 'select':
+        cleanup = setupHighlighter(components, world, fragments);
+        break;
       case 'clip':
-        cleanup = setupClipper(components, world, container);
+        cleanup = setupClipper(components, world, containerEl);
         break;
       default:
         // By default, disable specialized tools
@@ -113,7 +221,7 @@ export const BIMProvider: FC<{ children: ReactNode }> = ({ children }) => {
     return () => {
       if (cleanup) cleanup();
     };
-  }, [activeTool, container, setupClipper]);
+  }, [activeTool, container, isReady, setupClipper, setupHighlighter]);
 
   const mount = useCallback(async (container: HTMLElement) => {
     if (componentsRef.current) return;
@@ -194,50 +302,6 @@ export const BIMProvider: FC<{ children: ReactNode }> = ({ children }) => {
     const grid = grids.create(world);
 
     grid.three.position.y = -0.01; // Slightly below ground to avoid Z-fighting
-
-    // todo: Raycaster event
-    // container.addEventListener('dblclick', async () => {
-    //   const result = await caster.castRay();
-    //   if (result) {
-    //     console.log('Raycast result:', result);
-    //     const { object, faceIndex, point } = result;
-    //     console.log('Hit object:', object);
-    //     console.log('Face index:', faceIndex);
-    //     console.log('Hit point:', point);
-    //   } else {
-    //     console.log('No object hit.');
-    //   }
-    // });
-
-    // todo: Highligh event
-    // const highlighter = components.get(OBF.Highlighter);
-    // highlighter.setup({
-    //   world,
-    //   selectMaterialDefinition: {
-    //     color: new THREE.Color('#bcf124'),
-    //     opacity: 1,
-    //     transparent: false,
-    //     renderedFaces: 0,
-    //   },
-    // });
-
-    // highlighter.events.select.onHighlight.add(async (modelIdMap) => {
-    //   console.log('Something was selected');
-
-    //   const promises = [];
-    //   for (const [modelId, localIds] of Object.entries(modelIdMap)) {
-    //     const model = fragments.list.get(modelId);
-    //     if (!model) continue;
-    //     promises.push(model.getItemsData([...localIds]));
-    //   }
-
-    //   const data = (await Promise.all(promises)).flat();
-    //   console.log(data);
-    // });
-
-    // highlighter.events.select.onClear.add(() => {
-    //   console.log('Selection was cleared');
-    // });
   }, []);
 
   const value = {
