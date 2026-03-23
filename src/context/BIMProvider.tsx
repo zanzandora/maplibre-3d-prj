@@ -105,12 +105,13 @@ export const BIMProvider: FC<{ children: ReactNode }> = ({ children }) => {
           const psets: Record<string, any> = {};
           if (item.IsDefinedBy && Array.isArray(item.IsDefinedBy)) {
             for (const pset of item.IsDefinedBy) {
-              const psetName: string = pset.Name?.value || 'Common Properties';
+              const psetName: string =
+                (pset.Name as any)?.value || 'Common Properties';
               const props: Record<string, any> = {};
               if (pset.HasProperties && Array.isArray(pset.HasProperties)) {
                 for (const prop of pset.HasProperties) {
-                  const name = prop.Name?.value;
-                  const val = prop.NominalValue?.value;
+                  const name = (prop.Name as any)?.value;
+                  const val = (prop.NominalValue as any)?.value;
                   if (name && val !== undefined) {
                     props[name] = val;
                   }
@@ -119,7 +120,7 @@ export const BIMProvider: FC<{ children: ReactNode }> = ({ children }) => {
               psets[psetName] = props;
             }
           }
-          console.log('pset: ', psets);
+          // console.log('pset: ', psets);
 
           // 2. Flatten and spread direct attributes
           const flatAttributes: Record<string, any> = {};
@@ -133,7 +134,7 @@ export const BIMProvider: FC<{ children: ReactNode }> = ({ children }) => {
               flatAttributes[key] = val;
             }
           }
-          console.log('flatAttributes: ', flatAttributes);
+          // console.log('flatAttributes: ', flatAttributes);
 
           setSelectedElement({
             ...flatAttributes,
