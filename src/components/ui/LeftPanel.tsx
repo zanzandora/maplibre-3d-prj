@@ -1,4 +1,4 @@
-import { Search, LayoutPanelLeft } from 'lucide-react';
+import { Search, LayoutPanelLeft, Loader2 } from 'lucide-react';
 import { Button } from './Button';
 import { useBIMStore } from '../store/useBIMStore';
 
@@ -8,6 +8,7 @@ export const LeftPanel: React.FC = () => {
   const leftPanelOpen = useBIMStore((s) => s.leftPanelOpen);
   const toggleLeftPanel = useBIMStore((s) => s.toggleLeftPanel);
   const roots = useBIMStore((s) => s.spatialTreeRoots);
+  const isTreeLoading = useBIMStore((s) => s.isTreeLoading);
 
   if (!leftPanelOpen) {
     return (
@@ -43,12 +44,21 @@ export const LeftPanel: React.FC = () => {
         </div>
       </div>
 
-      <div className='flex-1 overflow-y-auto p-2'>
-        <div className='space-y-1'>
-          {roots.map((id) => (
-            <TreeNode key={id} id={id} level={0} />
-          ))}
-        </div>
+      <div className='flex-1 overflow-y-auto py-2 px-4'>
+        {isTreeLoading ? (
+          <div className='absolute inset-0 z-10 bg-slate-900/60 backdrop-blur-[2px] flex flex-col items-center justify-center space-y-3'>
+            <Loader2 className='w-8 h-8 text-blue-500 animate-spin' />
+            <span className='text-[10px] font-bold text-blue-400 uppercase tracking-widest'>
+              Building Tree...
+            </span>
+          </div>
+        ) : (
+          <div className='space-y-1'>
+            {roots.map((id) => (
+              <TreeNode key={id} id={id} level={0} />
+            ))}
+          </div>
+        )}
       </div>
 
       <div className='p-3 bg-slate-900 border-t border-slate-800 flex gap-2'>

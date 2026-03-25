@@ -8,6 +8,7 @@ export default function BIMViewer() {
   const containerRef = useRef<HTMLDivElement>(null);
   const { mount, fragments, isReady } = useBIMContext();
   const setSpatialTree = useBIMStore((s) => s.setSpatialTree);
+  const setIsTreeLoading = useBIMStore((s) => s.setIsTreeLoading);
 
   useEffect(() => {
     if (!containerRef.current) return;
@@ -26,14 +27,20 @@ export default function BIMViewer() {
         const buffer = await file.arrayBuffer();
         const model = await fragments.core.load(buffer, { modelId });
 
-        const result = await generateSpatialTree(model);
-        if (result) {
-          setSpatialTree(result.nodes, result.roots);
+        // Start Tree Loading
+        setIsTreeLoading(true);
+        try {
+          const result = await generateSpatialTree(model);
+          if (result) {
+            setSpatialTree(result.nodes, result.roots);
+          }
+        } finally {
+          setIsTreeLoading(false);
         }
       };
       loadFragments();
     }
-  }, [isReady, fragments, setSpatialTree]);
+  }, [isReady, fragments, setSpatialTree, setIsTreeLoading]);
 
   return (
     <BIMViewerLayout>

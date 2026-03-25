@@ -4,14 +4,15 @@ import { create } from 'zustand';
 export interface ISelectedElement {
   [key: string]: any;
   psets: Record<string, Record<string, any>>;
+  _localId?: number;
 }
 
 export interface ISpatialNode {
   id: string | number;
   label: string;
   type: string;
-  children: number[]; // Store child IDs for normalized traversal
-  parentId: number | null;
+  children: (string | number)[];
+  parentId: string | number | null;
   isGroup?: boolean;
   count?: number;
 }
@@ -29,14 +30,17 @@ interface BIMState {
   leftPanelOpen: boolean;
   rightPanelOpen: boolean;
 
-  // Select Element
+  // Selection
   selectedElement: ISelectedElement | null;
+  selectedNodeId: string | number | null;
   isHighlighting: boolean;
 
   // Normalized Spatial Tree
   spatialTreeById: Record<string | number, ISpatialNode>;
-  spatialTreeRoots: string[] | number[];
+  spatialTreeRoots: (string | number)[];
+  totalElements: number;
   expandedIds: Set<string | number>;
+  isTreeLoading: boolean; // Added for Tree Generation loading
 
   // UI Actions
   setBIMVisible: (visible: boolean) => void;
@@ -46,14 +50,16 @@ interface BIMState {
 
   // Select Element Actions
   setSelectedElement: (element: ISelectedElement | null) => void;
+  setSelectedNodeId: (id: string | number | null) => void;
   setIsHighlighting: (loading: boolean) => void;
 
   // Tree Actions
   setSpatialTree: (
-    nodes: Record<number, ISpatialNode>,
-    roots: string[] | number[]
+    nodes: Record<string | number, ISpatialNode>,
+    roots: (string | number)[]
   ) => void;
   toggleNode: (id: string | number) => void;
+  setIsTreeLoading: (loading: boolean) => void; // Added action
 }
 
 export const useBIMStore = create<BIMState>((set) => ({
@@ -62,11 +68,14 @@ export const useBIMStore = create<BIMState>((set) => ({
   leftPanelOpen: true,
   rightPanelOpen: true,
   selectedElement: null,
+  selectedNodeId: null,
   isHighlighting: false,
 
   spatialTreeById: {},
   spatialTreeRoots: [],
+  totalElements: 0,
   expandedIds: new Set(),
+  isTreeLoading: false,
 
   setBIMVisible: (visible) => set({ isBIMVisible: visible }),
   setActiveTool: (tool) => set({ activeTool: tool }),
@@ -75,10 +84,20 @@ export const useBIMStore = create<BIMState>((set) => ({
   toggleRightPanel: () =>
     set((state) => ({ rightPanelOpen: !state.rightPanelOpen })),
   setSelectedElement: (element) => set({ selectedElement: element }),
+  setSelectedNodeId: (id) => set({ selectedNodeId: id }),
   setIsHighlighting: (loading) => set({ isHighlighting: loading }),
 
-  setSpatialTree: (nodes, roots) =>
-    set({ spatialTreeById: nodes, spatialTreeRoots: roots }),
+  setSpatialTree: (nodes, roots) => {
+    // Calculate total elements: Sum of 'count' from all 'CategoryGroup' nodes
+    const total = Object.values(nodes).reduce((acc, node) => {
+      if (node.isGroup && node.type === 'CategoryGroup' && node.count) {
+        return acc + node.count;
+      }
+      return acc;
+    }, 0);
+
+    set({ spatialTreeById: nodes, spatialTreeRoots: roots, totalElements: total });
+  },
   toggleNode: (id) =>
     set((state) => {
       const nextExpanded = new Set(state.expandedIds);
@@ -89,4 +108,5 @@ export const useBIMStore = create<BIMState>((set) => ({
       }
       return { expandedIds: nextExpanded };
     }),
+  setIsTreeLoading: (loading) => set({ isTreeLoading: loading }),
 }));

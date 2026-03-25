@@ -1,9 +1,10 @@
-import { Box, FileOutput, X } from 'lucide-react';
+import { Box, X } from 'lucide-react';
 import { Button } from './Button';
 import { useBIMStore } from '../store/useBIMStore';
 
 export const Header: React.FC = () => {
   const setBIMVisible = useBIMStore((state) => state.setBIMVisible);
+  const totalElements = useBIMStore((state) => state.totalElements);
 
   return (
     <header className='h-14 flex items-center justify-between px-4 bg-slate-900/80 backdrop-blur-md border-b border-slate-700 pointer-events-auto'>
@@ -36,15 +37,15 @@ export const Header: React.FC = () => {
           <div className='h-3 w-px bg-slate-700' />
           <div className='flex items-center gap-1.5'>
             <span className='italic'>Elements:</span>
-            <span className='text-slate-200'>14,282</span>
+            <span className='text-slate-200'>{totalElements.toLocaleString()}</span>
           </div>
         </div>
 
         <div className='flex items-center gap-3'>
-          <Button size='sm' className='gap-2'>
+          {/* <Button size='sm' className='gap-2'>
             <FileOutput className='w-3.5 h-3.5' />
             Export IFC
-          </Button>
+          </Button> */}
 
           <Button
             variant='secondary'
