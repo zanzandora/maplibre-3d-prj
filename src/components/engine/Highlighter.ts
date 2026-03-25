@@ -2,13 +2,13 @@
 import * as OBC from '@thatopen/components';
 import * as OBF from '@thatopen/components-front';
 import * as THREE from 'three';
-import type { SelectedElement } from '../store/useBIMStore';
+import type { ISelectedElement } from '../store/useBIMStore';
 
 export const setupHighlighter = (
   highlighter: OBF.Highlighter,
   world: OBC.World,
   fragments: OBC.FragmentsManager,
-  setSelectedElement: (element: SelectedElement | null) => void,
+  setSelectedElement: (element: ISelectedElement | null) => void,
   setIsHighlighting: (loading: boolean) => void
 ) => {
   highlighter.setup({
@@ -105,8 +105,9 @@ export const setupHighlighter = (
   highlighter.events.select.onClear.add(onClear);
 
   return () => {
-    highlighter.clear('select');
+    highlighter.enabled = false;
     highlighter.events.select.onHighlight.remove(onHighlight);
     highlighter.events.select.onClear.remove(onClear);
+    highlighter.dispose();
   };
 };

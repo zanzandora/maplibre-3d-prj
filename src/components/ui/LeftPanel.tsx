@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, memo } from 'react';
 import {
   ChevronDown,
   ChevronRight,
@@ -13,149 +13,10 @@ import {
   CollapsibleTrigger,
 } from './Collapsible';
 
-interface ModelNode {
-  id: number;
-  label: string;
-  type: string;
-  expressIDs: number[];
-  children?: ModelNode[];
-}
-
-const mock: ModelNode[] = [
-  {
-    id: 100,
-    label: 'TẦNG 1',
-    type: 'IFCBUILDINGSTOREY',
-    expressIDs: [101, 102, 103, 104, 105],
-    children: [
-      {
-        id: 200,
-        label: 'Cấu kiện tường (IFCWALL)',
-        type: 'CATEGORY',
-        expressIDs: [101, 102],
-        children: [
-          {
-            id: 101,
-            label: 'Wall-Standard-01',
-            type: 'ELEMENT',
-            expressIDs: [101],
-          },
-          {
-            id: 102,
-            label: 'Wall-Standard-02',
-            type: 'ELEMENT',
-            expressIDs: [102],
-            children: [
-              {
-                id: 101,
-                label: 'Wall-Standard-01',
-                type: 'ELEMENT',
-                expressIDs: [101],
-              },
-              {
-                id: 103,
-                label: 'Wall-Standard-03',
-                type: 'ELEMENT',
-                expressIDs: [102],
-                children: [
-                  {
-                    id: 101,
-                    label: 'Wall-Standard-01',
-                    type: 'ELEMENT',
-                    expressIDs: [101],
-                  },
-                  {
-                    id: 104,
-                    label: 'Wall-Standard-02',
-                    type: 'ELEMENT',
-                    expressIDs: [102],
-                  },
-                ],
-              },
-            ],
-          },
-        ],
-      },
-      {
-        id: 201,
-        label: 'Cửa đi (IFCDOOR)',
-        type: 'CATEGORY',
-        expressIDs: [103],
-        children: [
-          {
-            id: 103,
-            label: 'Door-Single-600x2100',
-            type: 'ELEMENT',
-            expressIDs: [103],
-          },
-        ],
-      },
-    ],
-  },
-  {
-    id: 300,
-    label: 'TẦNG 2',
-    type: 'IFCBUILDINGSTOREY',
-    expressIDs: [301, 302],
-    children: [
-      {
-        id: 301,
-        label: 'Sàn bê tông (IFCSLAB)',
-        type: 'ELEMENT',
-        expressIDs: [301],
-      },
-      {
-        id: 302,
-        label: 'Dầm thép (IFCBEAM)',
-        type: 'ELEMENT',
-        expressIDs: [302],
-      },
-    ],
-  },
-  {
-    id: 400,
-    label: 'TẦNG TUM',
-    type: 'IFCBUILDINGSTOREY',
-    expressIDs: [401],
-    children: [],
-  },
-];
-
 export const LeftPanel: React.FC = () => {
   const leftPanelOpen = useBIMStore((s) => s.leftPanelOpen);
   const toggleLeftPanel = useBIMStore((s) => s.toggleLeftPanel);
-  const [expandedIds, setExpandedIds] = useState<Set<number>>(new Set());
-  const [selectedId, setSelectedId] = useState<number | null>(null);
-
-  const toggleNode = (id: number) => {
-    const newExpanded = new Set(expandedIds);
-    if (newExpanded.has(id)) {
-      newExpanded.delete(id);
-    } else {
-      newExpanded.add(id);
-    }
-    setExpandedIds(newExpanded);
-  };
-
-  const selectNode = (id: number) => {
-    setSelectedId(id === selectedId ? null : id);
-  };
-
-  const renderTree = (nodes: ModelNode[]) => {
-    return nodes.map((node) => (
-      <TreeItem
-        key={node.id}
-        label={node.label}
-        expanded={expandedIds.has(node.id)}
-        selected={selectedId === node.id}
-        onToggle={() => toggleNode(node.id)}
-        onSelect={() => selectNode(node.id)}
-        hasChildren={node.children && node.children.length > 0}
-      >
-        {node.children && node.children.length > 0 && renderTree(node.children)}
-      </TreeItem>
-    ));
-  };
+  const roots = useBIMStore((s) => s.spatialTreeRoots);
 
   if (!leftPanelOpen) {
     return (
@@ -192,7 +53,11 @@ export const LeftPanel: React.FC = () => {
       </div>
 
       <div className='flex-1 overflow-y-auto p-2'>
-        <div className='space-y-1'>{renderTree(mock)}</div>
+        <div className='space-y-1'>
+          {roots.map((id) => (
+            <TreeNode key={id} id={id} level={0} />
+          ))}
+        </div>
       </div>
 
       <div className='p-3 bg-slate-900 border-t border-slate-800 flex gap-2'>
@@ -215,40 +80,43 @@ export const LeftPanel: React.FC = () => {
   );
 };
 
-interface TreeItemProps {
-  label: string;
-  expanded?: boolean;
-  selected?: boolean;
-  onToggle: () => void;
-  onSelect: () => void;
-  hasChildren?: boolean;
-  children?: React.ReactNode;
+interface TreeNodeProps {
+  id: string | number;
+  level: number;
 }
 
-const TreeItem: React.FC<TreeItemProps> = ({
-  label,
-  expanded,
-  selected,
-  onToggle,
-  onSelect,
-  hasChildren,
-  children,
-}) => {
+const TreeNode = memo(({ id, level }: TreeNodeProps) => {
+  // Fine-grained subscription: only re-render if THIS node's data changes
+  const node = useBIMStore((s) => s.spatialTreeById[id]);
+  const isExpanded = useBIMStore((s) => s.expandedIds.has(id));
+  const toggleNode = useBIMStore((s) => s.toggleNode);
+
+  const [selected, setSelected] = useState(false);
+
+  if (!node) return null;
+
+  const hasChildren = node.children && node.children.length > 0;
+
   return (
-    <Collapsible
-      open={expanded}
-      onOpenChange={onToggle}
-      className='text-xs select-none'
-    >
+    <Collapsible open={isExpanded} onOpenChange={() => toggleNode(id)}>
       <div
-        className={`flex items-center gap-1 py-1 px-1.5 rounded cursor-pointer group transition-colors ${
+        className={`flex items-center gap-1 py-1 px-1.5 rounded cursor-pointer group transition-colors text-xs select-none ${
           selected
             ? 'bg-blue-600/30 text-blue-100 border-l-2 border-blue-500'
             : 'hover:bg-slate-800 text-slate-400 hover:text-slate-200'
         }`}
+        style={{ marginLeft: level * 8 }}
         onClick={(e) => {
           e.stopPropagation();
-          onSelect();
+
+          // Nếu là thư mục Group -> Chỉ Toggle đóng/mở
+          if (node.isGroup) {
+            toggleNode(id);
+          }
+          // Nếu là cấu kiện thật -> Select trên màn hình 3D
+          else {
+            setSelected(!selected);
+          }
         }}
       >
         <CollapsibleTrigger
@@ -261,7 +129,7 @@ const TreeItem: React.FC<TreeItemProps> = ({
         >
           <div className='w-4 h-4 flex items-center justify-center hover:bg-slate-700 rounded'>
             {hasChildren ? (
-              expanded ? (
+              isExpanded ? (
                 <ChevronDown className='w-3 h-3 shrink-0' />
               ) : (
                 <ChevronRight className='w-3 h-3 shrink-0' />
@@ -276,15 +144,28 @@ const TreeItem: React.FC<TreeItemProps> = ({
             selected ? 'bg-blue-500' : 'bg-slate-600 group-hover:bg-slate-400'
           }`}
         />
-        <span className='truncate flex-1'>{label}</span>
+        <span className='truncate flex-1'>
+          {node.label}{' '}
+          {node.isGroup && (
+            <span className='text-slate-500'>({node.count})</span>
+          )}
+        </span>
+        {/* <span className='text-[10px] opacity-30 group-hover:opacity-60 transition-opacity ml-1 uppercase'>
+          {node.type.replace('IFC', '')}
+        </span> */}
       </div>
-      <CollapsibleContent>
-        {children && (
-          <div className='ml-3 pl-2 border-l border-slate-800/50 mt-1 space-y-1'>
-            {children}
+
+      {hasChildren && (
+        <CollapsibleContent>
+          <div className='mt-1 space-y-1'>
+            {node.children.map((childId) => (
+              <TreeNode key={childId} id={childId} level={level + 1} />
+            ))}
           </div>
-        )}
-      </CollapsibleContent>
+        </CollapsibleContent>
+      )}
     </Collapsible>
   );
-};
+});
+
+TreeNode.displayName = 'TreeNode';

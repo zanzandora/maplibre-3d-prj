@@ -1,7 +1,7 @@
 import React from 'react';
 import { Share2, Edit3, LucideLayoutPanelLeft, Loader2 } from 'lucide-react';
 import { Button } from './Button';
-import { useBIMStore, type SelectedElement } from '../store/useBIMStore';
+import { useBIMStore, type ISelectedElement } from '../store/useBIMStore';
 
 export const RightPanel: React.FC = () => {
   const rightPanelOpen = useBIMStore((s) => s.rightPanelOpen);
@@ -25,7 +25,7 @@ export const RightPanel: React.FC = () => {
   }
 
   // Helper to filter out internal or handled properties and null/undefined/empty values
-  const getDisplayAttributes = (element: SelectedElement) => {
+  const getDisplayAttributes = (element: ISelectedElement) => {
     const skip = ['psets'];
     return Object.entries(element).filter(
       ([key, val]) =>

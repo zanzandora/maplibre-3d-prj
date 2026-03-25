@@ -1,10 +1,13 @@
 import { useEffect, useRef } from 'react';
 import { useBIMContext } from '../context/BIMContext';
 import { BIMViewerLayout } from './ui/BIMViewerLayout';
+import { generateSpatialTree } from '../utils/generateSpatialTreeJSON';
+import { useBIMStore } from './store/useBIMStore';
 
 export default function BIMViewer() {
   const containerRef = useRef<HTMLDivElement>(null);
   const { mount, fragments, isReady } = useBIMContext();
+  const setSpatialTree = useBIMStore((s) => s.setSpatialTree);
 
   useEffect(() => {
     if (!containerRef.current) return;
@@ -16,13 +19,21 @@ export default function BIMViewer() {
       const loadFragments = async () => {
         const path = '/school_str.frag';
         const modelId = 'school_str';
+
+        if (fragments.list.has(modelId)) return;
+
         const file = await fetch(path);
         const buffer = await file.arrayBuffer();
-        await fragments.core.load(buffer, { modelId });
+        const model = await fragments.core.load(buffer, { modelId });
+
+        const result = await generateSpatialTree(model);
+        if (result) {
+          setSpatialTree(result.nodes, result.roots);
+        }
       };
       loadFragments();
     }
-  }, [isReady, fragments]);
+  }, [isReady, fragments, setSpatialTree]);
 
   return (
     <BIMViewerLayout>
