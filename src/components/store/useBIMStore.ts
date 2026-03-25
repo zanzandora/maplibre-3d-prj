@@ -88,7 +88,6 @@ export const useBIMStore = create<BIMState>((set) => ({
   setIsHighlighting: (loading) => set({ isHighlighting: loading }),
 
   setSpatialTree: (nodes, roots) => {
-    // Calculate total elements: Sum of 'count' from all 'CategoryGroup' nodes
     const total = Object.values(nodes).reduce((acc, node) => {
       if (node.isGroup && node.type === 'CategoryGroup' && node.count) {
         return acc + node.count;
@@ -96,7 +95,11 @@ export const useBIMStore = create<BIMState>((set) => ({
       return acc;
     }, 0);
 
-    set({ spatialTreeById: nodes, spatialTreeRoots: roots, totalElements: total });
+    set({
+      spatialTreeById: nodes,
+      spatialTreeRoots: roots,
+      totalElements: total,
+    });
   },
   toggleNode: (id) =>
     set((state) => {

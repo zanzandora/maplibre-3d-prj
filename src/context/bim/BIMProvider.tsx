@@ -8,9 +8,9 @@ import {
 } from 'react';
 import * as OBC from '@thatopen/components';
 import { BIMContext } from './BIMContext';
-import { useBIMStore } from '../components/store/useBIMStore';
-import { setupHighlighter } from '../components/engine/Highlighter';
-import { setupClipper } from '../components/engine/Clipper';
+import { useBIMStore } from '../../components/store/useBIMStore';
+import { setupHighlighter } from '../../components/engine/Highlighter';
+import { setupClipper } from '../../components/engine/Clipper';
 import {
   Highlighter,
   PostproductionRenderer,
