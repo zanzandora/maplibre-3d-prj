@@ -1,27 +1,27 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import * as OBC from '@thatopen/components';
-import * as OBF from '@thatopen/components-front';
-import * as THREE from 'three';
 import type { ISelectedElement } from '../store/useBIMStore';
+import { Color } from 'three';
+import type { Highlighter } from '@thatopen/components-front';
+import type { FragmentsManager, ModelIdMap, World } from '@thatopen/components';
 
 export const setupHighlighter = (
-  highlighter: OBF.Highlighter,
-  world: OBC.World,
-  fragments: OBC.FragmentsManager,
+  highlighter: Highlighter,
+  world: World,
+  fragments: FragmentsManager,
   setSelectedElement: (element: ISelectedElement | null) => void,
   setIsHighlighting: (loading: boolean) => void
 ) => {
   highlighter.setup({
     world,
     selectMaterialDefinition: {
-      color: new THREE.Color('#bcf124'),
+      color: new Color('#bcf124'),
       opacity: 1,
       transparent: false,
       renderedFaces: 0,
     },
   });
 
-  const onHighlight = async (modelIdMap: OBC.ModelIdMap) => {
+  const onHighlight = async (modelIdMap: ModelIdMap) => {
     setIsHighlighting(true);
     try {
       const promises = [];

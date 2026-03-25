@@ -7,12 +7,15 @@ import {
   useEffect,
 } from 'react';
 import * as OBC from '@thatopen/components';
-import * as OBF from '@thatopen/components-front';
-import * as THREE from 'three';
 import { BIMContext } from './BIMContext';
 import { useBIMStore } from '../components/store/useBIMStore';
 import { setupHighlighter } from '../components/engine/Highlighter';
 import { setupClipper } from '../components/engine/Clipper';
+import {
+  Highlighter,
+  PostproductionRenderer,
+} from '@thatopen/components-front';
+import { Color } from 'three';
 
 export type BIMWorld = OBC.World;
 
@@ -66,7 +69,7 @@ export const BIMProvider: FC<{ children: ReactNode }> = ({ children }) => {
     if (!isReady || !components || !world || !containerEl || !fragments) return;
 
     const clipper = components.get(OBC.Clipper);
-    const highlighter = components.get(OBF.Highlighter);
+    const highlighter = components.get(Highlighter);
 
     let cleanup: (() => void) | undefined;
 
@@ -107,17 +110,17 @@ export const BIMProvider: FC<{ children: ReactNode }> = ({ children }) => {
     const world = worlds.create<
       OBC.SimpleScene,
       OBC.OrthoPerspectiveCamera,
-      OBF.PostproductionRenderer
+      PostproductionRenderer
     >();
     worldRef.current = world;
 
     world.scene = new OBC.SimpleScene(components);
-    world.renderer = new OBF.PostproductionRenderer(components, container);
+    world.renderer = new PostproductionRenderer(components, container);
     world.camera = new OBC.OrthoPerspectiveCamera(components);
 
     components.init();
     world.scene.setup();
-    world.scene.three.background = new THREE.Color('#202932');
+    world.scene.three.background = new Color('#202932');
 
     const fragments = components.get(OBC.FragmentsManager);
     fragmentsRef.current = fragments;

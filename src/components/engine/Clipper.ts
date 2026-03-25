@@ -1,8 +1,8 @@
-import * as OBC from '@thatopen/components';
+import type { Clipper, World } from '@thatopen/components';
 
 export const setupClipper = (
-  clipper: OBC.Clipper,
-  world: OBC.World,
+  clipper: Clipper,
+  world: World,
   container: HTMLElement
 ) => {
   clipper.enabled = true;
