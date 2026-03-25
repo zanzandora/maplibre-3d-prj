@@ -21,6 +21,8 @@ export const setupHighlighter = (
     },
   });
 
+  highlighter.zoomToSelection = true;
+
   const onHighlight = async (modelIdMap: ModelIdMap) => {
     setIsHighlighting(true);
     try {
