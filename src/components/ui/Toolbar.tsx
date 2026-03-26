@@ -37,55 +37,79 @@ const ToolButton: React.FC<{
   tool: Tool;
   isActive: boolean;
   onClick: () => void;
-}> = ({ tool, isActive, onClick }) => (
-  <Button
-    onClick={onClick}
-    variant={isActive ? 'default' : 'ghost'}
-    size='icon'
-    className={`rounded-full transition-all ${
-      isActive
-        ? 'shadow-lg shadow-bim-primary/40'
-        : 'text-bim-text-muted hover:text-bim-text-main'
-    }`}
-    title={tool.label}
-  >
-    <tool.icon className='w-5 h-5' />
-  </Button>
-);
+  iconOverride?: LucideIcon;
+}> = ({ tool, isActive, onClick, iconOverride }) => {
+  const Icon = iconOverride || tool.icon;
+  return (
+    <Button
+      onClick={onClick}
+      variant={isActive ? 'default' : 'ghost'}
+      size='icon'
+      className={`rounded-full transition-all ${
+        isActive
+          ? 'shadow-lg shadow-bim-primary/40'
+          : 'text-bim-text-muted hover:text-bim-text-main'
+      }`}
+      title={tool.label}
+    >
+      <Icon className='w-5 h-5' />
+    </Button>
+  );
+};
 
 const ToolWithPopover: React.FC<{
   tool: Tool;
   isActive: boolean;
   onMainClick: () => void;
-}> = ({ tool, isActive, onMainClick }) => (
-  <Popover>
-    <PopoverTrigger>
-      <div className='inline-block'>
-        <ToolButton tool={tool} isActive={isActive} onClick={onMainClick} />
-      </div>
-    </PopoverTrigger>
-    <PopoverContent side='top' className='w-fit p-2'>
-      <div className='flex gap-2'>
-        {tool.subTools?.map((sub) => (
-          <Button
-            key={sub.id}
-            variant='ghost'
-            size='sm'
-            className='flex flex-col items-center gap-1 h-auto p-2 text-bim-text-muted hover:text-bim-text-main hover:bg-bim-bg-item-hover rounded-md'
-            title={sub.label}
-          >
-            <sub.icon className='w-4 h-4' />
-            {/* <span className='text-[10px]'>{sub.label}</span> */}
-          </Button>
-        ))}
-      </div>
-    </PopoverContent>
-  </Popover>
-);
+  activeSubToolId?: string;
+  onSubClick: (subId: string) => void;
+}> = ({ tool, isActive, onMainClick, activeSubToolId, onSubClick }) => {
+  const activeSubTool = tool.subTools?.find((s) => s.id === activeSubToolId);
+
+  return (
+    <Popover>
+      <PopoverTrigger>
+        <div className='inline-block'>
+          <ToolButton
+            tool={tool}
+            isActive={isActive}
+            onClick={onMainClick}
+            iconOverride={activeSubTool?.icon}
+          />
+        </div>
+      </PopoverTrigger>
+      <PopoverContent side='top' className='w-auto p-2'>
+        <div className='flex gap-2'>
+          {tool.subTools?.map((sub) => {
+            const isSubActive = activeSubToolId === sub.id;
+            return (
+              <Button
+                key={sub.id}
+                onClick={() => onSubClick(sub.id)}
+                variant='ghost'
+                size='sm'
+                className={`flex flex-col items-center gap-1 h-auto p-2 rounded-md transition-colors ${
+                  isSubActive
+                    ? 'text-bim-primary bg-bim-bg-item-hover'
+                    : 'text-bim-text-muted hover:text-bim-text-main hover:bg-bim-bg-item-hover'
+                }`}
+                title={sub.label}
+              >
+                <sub.icon className='w-4 h-4' />
+              </Button>
+            );
+          })}
+        </div>
+      </PopoverContent>
+    </Popover>
+  );
+};
 
 export const Toolbar: React.FC = () => {
   const activeTool = useBIMStore((s) => s.activeTool);
+  const activeSubTools = useBIMStore((s) => s.activeSubTools);
   const setActiveTool = useBIMStore((s) => s.setActiveTool);
+  const setActiveSubTool = useBIMStore((s) => s.setActiveSubTool);
 
   const tools: ToolbarItem[] = [
     { id: 'orbit', icon: Orbit, label: 'Orbit' },
@@ -130,14 +154,23 @@ export const Toolbar: React.FC = () => {
           const isActive = activeTool === item.id;
           const onMainClick = () => setActiveTool(item.id as any);
 
-          return item.subTools ? (
-            <ToolWithPopover
-              key={item.id}
-              tool={item}
-              isActive={isActive}
-              onMainClick={onMainClick}
-            />
-          ) : (
+          if (item.subTools) {
+            return (
+              <ToolWithPopover
+                key={item.id}
+                tool={item}
+                isActive={isActive}
+                onMainClick={onMainClick}
+                activeSubToolId={activeSubTools[item.id]}
+                onSubClick={(subId) => {
+                  setActiveSubTool(item.id, subId);
+                  setActiveTool(item.id as any);
+                }}
+              />
+            );
+          }
+
+          return (
             <ToolButton
               key={item.id}
               tool={item}

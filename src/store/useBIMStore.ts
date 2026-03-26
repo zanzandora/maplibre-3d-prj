@@ -27,6 +27,7 @@ interface BIMState {
     | 'isolate'
     | 'hide'
     | null;
+  activeSubTools: Record<string, string>;
   leftPanelOpen: boolean;
   rightPanelOpen: boolean;
 
@@ -45,6 +46,7 @@ interface BIMState {
   // UI Actions
   setBIMVisible: (visible: boolean) => void;
   setActiveTool: (tool: BIMState['activeTool']) => void;
+  setActiveSubTool: (toolId: string, subToolId: string) => void;
   toggleLeftPanel: () => void;
   toggleRightPanel: () => void;
 
@@ -65,6 +67,9 @@ interface BIMState {
 export const useBIMStore = create<BIMState>((set) => ({
   isBIMVisible: false,
   activeTool: 'select',
+  activeSubTools: {
+    measure: 'length',
+  },
   leftPanelOpen: true,
   rightPanelOpen: true,
   selectedElement: null,
@@ -78,7 +83,16 @@ export const useBIMStore = create<BIMState>((set) => ({
   isTreeLoading: false,
 
   setBIMVisible: (visible) => set({ isBIMVisible: visible }),
+
   setActiveTool: (tool) => set({ activeTool: tool }),
+  setActiveSubTool: (toolId, subToolId) =>
+    set((state) => ({
+      activeSubTools: {
+        ...state.activeSubTools,
+        [toolId]: subToolId,
+      },
+    })),
+
   toggleLeftPanel: () =>
     set((state) => ({ leftPanelOpen: !state.leftPanelOpen })),
   toggleRightPanel: () =>
