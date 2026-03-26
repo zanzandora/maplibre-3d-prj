@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import type { ISelectedElement } from '../store/useBIMStore';
+import type { ISelectedElement } from '../../store/useBIMStore';
 import { Color } from 'three';
 import type { Highlighter } from '@thatopen/components-front';
 import type { FragmentsManager, ModelIdMap, World } from '@thatopen/components';

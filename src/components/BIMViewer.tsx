@@ -2,11 +2,12 @@ import { useEffect, useRef } from 'react';
 import { useBIMContext } from '../context/bim/BIMContext';
 import { BIMViewerLayout } from './ui/BIMViewerLayout';
 import { generateSpatialTree } from '../utils/generateSpatialTreeJSON';
-import { useBIMStore } from './store/useBIMStore';
+import { useBIMStore } from '../store/useBIMStore';
+import { useViewCube } from '../hooks/useViewCube';
 
 export default function BIMViewer() {
   const containerRef = useRef<HTMLDivElement>(null);
-  const { mount, fragments, isReady } = useBIMContext();
+  const { mount, fragments, isReady, world, container } = useBIMContext();
   const setSpatialTree = useBIMStore((s) => s.setSpatialTree);
   const setIsTreeLoading = useBIMStore((s) => s.setIsTreeLoading);
 
@@ -42,6 +43,7 @@ export default function BIMViewer() {
     }
   }, [isReady, fragments, setSpatialTree, setIsTreeLoading]);
 
+  useViewCube(isReady, world, container);
   return (
     <BIMViewerLayout>
       <div ref={containerRef} className='w-full h-full' />

@@ -1,7 +1,7 @@
 import React from 'react';
 import { Edit3, Loader2, ChevronLeft, ChevronRight } from 'lucide-react';
 import { Button } from './Button';
-import { useBIMStore, type ISelectedElement } from '../store/useBIMStore';
+import { useBIMStore, type ISelectedElement } from '../../store/useBIMStore';
 
 export const RightPanel: React.FC = () => {
   const rightPanelOpen = useBIMStore((s) => s.rightPanelOpen);

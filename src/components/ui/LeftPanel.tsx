@@ -1,7 +1,7 @@
 import React from 'react';
 import { Search, Loader2, ChevronLeft, ChevronRight } from 'lucide-react';
 import { Button } from './Button';
-import { useBIMStore } from '../store/useBIMStore';
+import { useBIMStore } from '../../store/useBIMStore';
 import TreeNode from './TreeNode';
 
 export const LeftPanel: React.FC = () => {
@@ -28,7 +28,7 @@ export const LeftPanel: React.FC = () => {
 
         <div className='flex-1 overflow-y-auto py-2 px-4'>
           {isTreeLoading ? (
-            <div className='absolute inset-0 z-10 bg-bim-bg-main/60 backdrop-blur-[2px] flex flex-col items-center justify-center space-y-3'>
+            <div className='h-full z-10  flex flex-col items-center justify-center space-y-3'>
               <Loader2 className='w-8 h-8 text-bim-primary animate-spin' />
               <span className='text-[10px] font-bold text-bim-primary uppercase tracking-widest'>
                 Building Tree...
@@ -46,12 +46,14 @@ export const LeftPanel: React.FC = () => {
         <div className='p-3 bg-bim-bg-main border-t border-bim-border-light flex gap-2'>
           <Button
             size='sm'
+            disabled={isTreeLoading}
             className='flex-1 border-1 border-bim-border-main text-[10px] font-bold uppercase tracking-wider h-8'
           >
             Isolate
           </Button>
           <Button
             size='sm'
+            disabled={isTreeLoading}
             className='flex-1 text-[10px] font-bold border-1 border-bim-border-main uppercase tracking-wider h-8'
           >
             Hide

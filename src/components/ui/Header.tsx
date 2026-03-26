@@ -1,6 +1,6 @@
 import { Box, X } from 'lucide-react';
 import { Button } from './Button';
-import { useBIMStore } from '../store/useBIMStore';
+import { useBIMStore } from '../../store/useBIMStore';
 import { DarkMode } from './DarkMode';
 
 export const Header: React.FC = () => {

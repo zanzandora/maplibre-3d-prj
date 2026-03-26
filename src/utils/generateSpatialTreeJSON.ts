@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { FragmentsModel } from '@thatopen/fragments';
-import type { ISpatialNode } from '../components/store/useBIMStore';
+import type { ISpatialNode } from '../store/useBIMStore';
 
 /**
  * Chuyển đổi cấu trúc dữ liệu từ FragmentsModel thành cây không gian chuẩn hóa (Normalized Tree).

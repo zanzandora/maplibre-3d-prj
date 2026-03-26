@@ -1,5 +1,5 @@
 import { memo, useCallback } from 'react';
-import { useBIMStore } from '../store/useBIMStore';
+import { useBIMStore } from '../../store/useBIMStore';
 import {
   Collapsible,
   CollapsibleContent,

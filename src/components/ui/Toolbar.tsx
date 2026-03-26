@@ -8,7 +8,7 @@ import {
   Orbit,
 } from 'lucide-react';
 import { Button } from './Button';
-import { useBIMStore } from '../store/useBIMStore';
+import { useBIMStore } from '../../store/useBIMStore';
 
 export const Toolbar: React.FC = () => {
   const activeTool = useBIMStore((s) => s.activeTool);
@@ -37,7 +37,10 @@ export const Toolbar: React.FC = () => {
 
         {tools.map((tool, index) =>
           tool.divider ? (
-            <div key={`div-${index}`} className='w-px h-6 bg-bim-border-main mx-1' />
+            <div
+              key={`div-${index}`}
+              className='w-px h-6 bg-bim-border-main mx-1'
+            />
           ) : (
             <Button
               key={tool.id}

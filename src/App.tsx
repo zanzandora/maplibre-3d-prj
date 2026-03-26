@@ -1,7 +1,7 @@
 import BIMViewer from './components/BIMViewer';
 import { BIMProvider } from './context/bim/BIMProvider';
 import { Button } from './components/ui/Button';
-import { useBIMStore } from './components/store/useBIMStore';
+import { useBIMStore } from './store/useBIMStore';
 import { ThemeProvider } from './context/theme/ThemeProvider';
 
 function App() {
