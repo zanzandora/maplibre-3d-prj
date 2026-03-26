@@ -45,11 +45,6 @@ export const Header: React.FC = () => {
         </div>
 
         <div className='flex items-center gap-3'>
-          {/* <Button size='sm' className='gap-2'>
-            <FileOutput className='w-3.5 h-3.5' />
-            Export IFC
-          </Button> */}
-
           <DarkMode />
 
           <Button
@@ -60,14 +55,6 @@ export const Header: React.FC = () => {
           >
             <X className='w-4 h-4' />
           </Button>
-
-          {/* <Button
-            variant='secondary'
-            size='icon'
-            className='rounded-full w-8 h-8 font-bold text-xs p-0 border border-slate-600'
-          >
-            JD
-          </Button> */}
         </div>
       </div>
     </header>
