@@ -1,5 +1,4 @@
-import { useEffect, useMemo, useRef } from 'react';
-import { type CustomLayerInterface, type Map } from 'maplibre-gl';
+import { useEffect, useMemo, useRef } from "react";
 import {
   Mesh,
   InstancedMesh,
@@ -12,10 +11,9 @@ import {
   AmbientLight,
   Group,
   DirectionalLight,
-} from 'three';
-import { createRoot, extend, useThree } from '@react-three/fiber';
-import { Lights } from './Lights';
-import type { AdvanceFn, R3FRoot } from '../../utils/types';
+} from "three";
+import { createRoot, extend, useThree } from "@react-three/fiber";
+import { Lights } from "./Lights";
 
 // extend(THREE as any);
 extend({
@@ -27,24 +25,13 @@ extend({
   Group,
   DirectionalLight,
 });
-interface MapThreeLayerProps {
-  map: Map;
-  centerCoord: { x: number; y: number; z: number; meterScale: number };
-  children: React.ReactNode;
-  layerId?: string;
-  beforeId?: string; // ID của layer mà 3D Layer sẽ chèn vào DƯỚI nó (ví dụ: chèn dưới layer 'poi_outdoor')
-}
 
 const MAP_MATRIX = new Matrix4();
 
 /**
  *  todo: Help MapLibre pull Three.js to run alongside it.
  */
-const AdvanceCapturer = ({
-  advanceRef,
-}: {
-  advanceRef: React.RefObject<AdvanceFn | null>;
-}) => {
+const AdvanceCapturer = ({ advanceRef }) => {
   const advance = useThree((state) => state.advance);
   useEffect(() => {
     advanceRef.current = advance;
@@ -55,7 +42,7 @@ const AdvanceCapturer = ({
 /**
  * todo: Help Three.js wake up MapLibre when new data is received..
  */
-const InvalidateSync = ({ map }: { map: Map }) => {
+const InvalidateSync = ({ map }) => {
   const set = useThree((state) => state.set);
   const get = useThree((state) => state.get);
 
@@ -81,15 +68,15 @@ export const MapThreeLayer = ({
   map,
   centerCoord,
   children,
-  layerId = 'map-three-layer',
+  layerId = "map-three-layer",
   beforeId,
-}: MapThreeLayerProps) => {
-  const rootRef = useRef<R3FRoot | null>(null);
-  const rendererRef = useRef<WebGLRenderer | null>(null);
-  const cameraRef = useRef<PerspectiveCamera | null>(null);
-  const sceneRef = useRef<Scene | null>(null);
+}) => {
+  const rootRef = useRef(null);
+  const rendererRef = useRef(null);
+  const cameraRef = useRef(null);
+  const sceneRef = useRef(null);
 
-  const advanceRef = useRef<AdvanceFn | null>(null);
+  const advanceRef = useRef(null);
 
   // note: Đóng băng World Matrix để tránh tính toán lại mỗi frame
   const worldMatrix = useMemo(() => {
@@ -111,7 +98,7 @@ export const MapThreeLayer = ({
       0,
       0,
       0,
-      1
+      1,
     );
     return m;
   }, [centerCoord]);
@@ -125,7 +112,7 @@ export const MapThreeLayer = ({
           <AdvanceCapturer advanceRef={advanceRef} />
           <Lights />
           {children}
-        </group>
+        </group>,
       );
       map.triggerRepaint();
     }
@@ -135,10 +122,10 @@ export const MapThreeLayer = ({
     if (!map) return;
 
     // Định nghĩa Custom Layer theo chuẩn MapLibre GL JS
-    const customLayer: CustomLayerInterface = {
+    const customLayer = {
       id: layerId,
-      type: 'custom',
-      renderingMode: '3d',
+      type: "custom",
+      renderingMode: "3d",
 
       onAdd: function (mapInstance, gl) {
         const canvas = mapInstance.getCanvas();
@@ -171,7 +158,7 @@ export const MapThreeLayer = ({
             gl: renderer,
             camera: camera,
             scene: scene,
-            frameloop: 'never', // Frame sẽ được đẩy thủ công bên trong hàm `render` của maplibre
+            frameloop: "never", // Frame sẽ được đẩy thủ công bên trong hàm `render` của maplibre
             events: () => ({
               // note: true when (hover/click) on 3D models
               enabled: false,
@@ -209,7 +196,7 @@ export const MapThreeLayer = ({
         const m = matrix.defaultProjectionData
           ? matrix.defaultProjectionData.mainMatrix
           : matrix;
-        MAP_MATRIX.fromArray(m as number[]);
+        MAP_MATRIX.fromArray(m);
 
         // note: Kết hợp ma trận thế giới đã được đóng băng
         camera.projectionMatrix.copy(MAP_MATRIX).multiply(worldMatrix);
@@ -251,7 +238,7 @@ export const MapThreeLayer = ({
     addLayerToMap();
 
     // Lắng nghe sự kiện styledata để chèn lại layer nếu style bị nạp lại (ví dụ khi bật Terrain)
-    map.on('styledata', addLayerToMap);
+    map.on("styledata", addLayerToMap);
 
     // Bắt sự kiện resize để update R3F canvas size
     const onResize = () => {
@@ -266,15 +253,15 @@ export const MapThreeLayer = ({
         });
       }
     };
-    map.on('resize', onResize);
+    map.on("resize", onResize);
 
     return () => {
       if (map && map.getStyle && map.getStyle()) {
-        map.off('styledata', addLayerToMap);
+        map.off("styledata", addLayerToMap);
         if (map.getLayer(layerId)) {
           map.removeLayer(layerId);
         }
-        map.off('resize', onResize);
+        map.off("resize", onResize);
       }
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps

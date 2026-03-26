@@ -1,12 +1,12 @@
-import * as THREE from 'three';
+import type { PerspectiveCamera, Scene, WebGLRenderer } from 'three';
 import { R3FRoot } from '../utils/types';
 
 declare global {
   interface HTMLCanvasElement {
     __r3fSetup?: {
-      renderer: THREE.WebGLRenderer;
-      scene: THREE.Scene;
-      camera: THREE.PerspectiveCamera;
+      renderer: WebGLRenderer;
+      scene: Scene;
+      camera: PerspectiveCamera;
       root: R3FRoot;
     };
   }
