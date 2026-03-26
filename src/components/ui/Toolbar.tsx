@@ -6,17 +6,99 @@ import {
   User,
   Box,
   Orbit,
+  Square,
+  Maximize,
+  type LucideIcon,
 } from 'lucide-react';
 import { Button } from './elements/Button';
 import { useBIMStore } from '../../store/useBIMStore';
+import { Popover, PopoverContent, PopoverTrigger } from './elements/Popover';
+
+interface SubTool {
+  id: string;
+  icon: LucideIcon;
+  label: string;
+}
+
+interface Tool {
+  id: string;
+  icon: LucideIcon;
+  label: string;
+  subTools?: SubTool[];
+}
+
+interface Divider {
+  divider: true;
+}
+
+type ToolbarItem = Tool | Divider;
+
+const ToolButton: React.FC<{
+  tool: Tool;
+  isActive: boolean;
+  onClick: () => void;
+}> = ({ tool, isActive, onClick }) => (
+  <Button
+    onClick={onClick}
+    variant={isActive ? 'default' : 'ghost'}
+    size='icon'
+    className={`rounded-full transition-all ${
+      isActive
+        ? 'shadow-lg shadow-bim-primary/40'
+        : 'text-bim-text-muted hover:text-bim-text-main'
+    }`}
+    title={tool.label}
+  >
+    <tool.icon className='w-5 h-5' />
+  </Button>
+);
+
+const ToolWithPopover: React.FC<{
+  tool: Tool;
+  isActive: boolean;
+  onMainClick: () => void;
+}> = ({ tool, isActive, onMainClick }) => (
+  <Popover>
+    <PopoverTrigger>
+      <div className='inline-block'>
+        <ToolButton tool={tool} isActive={isActive} onClick={onMainClick} />
+      </div>
+    </PopoverTrigger>
+    <PopoverContent side='top' className='w-fit p-2'>
+      <div className='flex gap-2'>
+        {tool.subTools?.map((sub) => (
+          <Button
+            key={sub.id}
+            variant='ghost'
+            size='sm'
+            className='flex flex-col items-center gap-1 h-auto p-2 text-bim-text-muted hover:text-bim-text-main hover:bg-bim-bg-item-hover rounded-md'
+            title={sub.label}
+          >
+            <sub.icon className='w-4 h-4' />
+            {/* <span className='text-[10px]'>{sub.label}</span> */}
+          </Button>
+        ))}
+      </div>
+    </PopoverContent>
+  </Popover>
+);
 
 export const Toolbar: React.FC = () => {
   const activeTool = useBIMStore((s) => s.activeTool);
   const setActiveTool = useBIMStore((s) => s.setActiveTool);
 
-  const tools = [
+  const tools: ToolbarItem[] = [
     { id: 'orbit', icon: Orbit, label: 'Orbit' },
-    { id: 'measure', icon: Ruler, label: 'Measure' },
+    {
+      id: 'measure',
+      icon: Ruler,
+      label: 'Measure',
+      subTools: [
+        { id: 'length', icon: Ruler, label: 'Length' },
+        { id: 'area', icon: Square, label: 'Area' },
+        { id: 'volume', icon: Maximize, label: 'Volume' },
+      ],
+    },
     { id: 'search', icon: Search, label: 'Search' },
     { divider: true },
     { id: 'select', icon: Box, label: 'Select' },
@@ -35,29 +117,35 @@ export const Toolbar: React.FC = () => {
           <RefreshCcw className='w-5 h-5' />
         </Button>
 
-        {tools.map((tool, index) =>
-          tool.divider ? (
-            <div
-              key={`div-${index}`}
-              className='w-px h-6 bg-bim-border-main mx-1'
+        {tools.map((item, index) => {
+          if ('divider' in item) {
+            return (
+              <div
+                key={`div-${index}`}
+                className='w-px h-6 bg-bim-border-main mx-1'
+              />
+            );
+          }
+
+          const isActive = activeTool === item.id;
+          const onMainClick = () => setActiveTool(item.id as any);
+
+          return item.subTools ? (
+            <ToolWithPopover
+              key={item.id}
+              tool={item}
+              isActive={isActive}
+              onMainClick={onMainClick}
             />
           ) : (
-            <Button
-              key={tool.id}
-              onClick={() => setActiveTool(tool.id as any)}
-              variant={activeTool === tool.id ? 'default' : 'ghost'}
-              size='icon'
-              className={`rounded-full transition-all ${
-                activeTool === tool.id
-                  ? 'shadow-lg shadow-bim-primary/40'
-                  : 'text-bim-text-muted hover:text-bim-text-main'
-              }`}
-              title={tool.label}
-            >
-              {tool.icon && <tool.icon className='w-5 h-5' />}
-            </Button>
-          )
-        )}
+            <ToolButton
+              key={item.id}
+              tool={item}
+              isActive={isActive}
+              onClick={onMainClick}
+            />
+          );
+        })}
       </div>
     </div>
   );

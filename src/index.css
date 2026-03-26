@@ -73,3 +73,32 @@
 body {
   margin: 0;
 }
+
+/* Popover Components Styles */
+.popover-content {
+  background-color: var(--bim-bg-panel);
+  color: var(--bim-text-main);
+  border: 1px solid var(--bim-border-light);
+  border-radius: 8px;
+  padding: 10px;
+  font-size: 14px;
+  box-shadow: 0 10px 15px -3px var(--bim-shadow);
+  z-index: 50;
+  outline: none;
+  backdrop-filter: blur(12px);
+}
+
+.popover-header {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  font-size: 14px;
+}
+
+.popover-title {
+  font-weight: 500;
+}
+
+.popover-description {
+  color: var(--bim-text-muted);
+}
