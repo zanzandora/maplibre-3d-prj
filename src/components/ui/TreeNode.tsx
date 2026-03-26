@@ -6,7 +6,7 @@ import {
   CollapsibleTrigger,
 } from './Collapsible';
 import { ChevronDown, ChevronRight } from 'lucide-react';
-import { useBIMContext } from '../../context/BIMContext';
+import { useBIMContext } from '../../context/bim/BIMContext';
 import { Highlighter } from '@thatopen/components-front';
 
 interface TreeNodeProps {
@@ -103,8 +103,8 @@ const TreeNode = memo(({ id, level }: TreeNodeProps) => {
       <div
         className={`flex items-center gap-1 py-1 px-1.5 rounded cursor-pointer group transition-colors text-xs select-none ${
           isSelected
-            ? 'bg-blue-600/40 text-blue-50 border-l-2 border-blue-500'
-            : 'hover:bg-slate-800 text-slate-400 hover:text-slate-200'
+            ? 'bg-bim-primary/40 text-bim-text-main border-l-2 border-bim-primary'
+            : 'hover:bg-bim-bg-item-hover text-bim-text-muted hover:text-bim-text-main'
         }`}
         style={{ marginLeft: level * 8 }}
         onClick={handleSelect}
@@ -117,7 +117,7 @@ const TreeNode = memo(({ id, level }: TreeNodeProps) => {
             e.stopPropagation();
           }}
         >
-          <div className='w-4 h-4 flex items-center justify-center hover:bg-slate-700 rounded'>
+          <div className='w-4 h-4 flex items-center justify-center hover:bg-bim-bg-item-hover rounded'>
             {hasChildren ? (
               isExpanded ? (
                 <ChevronDown className='w-3 h-3 shrink-0' />
@@ -131,13 +131,15 @@ const TreeNode = memo(({ id, level }: TreeNodeProps) => {
         </CollapsibleTrigger>
         <div
           className={`w-1.5 h-1.5 rounded-full shrink-0 ${
-            isSelected ? 'bg-blue-500' : 'bg-slate-600 group-hover:bg-slate-400'
+            isSelected
+              ? 'bg-bim-primary'
+              : 'bg-bim-border-main group-hover:bg-bim-text-muted'
           }`}
         />
         <span className=' flex-1 truncate'>
           {node.label}{' '}
           {node.isGroup && (
-            <span className='text-slate-500'>({node.count})</span>
+            <span className='text-bim-text-muted/80'>({node.count})</span>
           )}
         </span>
       </div>

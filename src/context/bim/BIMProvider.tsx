@@ -15,7 +15,8 @@ import {
   Highlighter,
   PostproductionRenderer,
 } from '@thatopen/components-front';
-import { Color } from 'three';
+import { Color, Scene } from 'three';
+import { useTheme } from '../theme/ThemeContext';
 
 export type BIMWorld = OBC.World;
 
@@ -41,6 +42,8 @@ export const BIMProvider: FC<{ children: ReactNode }> = ({ children }) => {
   const setSelectedElement = useBIMStore((s) => s.setSelectedElement);
   const setIsHighlighting = useBIMStore((s) => s.setIsHighlighting);
 
+  const { theme } = useTheme();
+
   const isMountedRef = useRef(true);
 
   // Cleanup on unmount
@@ -59,7 +62,7 @@ export const BIMProvider: FC<{ children: ReactNode }> = ({ children }) => {
     };
   }, []);
 
-  // Tool Controller (Switch statement for better scalability)
+  // Tool Controller
   useEffect(() => {
     const components = componentsRef.current;
     const world = worldRef.current;
@@ -97,6 +100,20 @@ export const BIMProvider: FC<{ children: ReactNode }> = ({ children }) => {
       if (cleanup) cleanup();
     };
   }, [activeTool, container, isReady, setSelectedElement, setIsHighlighting]);
+
+  // todo: Change color bg base on Dark mode
+  useEffect(() => {
+    const world = worldRef.current;
+    if (!isReady || !world) return;
+
+    const isDark =
+      theme === 'dark' ||
+      (theme === 'system' &&
+        window.matchMedia('(prefers-color-scheme: dark)').matches);
+
+    const targetColor = isDark ? '#202932' : '#ddf2f7';
+    (world.scene.three as Scene).background = new Color(targetColor); // Sửa mã màu Light theo UI của bạn
+  }, [isReady, theme]);
 
   const mount = useCallback(async (container: HTMLElement) => {
     if (componentsRef.current) return;

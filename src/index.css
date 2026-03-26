@@ -1,6 +1,35 @@
 @import 'tailwindcss';
 
+@theme {
+  --color-bim-primary: #3183ff;
+  --color-bim-secondary: #98a9bc;
+  --font-bim-main: 'Inter', sans-serif;
+
+  /* Base mapping for Tailwind utility generation */
+  --color-bim-bg-main: var(--bim-bg-main);
+  --color-bim-bg-page: var(--bim-bg-page);
+  --color-bim-bg-panel: var(--bim-bg-panel);
+  --color-bim-bg-item: var(--bim-bg-item);
+  --color-bim-bg-item-hover: var(--bim-bg-item-hover);
+  --color-bim-text-main: var(--bim-text-main);
+  --color-bim-text-muted: var(--bim-text-muted);
+  --color-bim-border-main: var(--bim-border-main);
+  --color-bim-border-light: var(--bim-border-light);
+  --color-bim-shadow: var(--bim-shadow);
+}
+
 :root {
+  --bim-bg-main: #111111;
+  --bim-bg-page: #1d1d1b;
+  --bim-bg-panel: rgba(20, 30, 46, 0.95);
+  --bim-bg-item: #1d1d1b;
+  --bim-bg-item-hover: #333333;
+  --bim-text-main: #ffffff;
+  --bim-text-muted: #aaaaaa;
+  --bim-border-main: #575656;
+  --bim-border-light: rgba(255, 255, 255, 0.1);
+  --bim-shadow: rgba(0, 0, 0, 0.5);
+
   font-family: system-ui, Avenir, Helvetica, Arial, sans-serif;
   line-height: 1.5;
   font-weight: 400;
@@ -13,6 +42,32 @@
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+}
+
+.light-theme {
+  --bim-bg-main: #eeeeee;
+  --bim-bg-page: #eeeeee;
+  --bim-bg-panel: rgba(255, 255, 255, 0.9);
+  --bim-bg-item: #ffffff;
+  --bim-bg-item-hover: #f0f0f0;
+  --bim-text-main: #1d1d1f;
+  --bim-text-muted: #666666;
+  --bim-border-main: #d2d2d7;
+  --bim-border-light: rgba(0, 0, 0, 0.05);
+  --bim-shadow: rgba(0, 0, 0, 0.1);
+}
+
+.dark-theme {
+  --bim-bg-main: #111111;
+  --bim-bg-page: #1d1d1b;
+  --bim-bg-panel: rgba(20, 30, 46, 0.95);
+  --bim-bg-item: #1d1d1b;
+  --bim-bg-item-hover: #333333;
+  --bim-text-main: #ffffff;
+  --bim-text-muted: #aaaaaa;
+  --bim-border-main: #575656;
+  --bim-border-light: rgba(255, 255, 255, 0.1);
+  --bim-shadow: rgba(0, 0, 0, 0.5);
 }
 
 body {

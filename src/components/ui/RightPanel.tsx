@@ -39,9 +39,9 @@ export const RightPanel: React.FC = () => {
   };
 
   return (
-    <aside className='absolute right-4 top-20 bottom-12 min-w-xs  flex flex-col bg-slate-900/90 backdrop-blur-md border border-slate-700 rounded-lg overflow-hidden pointer-events-auto shadow-2xl transition-all'>
-      <div className='p-3 border-b border-slate-800 flex items-center justify-between'>
-        <h2 className='text-xs font-bold text-slate-400 uppercase tracking-widest'>
+    <aside className='absolute right-4 top-20 bottom-12 min-w-xs max-w-sm flex flex-col bg-bim-bg-panel/90 backdrop-blur-md border border-bim-border-main rounded-lg overflow-hidden pointer-events-auto shadow-2xl transition-all'>
+      <div className='p-3 border-b border-bim-border-light flex items-center justify-between'>
+        <h2 className='text-xs font-bold text-bim-text-main uppercase tracking-widest'>
           Properties
         </h2>
         <Button
@@ -56,9 +56,9 @@ export const RightPanel: React.FC = () => {
 
       <div className='flex-1 overflow-y-auto p-4 space-y-6 relative'>
         {isHighlighting && (
-          <div className='absolute inset-0 z-10 bg-slate-900/60 backdrop-blur-[2px] flex flex-col items-center justify-center space-y-3'>
-            <Loader2 className='w-8 h-8 text-blue-500 animate-spin' />
-            <span className='text-[10px] font-bold text-blue-400 uppercase tracking-widest'>
+          <div className='absolute inset-0 z-10 bg-bim-bg-main/60 backdrop-blur-[2px] flex flex-col items-center justify-center space-y-3'>
+            <Loader2 className='w-8 h-8 text-bim-primary animate-spin' />
+            <span className='text-[10px] font-bold text-bim-primary uppercase tracking-widest'>
               Loading Data...
             </span>
           </div>
@@ -66,15 +66,15 @@ export const RightPanel: React.FC = () => {
         {selectedElement ? (
           <>
             <section>
-              <h3 className='text-base font-bold text-blue-400 mb-0.5'>
+              <h3 className='text-base font-bold text-bim-primary mb-0.5'>
                 {selectedElement.Name ||
                   selectedElement.name ||
                   'Unknown Element'}
               </h3>
-              <p className='text-xs text-slate-400 uppercase tracking-wider'>
+              <p className='text-xs text-bim-text-muted uppercase tracking-wider'>
                 GUID: {selectedElement._guid || 'N/A'}
               </p>
-              <p className='text-xs text-slate-400 uppercase tracking-wider'>
+              <p className='text-xs text-bim-text-muted uppercase tracking-wider'>
                 LocalId: {selectedElement._localId}
               </p>
             </section>
@@ -82,15 +82,15 @@ export const RightPanel: React.FC = () => {
             {/* Base Attributes Section */}
             {getDisplayAttributes(selectedElement).length > 0 && (
               <section className='space-y-2'>
-                <h4 className='text-[10px] font-bold text-blue-500 uppercase tracking-wider border-b border-slate-800 pb-1'>
+                <h4 className='text-[10px] font-bold text-bim-primary uppercase tracking-wider border-b border-bim-border-light pb-1'>
                   General Attributes
                 </h4>
                 <div className='grid grid-cols-2 gap-y-1.5  text-xs'>
                   {getDisplayAttributes(selectedElement).map(([key, val]) => (
                     <React.Fragment key={key}>
-                      <span className='text-slate-400'>{key}</span>
+                      <span className='text-bim-text-muted'>{key}</span>
                       <span
-                        className='text-right text-white pl-2'
+                        className='text-right text-bim-text-main pl-2 truncate'
                         title={String(val)}
                       >
                         {String(val)}
@@ -112,15 +112,17 @@ export const RightPanel: React.FC = () => {
 
                 return (
                   <section key={psetName} className='space-y-2'>
-                    <h4 className='text-[10px] font-bold text-blue-500 uppercase tracking-wider border-b border-slate-800 pb-1'>
+                    <h4 className='text-[10px] font-bold text-bim-primary uppercase tracking-wider border-b border-bim-border-light pb-1'>
                       {psetName}
                     </h4>
                     <div className='grid grid-cols-2 gap-y-1.5 text-xs'>
                       {validProps.map(([propName, val]) => (
                         <React.Fragment key={propName}>
-                          <span className='text-slate-400'>{propName}</span>
+                          <span className='text-bim-text-muted'>
+                            {propName}
+                          </span>
                           <span
-                            className='text-right text-white font-mono  pl-2'
+                            className='text-right text-bim-text-main font-mono  pl-2'
                             title={String(val)}
                           >
                             {String(val)}
@@ -134,7 +136,7 @@ export const RightPanel: React.FC = () => {
             )}
           </>
         ) : (
-          <div className='h-full flex flex-col items-center justify-center text-slate-600 space-y-2'>
+          <div className='h-full flex flex-col items-center justify-center text-bim-text-muted/50 space-y-2'>
             <Edit3 className='w-8 h-8 ' />
             <span className='text-xs italic'>No element selected</span>
           </div>

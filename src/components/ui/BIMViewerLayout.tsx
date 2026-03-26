@@ -12,16 +12,9 @@ export const BIMViewerLayout: React.FC<BIMViewerLayoutProps> = ({
   children,
 }) => {
   return (
-    <div className='relative w-screen h-screen overflow-hidden bg-[#202932]'>
+    <div className='relative w-screen h-screen overflow-hidden bg-bim-bg-page transition-colors duration-500'>
       {/* Base Layer: 3D Rendering (Z-index 0) */}
-      <div className='absolute inset-0 z-0'>
-        {children}
-
-        {/* Placeholder for the 3D grid shown in image */}
-        <div className='absolute inset-0 pointer-events-none opacity-10'>
-          <div className='w-full h-full bg-[linear-gradient(rgba(255,255,255,.05)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,.05)_1px,transparent_1px)] bg-[size:40px_40px]' />
-        </div>
-      </div>
+      <div className='absolute inset-0 z-0'>{children}</div>
 
       {/* UI Layer: Overlays (Z-index 10) */}
       <div className='absolute inset-0 z-10 pointer-events-none flex flex-col'>

@@ -26,18 +26,18 @@ export const Toolbar: React.FC = () => {
 
   return (
     <div className='absolute bottom-14 left-1/2 -translate-x-1/2 pointer-events-auto'>
-      <div className='flex items-center gap-1 p-1.5 bg-slate-900/80 backdrop-blur-md border border-slate-700 rounded-full shadow-2xl'>
+      <div className='flex items-center gap-1 p-1.5 bg-bim-bg-panel/80 backdrop-blur-md border border-bim-border-main rounded-full shadow-2xl'>
         <Button
           variant='ghost'
           size='icon'
-          className='rounded-full text-slate-400 hover:text-white'
+          className='rounded-full text-bim-text-muted hover:text-bim-text-main'
         >
           <RefreshCcw className='w-5 h-5' />
         </Button>
 
         {tools.map((tool, index) =>
           tool.divider ? (
-            <div key={`div-${index}`} className='w-px h-6 bg-slate-700 mx-1' />
+            <div key={`div-${index}`} className='w-px h-6 bg-bim-border-main mx-1' />
           ) : (
             <Button
               key={tool.id}
@@ -46,8 +46,8 @@ export const Toolbar: React.FC = () => {
               size='icon'
               className={`rounded-full transition-all ${
                 activeTool === tool.id
-                  ? 'shadow-lg shadow-blue-900/40'
-                  : 'text-slate-400 hover:text-slate-200'
+                  ? 'shadow-lg shadow-bim-primary/40'
+                  : 'text-bim-text-muted hover:text-bim-text-main'
               }`}
               title={tool.label}
             >
