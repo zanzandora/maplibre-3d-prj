@@ -1,6 +1,6 @@
 import React from 'react';
 import { Search, Loader2, ChevronLeft, ChevronRight } from 'lucide-react';
-import { Button } from './Button';
+import { Button } from './elements/Button';
 import { useBIMStore } from '../../store/useBIMStore';
 import TreeNode from './TreeNode';
 

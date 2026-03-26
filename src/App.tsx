@@ -1,6 +1,6 @@
 import BIMViewer from './components/BIMViewer';
 import { BIMProvider } from './context/bim/BIMProvider';
-import { Button } from './components/ui/Button';
+import { Button } from './components/ui/elements/Button';
 import { useBIMStore } from './store/useBIMStore';
 import { ThemeProvider } from './context/theme/ThemeProvider';
 

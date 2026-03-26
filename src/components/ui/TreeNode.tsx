@@ -4,7 +4,7 @@ import {
   Collapsible,
   CollapsibleContent,
   CollapsibleTrigger,
-} from './Collapsible';
+} from './elements/Collapsible';
 import { ChevronDown, ChevronRight } from 'lucide-react';
 import { useBIMContext } from '../../context/bim/BIMContext';
 import { Highlighter } from '@thatopen/components-front';

@@ -1,5 +1,5 @@
 import { Box, X } from 'lucide-react';
-import { Button } from './Button';
+import { Button } from './elements/Button';
 import { useBIMStore } from '../../store/useBIMStore';
 import { DarkMode } from './DarkMode';
 

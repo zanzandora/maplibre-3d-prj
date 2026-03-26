@@ -7,7 +7,7 @@ import {
   Box,
   Orbit,
 } from 'lucide-react';
-import { Button } from './Button';
+import { Button } from './elements/Button';
 import { useBIMStore } from '../../store/useBIMStore';
 
 export const Toolbar: React.FC = () => {
