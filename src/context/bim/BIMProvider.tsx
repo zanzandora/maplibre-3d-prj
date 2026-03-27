@@ -44,6 +44,9 @@ export const BIMProvider: FC<{ children: ReactNode }> = ({ children }) => {
   const setSelectedElement = useBIMStore((s) => s.setSelectedElement);
   const setIsHighlighting = useBIMStore((s) => s.setIsHighlighting);
 
+  const measureUnit = useBIMStore((s) => s.measureUnit);
+  const measurePrecision = useBIMStore((s) => s.measurePrecision);
+
   const { theme } = useTheme();
 
   const isMountedRef = useRef(true);
@@ -97,7 +100,9 @@ export const BIMProvider: FC<{ children: ReactNode }> = ({ children }) => {
           world,
           container,
           subTool,
-          fragments
+          fragments,
+          measureUnit,
+          measurePrecision
         );
         break;
       }
@@ -118,6 +123,8 @@ export const BIMProvider: FC<{ children: ReactNode }> = ({ children }) => {
     isReady,
     setSelectedElement,
     setIsHighlighting,
+    measureUnit,
+    measurePrecision,
   ]);
 
   // todo: Change color bg base on Dark mode

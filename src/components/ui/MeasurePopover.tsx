@@ -4,6 +4,12 @@ import { useBIMStore } from '../../store/useBIMStore';
 import { Popover, PopoverContent, PopoverTrigger } from './elements/Popover';
 import { RadioGroup, RadioGroupItem } from './elements/RadioGroup';
 
+const UNIT_OPTIONS: Record<string, string[]> = {
+  length: ['mm', 'cm', 'm', 'km'],
+  area: ['mm2', 'cm2', 'm2', 'km2'],
+  volume: ['mm3', 'cm3', 'm3', 'km3'],
+};
+
 export const MeasurePopover = ({
   isActive,
   onMainClick,
@@ -15,6 +21,11 @@ export const MeasurePopover = ({
   const setActiveSubTool = useBIMStore((s) => s.setActiveSubTool);
   const activeSubToolId = activeSubTools['measure'] || 'length';
 
+  const measureUnit = useBIMStore((s) => s.measureUnit);
+  const setMeasureUnit = useBIMStore((s) => s.setMeasureUnit);
+  const measurePrecision = useBIMStore((s) => s.measurePrecision);
+  const setMeasurePrecision = useBIMStore((s) => s.setMeasurePrecision);
+
   const subTools = [
     { id: 'length', icon: Ruler, label: 'Length' },
     { id: 'area', icon: Square, label: 'Area' },
@@ -23,6 +34,13 @@ export const MeasurePopover = ({
 
   const activeSubTool = subTools.find((s) => s.id === activeSubToolId);
   const Icon = activeSubTool?.icon || Ruler;
+
+  const currentUnitsList =
+    UNIT_OPTIONS[activeSubToolId] || UNIT_OPTIONS['length'];
+
+  const displayUnit = currentUnitsList.includes(measureUnit)
+    ? measureUnit
+    : currentUnitsList[0];
 
   return (
     <Popover>
@@ -82,8 +100,13 @@ export const MeasurePopover = ({
             <span className='text-xs font-semibold text-bim-text-muted px-1'>
               Unit
             </span>
-            <RadioGroup className='grid-cols-4 gap-1 mt-1' defaultValue='mm'>
-              {['mm', 'cm', 'feet', 'inches'].map((unit) => (
+            <RadioGroup
+              className='grid-cols-4 gap-1 mt-1'
+              defaultValue='mm'
+              value={displayUnit}
+              onValueChange={setMeasureUnit}
+            >
+              {currentUnitsList.map((unit) => (
                 <RadioGroupItem key={unit} id={unit} value={unit}>
                   {unit}
                 </RadioGroupItem>
@@ -96,9 +119,14 @@ export const MeasurePopover = ({
             <span className='text-xs font-semibold text-bim-text-muted px-1'>
               Precision
             </span>
-            <RadioGroup className='grid-cols-4 gap-1' defaultValue='0'>
-              {['0', '0.0', '0.00', '0.000'].map((p) => (
-                <RadioGroupItem key={p} id={p} value={p}>
+            <RadioGroup
+              className='grid-cols-4 gap-1'
+              defaultValue={2}
+              value={measurePrecision}
+              onValueChange={setMeasurePrecision}
+            >
+              {[0, 1, 2, 3, 4, 5].map((p) => (
+                <RadioGroupItem key={p} id={`p-${p}`} value={p}>
                   {p}
                 </RadioGroupItem>
               ))}

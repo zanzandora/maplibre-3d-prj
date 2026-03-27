@@ -36,6 +36,10 @@ interface BIMState {
   selectedNodeId: string | number | null;
   isHighlighting: boolean;
 
+  // Measure Settings
+  measureUnit: string;
+  measurePrecision: number;
+
   // Normalized Spatial Tree
   spatialTreeById: Record<string | number, ISpatialNode>;
   spatialTreeRoots: (string | number)[];
@@ -54,6 +58,10 @@ interface BIMState {
   setSelectedElement: (element: ISelectedElement | null) => void;
   setSelectedNodeId: (id: string | number | null) => void;
   setIsHighlighting: (loading: boolean) => void;
+
+  // Measure Actions
+  setMeasureUnit: (unit: string) => void;
+  setMeasurePrecision: (precision: number) => void;
 
   // Tree Actions
   setSpatialTree: (
@@ -75,6 +83,9 @@ export const useBIMStore = create<BIMState>((set) => ({
   selectedElement: null,
   selectedNodeId: null,
   isHighlighting: false,
+
+  measureUnit: 'm',
+  measurePrecision: 2,
 
   spatialTreeById: {},
   spatialTreeRoots: [],
@@ -100,6 +111,9 @@ export const useBIMStore = create<BIMState>((set) => ({
   setSelectedElement: (element) => set({ selectedElement: element }),
   setSelectedNodeId: (id) => set({ selectedNodeId: id }),
   setIsHighlighting: (loading) => set({ isHighlighting: loading }),
+
+  setMeasureUnit: (unit) => set({ measureUnit: unit }),
+  setMeasurePrecision: (precision) => set({ measurePrecision: precision }),
 
   setSpatialTree: (nodes, roots) => {
     const total = Object.values(nodes).reduce((acc, node) => {

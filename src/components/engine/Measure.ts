@@ -23,7 +23,9 @@ export const setupMeasure = (
   world: BIMWorld,
   container: HTMLElement,
   subTool: string,
-  fragments: FragmentsManager
+  fragments: FragmentsManager,
+  unit: string,
+  precision: number = 2
 ) => {
   let measurement: AreaMeasurement | LengthMeasurement | VolumeMeasurement;
 
@@ -48,6 +50,17 @@ export const setupMeasure = (
   const pickingMeshes: Mesh[] = [];
   let isSynchronousSet = false;
   const pastDelay = measurement.delay;
+
+  if ('units' in measurement) {
+    measurement.units = unit as
+      | LengthMeasurement['units']
+      | AreaMeasurement['units']
+      | VolumeMeasurement['units'];
+  }
+
+  if ('rounding' in measurement) {
+    measurement.rounding = precision;
+  }
 
   const setupSynchronousPicking = async () => {
     if (fragments.list.size === 0) return;
