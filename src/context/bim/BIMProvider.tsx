@@ -8,16 +8,10 @@ import {
 } from 'react';
 import * as OBC from '@thatopen/components';
 import { BIMContext } from './BIMContext';
-import { useBIMStore } from '../../store/useBIMStore';
-import { setupHighlighter } from '../../components/engine/Highlighter';
-import { setupClipper } from '../../components/engine/Clipper';
-import { setupMeasure } from '../../components/engine/Measure';
-import {
-  Highlighter,
-  PostproductionRenderer,
-} from '@thatopen/components-front';
+import { PostproductionRenderer } from '@thatopen/components-front';
 import { Color, Scene } from 'three';
 import { useTheme } from '../theme/ThemeContext';
+import { useToolController } from '../../hooks/engine/useToolController';
 
 export type BIMWorld = OBC.World;
 
@@ -39,14 +33,6 @@ export const BIMProvider: FC<{ children: ReactNode }> = ({ children }) => {
   const fragmentsRef = useRef<OBC.FragmentsManager | null>(null);
   const workerUrlRef = useRef<string | null>(null);
 
-  const activeTool = useBIMStore((s) => s.activeTool);
-  const activeSubTools = useBIMStore((s) => s.activeSubTools);
-  const setSelectedElement = useBIMStore((s) => s.setSelectedElement);
-  const setIsHighlighting = useBIMStore((s) => s.setIsHighlighting);
-
-  const measureUnit = useBIMStore((s) => s.measureUnit);
-  const measurePrecision = useBIMStore((s) => s.measurePrecision);
-
   const { theme } = useTheme();
 
   const isMountedRef = useRef(true);
@@ -67,66 +53,6 @@ export const BIMProvider: FC<{ children: ReactNode }> = ({ children }) => {
     };
   }, []);
 
-  // Tool Controller
-  useEffect(() => {
-    const components = componentsRef.current;
-    const world = worldRef.current;
-    const fragments = fragmentsRef.current;
-
-    if (!isReady || !components || !world || !container || !fragments) return;
-
-    const clipper = components.get(OBC.Clipper);
-    const highlighter = components.get(Highlighter);
-
-    let cleanup: (() => void) | undefined;
-
-    switch (activeTool) {
-      case 'select':
-        cleanup = setupHighlighter(
-          highlighter,
-          world,
-          fragments,
-          setSelectedElement,
-          setIsHighlighting
-        );
-        break;
-      case 'clip':
-        cleanup = setupClipper(clipper, world, container);
-        break;
-      case 'measure': {
-        const subTool = activeSubTools['measure'];
-        cleanup = setupMeasure(
-          components,
-          world,
-          container,
-          subTool,
-          fragments,
-          measureUnit,
-          measurePrecision
-        );
-        break;
-      }
-      default:
-        // By default, disable specialized tools
-        clipper.enabled = false;
-        clipper.visible = false;
-        break;
-    }
-
-    return () => {
-      if (cleanup) cleanup();
-    };
-  }, [
-    activeTool,
-    activeSubTools,
-    container,
-    isReady,
-    setSelectedElement,
-    setIsHighlighting,
-    measureUnit,
-    measurePrecision,
-  ]);
-
   // todo: Change color bg base on Dark mode
   useEffect(() => {
     const world = worldRef.current;
@@ -140,6 +66,15 @@ export const BIMProvider: FC<{ children: ReactNode }> = ({ children }) => {
     const targetColor = isDark ? '#202932' : '#ddf2f7';
     (world.scene.three as Scene).background = new Color(targetColor); // Sửa mã màu Light theo UI của bạn
   }, [isReady, theme]);
+
+  // todo: Tool Controller
+  useToolController({
+    components: componentsRef.current,
+    world: worldRef.current,
+    fragments: fragmentsRef.current,
+    container,
+    isReady,
+  });
 
   const mount = useCallback(async (container: HTMLElement) => {
     if (componentsRef.current) return;

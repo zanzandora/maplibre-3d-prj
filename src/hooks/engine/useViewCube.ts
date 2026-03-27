@@ -1,9 +1,9 @@
 import { useEffect, useRef } from 'react';
 import * as BUI from '@thatopen/ui';
 import * as OBCUI from '@thatopen/ui-obc';
-import type { BIMWorld } from '../context/bim/BIMProvider';
-import { useBIMStore } from '../store/useBIMStore';
 import { Vector3 } from 'three';
+import type { BIMWorld } from '../../context/bim/BIMProvider';
+import { useBIMStore } from '../../store/useBIMStore';
 
 BUI.Manager.init();
 OBCUI.Manager.init();

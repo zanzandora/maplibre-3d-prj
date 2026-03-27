@@ -1,4 +1,4 @@
-import { Ruler, Square, Maximize, RotateCcw, Trash2 } from 'lucide-react';
+import { Ruler, Square, Maximize, Trash2 } from 'lucide-react';
 import { Button } from './elements/Button';
 import { useBIMStore } from '../../store/useBIMStore';
 import { Popover, PopoverContent, PopoverTrigger } from './elements/Popover';
@@ -135,18 +135,21 @@ export const MeasurePopover = ({
 
           {/* Actions */}
           <div className='flex gap-2 mt-1 px-1'>
-            <Button
+            {/* <Button
               variant='default'
               className='flex-1 h-10 rounded-xl text-xs font-semibold shadow-lg shadow-bim-primary/20'
             >
               <RotateCcw className='w-3.5 h-3.5 mr-1.5' />
               Clear Line
-            </Button>
+            </Button> */}
             <Button
-              variant='outline'
-              className='flex-1 h-10 rounded-xl text-xs font-semibold border-bim-border-light hover:bg-red-500/10 hover:text-red-500 hover:border-red-500/50'
+              variant='destructive'
+              onClick={() =>
+                window.dispatchEvent(new CustomEvent('bim-measure-delete-all'))
+              }
+              className='flex-1 h-10 rounded-xl text-sm font-semibold '
             >
-              <Trash2 className='w-3.5 h-3.5 mr-1.5' />
+              <Trash2 className='w-3.5 h-3.5' />
               Clear All
             </Button>
           </div>

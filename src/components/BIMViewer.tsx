@@ -3,7 +3,7 @@ import { useBIMContext } from '../context/bim/BIMContext';
 import { BIMViewerLayout } from './ui/BIMViewerLayout';
 import { generateSpatialTree } from '../utils/generateSpatialTreeJSON';
 import { useBIMStore } from '../store/useBIMStore';
-import { useViewCube } from '../hooks/useViewCube';
+import { useViewCube } from '../hooks/engine/useViewCube';
 
 export default function BIMViewer() {
   const containerRef = useRef<HTMLDivElement>(null);
