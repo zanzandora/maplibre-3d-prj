@@ -11,6 +11,7 @@ import { BIMContext } from './BIMContext';
 import { useBIMStore } from '../../store/useBIMStore';
 import { setupHighlighter } from '../../components/engine/Highlighter';
 import { setupClipper } from '../../components/engine/Clipper';
+import { setupMeasure } from '../../components/engine/Measure';
 import {
   Highlighter,
   PostproductionRenderer,
@@ -39,6 +40,7 @@ export const BIMProvider: FC<{ children: ReactNode }> = ({ children }) => {
   const workerUrlRef = useRef<string | null>(null);
 
   const activeTool = useBIMStore((s) => s.activeTool);
+  const activeSubTools = useBIMStore((s) => s.activeSubTools);
   const setSelectedElement = useBIMStore((s) => s.setSelectedElement);
   const setIsHighlighting = useBIMStore((s) => s.setIsHighlighting);
 
@@ -68,8 +70,7 @@ export const BIMProvider: FC<{ children: ReactNode }> = ({ children }) => {
     const world = worldRef.current;
     const fragments = fragmentsRef.current;
 
-    const containerEl = container;
-    if (!isReady || !components || !world || !containerEl || !fragments) return;
+    if (!isReady || !components || !world || !container || !fragments) return;
 
     const clipper = components.get(OBC.Clipper);
     const highlighter = components.get(Highlighter);
@@ -87,8 +88,19 @@ export const BIMProvider: FC<{ children: ReactNode }> = ({ children }) => {
         );
         break;
       case 'clip':
-        cleanup = setupClipper(clipper, world, containerEl);
+        cleanup = setupClipper(clipper, world, container);
         break;
+      case 'measure': {
+        const subTool = activeSubTools['measure'];
+        cleanup = setupMeasure(
+          components,
+          world,
+          container,
+          subTool,
+          fragments
+        );
+        break;
+      }
       default:
         // By default, disable specialized tools
         clipper.enabled = false;
@@ -99,7 +111,14 @@ export const BIMProvider: FC<{ children: ReactNode }> = ({ children }) => {
     return () => {
       if (cleanup) cleanup();
     };
-  }, [activeTool, container, isReady, setSelectedElement, setIsHighlighting]);
+  }, [
+    activeTool,
+    activeSubTools,
+    container,
+    isReady,
+    setSelectedElement,
+    setIsHighlighting,
+  ]);
 
   // todo: Change color bg base on Dark mode
   useEffect(() => {

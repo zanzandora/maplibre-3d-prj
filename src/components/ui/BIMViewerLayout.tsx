@@ -5,12 +5,10 @@ import { Toolbar } from './Toolbar';
 import { StatusBar } from './StatusBar';
 
 interface BIMViewerLayoutProps {
-  children?: React.ReactNode; // For the 3D Canvas
+  children?: React.ReactNode;
 }
 
-export const BIMViewerLayout: React.FC<BIMViewerLayoutProps> = ({
-  children,
-}) => {
+export const BIMViewerLayout = ({ children }: BIMViewerLayoutProps) => {
   return (
     <div className='relative w-screen h-screen overflow-hidden bg-bim-bg-page transition-colors duration-500'>
       {/* Base Layer: 3D Rendering (Z-index 0) */}

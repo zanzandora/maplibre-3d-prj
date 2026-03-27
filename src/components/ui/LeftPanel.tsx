@@ -1,10 +1,9 @@
-import React from 'react';
 import { Search, Loader2, ChevronLeft, ChevronRight } from 'lucide-react';
 import { Button } from './elements/Button';
 import { useBIMStore } from '../../store/useBIMStore';
 import TreeNode from './TreeNode';
 
-export const LeftPanel: React.FC = () => {
+export const LeftPanel = () => {
   const leftPanelOpen = useBIMStore((s) => s.leftPanelOpen);
   const toggleLeftPanel = useBIMStore((s) => s.toggleLeftPanel);
   const roots = useBIMStore((s) => s.spatialTreeRoots);

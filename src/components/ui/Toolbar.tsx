@@ -6,13 +6,12 @@ import {
   User,
   Box,
   Orbit,
-  Square,
-  Maximize,
   type LucideIcon,
 } from 'lucide-react';
 import { Button } from './elements/Button';
 import { useBIMStore } from '../../store/useBIMStore';
 import { Popover, PopoverContent, PopoverTrigger } from './elements/Popover';
+import { MeasurePopover } from './MeasurePopover';
 
 interface SubTool {
   id: string;
@@ -33,12 +32,22 @@ interface Divider {
 
 type ToolbarItem = Tool | Divider;
 
-const ToolButton: React.FC<{
+type IToolProps = {
   tool: Tool;
   isActive: boolean;
   onClick: () => void;
   iconOverride?: LucideIcon;
-}> = ({ tool, isActive, onClick, iconOverride }) => {
+};
+
+type IToolWithPopoverProps = {
+  tool: Tool;
+  isActive: boolean;
+  onMainClick: () => void;
+  activeSubToolId?: string;
+  onSubClick: (subId: string) => void;
+};
+
+const ToolButton = ({ tool, isActive, onClick, iconOverride }: IToolProps) => {
   const Icon = iconOverride || tool.icon;
   return (
     <Button
@@ -57,26 +66,27 @@ const ToolButton: React.FC<{
   );
 };
 
-const ToolWithPopover: React.FC<{
-  tool: Tool;
-  isActive: boolean;
-  onMainClick: () => void;
-  activeSubToolId?: string;
-  onSubClick: (subId: string) => void;
-}> = ({ tool, isActive, onMainClick, activeSubToolId, onSubClick }) => {
+const ToolWithPopover = ({
+  tool,
+  isActive,
+  onMainClick,
+  activeSubToolId,
+  onSubClick,
+}: IToolWithPopoverProps) => {
   const activeSubTool = tool.subTools?.find((s) => s.id === activeSubToolId);
 
   return (
     <Popover>
-      <PopoverTrigger>
-        <div className='inline-block'>
-          <ToolButton
-            tool={tool}
-            isActive={isActive}
-            onClick={onMainClick}
-            iconOverride={activeSubTool?.icon}
-          />
-        </div>
+      <PopoverTrigger
+        render={<div className='inline-block' />}
+        nativeButton={false}
+      >
+        <ToolButton
+          tool={tool}
+          isActive={isActive}
+          onClick={onMainClick}
+          iconOverride={activeSubTool?.icon}
+        />
       </PopoverTrigger>
       <PopoverContent side='top' className='w-auto p-2'>
         <div className='flex gap-2'>
@@ -105,7 +115,7 @@ const ToolWithPopover: React.FC<{
   );
 };
 
-export const Toolbar: React.FC = () => {
+export const Toolbar = () => {
   const activeTool = useBIMStore((s) => s.activeTool);
   const activeSubTools = useBIMStore((s) => s.activeSubTools);
   const setActiveTool = useBIMStore((s) => s.setActiveTool);
@@ -117,11 +127,6 @@ export const Toolbar: React.FC = () => {
       id: 'measure',
       icon: Ruler,
       label: 'Measure',
-      subTools: [
-        { id: 'length', icon: Ruler, label: 'Length' },
-        { id: 'area', icon: Square, label: 'Area' },
-        { id: 'volume', icon: Maximize, label: 'Volume' },
-      ],
     },
     { id: 'search', icon: Search, label: 'Search' },
     { divider: true },
@@ -153,6 +158,16 @@ export const Toolbar: React.FC = () => {
 
           const isActive = activeTool === item.id;
           const onMainClick = () => setActiveTool(item.id as any);
+
+          if (item.id === 'measure') {
+            return (
+              <MeasurePopover
+                key={item.id}
+                isActive={isActive}
+                onMainClick={onMainClick}
+              />
+            );
+          }
 
           if (item.subTools) {
             return (

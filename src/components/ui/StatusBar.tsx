@@ -1,4 +1,4 @@
-export const StatusBar: React.FC = () => {
+export const StatusBar = () => {
   return (
     <footer className='h-6 flex items-center justify-between px-3 bg-bim-bg-main border-t border-bim-border-light text-[10px] text-bim-text-muted pointer-events-auto'>
       <div className='flex items-center gap-4'>

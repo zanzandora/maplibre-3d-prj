@@ -2,7 +2,7 @@ import React from 'react';
 import { Edit3, Loader2, ChevronLeft, ChevronRight } from 'lucide-react';
 import { useBIMStore, type ISelectedElement } from '../../store/useBIMStore';
 
-export const RightPanel: React.FC = () => {
+export const RightPanel = () => {
   const rightPanelOpen = useBIMStore((s) => s.rightPanelOpen);
   const selectedElement = useBIMStore((s) => s.selectedElement);
   const isHighlighting = useBIMStore((s) => s.isHighlighting);

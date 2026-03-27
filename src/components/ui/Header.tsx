@@ -3,7 +3,7 @@ import { Button } from './elements/Button';
 import { useBIMStore } from '../../store/useBIMStore';
 import { DarkMode } from './DarkMode';
 
-export const Header: React.FC = () => {
+export const Header = () => {
   const setBIMVisible = useBIMStore((state) => state.setBIMVisible);
   const totalElements = useBIMStore((state) => state.totalElements);
 

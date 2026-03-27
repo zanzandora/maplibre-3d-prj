@@ -2,7 +2,7 @@ import { Moon, Sun } from 'lucide-react';
 import { useTheme } from '../../context/theme/ThemeContext';
 import { Button } from './elements/Button';
 
-export const DarkMode: React.FC = () => {
+export const DarkMode = () => {
   const { theme, setTheme } = useTheme();
 
   return (
