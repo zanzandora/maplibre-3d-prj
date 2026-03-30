@@ -1,13 +1,15 @@
-import { memo, useCallback } from 'react';
+import { memo } from 'react';
 import { useBIMStore } from '../../store/useBIMStore';
 import {
   Collapsible,
   CollapsibleContent,
   CollapsibleTrigger,
 } from './elements/Collapsible';
-import { ChevronDown, ChevronRight } from 'lucide-react';
+import { ChevronDown, ChevronRight, Eye, EyeOff } from 'lucide-react';
 import { useBIMContext } from '../../context/bim/BIMContext';
 import { Highlighter } from '@thatopen/components-front';
+import { getAllElementIds } from '../../utils/getAllElementIds';
+import * as OBC from '@thatopen/components';
 
 interface TreeNodeProps {
   id: string | number;
@@ -25,31 +27,11 @@ const TreeNode = memo(({ id, level }: TreeNodeProps) => {
   const setSelectedElement = useBIMStore((s) => s.setSelectedElement);
   const spatialTreeById = useBIMStore((s) => s.spatialTreeById);
 
+  // Visibility state
+  const isHidden = useBIMStore((s) => s.hiddenIds.has(id));
+  const toggleVisibility = useBIMStore((s) => s.toggleVisibility);
+
   const { components, fragments } = useBIMContext();
-
-  // Recursive helper to get all leaf element IDs from a node
-  const getAllElementIds = useCallback(
-    function getIds(nodeId: string | number): number[] {
-      const targetNode = spatialTreeById[nodeId];
-      if (!targetNode) return [];
-
-      if (!targetNode.children || targetNode.children.length === 0) {
-        return typeof nodeId === 'number' ? [nodeId] : [];
-      }
-
-      const ids: number[] = [];
-      for (const childId of targetNode.children) {
-        const childNode = spatialTreeById[childId];
-        if (childNode) {
-          ids.push(...getIds(childId));
-        } else if (typeof childId === 'number') {
-          ids.push(childId);
-        }
-      }
-      return ids;
-    },
-    [spatialTreeById]
-  );
 
   if (!node) return null;
 
@@ -78,7 +60,7 @@ const TreeNode = memo(({ id, level }: TreeNodeProps) => {
       highlighter.clear('select');
 
       // Get all constituent elements to highlight
-      const elementsToHighlight = getAllElementIds(id);
+      const elementsToHighlight = getAllElementIds(id, spatialTreeById);
 
       if (elementsToHighlight.length > 0) {
         highlighter.highlightByID('select', {
@@ -86,16 +68,31 @@ const TreeNode = memo(({ id, level }: TreeNodeProps) => {
         });
       }
 
-      // If it's a single real element, we can also show its properties in the RightPanel
-      // Note: Right now our logic assumes only single element properties, we'll keep it that way
       if (!node.isGroup && node.type !== 'IfcBuildingStorey') {
-        // This will trigger the property loading in Highlighter.ts or wherever setSelectedElement is watched
-        // However, we've bypassed onHighlight event, so we might need to trigger it manually or let the user re-select
-        // For simplicity, let's just update the ID and the UI will reflect selection.
+        // Properties will be handled elsewhere or if needed here
       } else {
-        setSelectedElement(null); // Clear properties if a group/storey is selected
+        setSelectedElement(null);
       }
     }
+  };
+
+  const handleToggleVisibility = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (!components || !fragments) return;
+
+    const hider = components.get(OBC.Hider);
+    const modelId = fragments.list.keys().next().value;
+    if (!modelId) return;
+
+    const elementIds = getAllElementIds(id, spatialTreeById);
+    if (elementIds.length === 0) return;
+
+    const fragmentMap = { [modelId]: new Set(elementIds) };
+
+    // If it was hidden, show it; if it was visible, hide it.
+    const newVisibleState = isHidden;
+    hider.set(newVisibleState, fragmentMap);
+    toggleVisibility(id);
   };
 
   return (
@@ -103,11 +100,10 @@ const TreeNode = memo(({ id, level }: TreeNodeProps) => {
       <div
         className={`flex items-center gap-1 py-1 px-1.5 rounded cursor-pointer group transition-colors text-xs select-none ${
           isSelected
-            ? 'bg-bim-primary/40 text-bim-text-main border-l-2 border-bim-primary'
+            ? 'bg-bim-primary/15 text-bim-text-main border-l-2 border-bim-primary'
             : 'hover:bg-bim-bg-item-hover text-bim-text-muted hover:text-bim-text-main'
         }`}
         style={{ marginLeft: level * 8 }}
-        onClick={handleSelect}
       >
         <CollapsibleTrigger
           onClick={(e) => {
@@ -129,14 +125,24 @@ const TreeNode = memo(({ id, level }: TreeNodeProps) => {
             )}
           </div>
         </CollapsibleTrigger>
-        <div
-          className={`w-1.5 h-1.5 rounded-full shrink-0 ${
-            isSelected
-              ? 'bg-bim-primary'
-              : 'bg-bim-border-main group-hover:bg-bim-text-muted'
+
+        {/* Visibility Icon */}
+        <button
+          onClick={handleToggleVisibility}
+          className={`w-5 h-5 flex items-center justify-center rounded transition-colors ${
+            isHidden
+              ? 'text-bim-text-muted/40'
+              : 'text-bim-primary hover:text-bim-primary/80'
           }`}
-        />
-        <span className=' flex-1 truncate'>
+        >
+          {isHidden ? (
+            <EyeOff className='w-3.5 h-3.5' />
+          ) : (
+            <Eye className='w-3.5 h-3.5' />
+          )}
+        </button>
+
+        <span className='flex-1 truncate ml-1' onClick={handleSelect}>
           {node.label}{' '}
           {node.isGroup && (
             <span className='text-bim-text-muted/80'>({node.count})</span>

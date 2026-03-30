@@ -24,13 +24,6 @@ export const BIMViewerLayout = ({ children }: BIMViewerLayoutProps) => {
           <LeftPanel />
           <RightPanel />
           <Toolbar />
-
-          {/* Compass / Viewcube Mock */}
-          {/* <div className="absolute top-2 right-4 pointer-events-auto">
-             <div className="w-12 h-12 bg-slate-800/80 border border-slate-700 rounded flex items-center justify-center text-[10px] font-bold text-slate-400 cursor-pointer hover:bg-slate-700">
-               TOP
-             </div>
-          </div> */}
         </div>
 
         {/* Bottom Status Bar */}

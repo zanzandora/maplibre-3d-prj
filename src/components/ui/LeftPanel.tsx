@@ -2,12 +2,62 @@ import { Search, Loader2, ChevronLeft, ChevronRight } from 'lucide-react';
 import { Button } from './elements/Button';
 import { useBIMStore } from '../../store/useBIMStore';
 import TreeNode from './TreeNode';
+import { useBIMContext } from '../../context/bim/BIMContext';
+import * as OBC from '@thatopen/components';
+import { useCallback } from 'react';
+import { getAllElementIds } from '../../utils/getAllElementIds';
 
 export const LeftPanel = () => {
   const leftPanelOpen = useBIMStore((s) => s.leftPanelOpen);
   const toggleLeftPanel = useBIMStore((s) => s.toggleLeftPanel);
   const roots = useBIMStore((s) => s.spatialTreeRoots);
   const isTreeLoading = useBIMStore((s) => s.isTreeLoading);
+
+  // Selection states from store
+  const selectedNodeId = useBIMStore((s) => s.selectedNodeId);
+  const spatialTreeById = useBIMStore((s) => s.spatialTreeById);
+  const resetVisibility = useBIMStore((s) => s.resetVisibility);
+
+  const { components, fragments } = useBIMContext();
+
+  /*
+    Tạo FragmentIdMap cho node đang được chọn để làm việc với FragmentsHider.
+  */
+  const getSelectedFragmentsMap = useCallback((): OBC.ModelIdMap | null => {
+    if (!selectedNodeId || !fragments) return null;
+
+    const modelId = fragments.list.keys().next().value;
+    if (!modelId) return null;
+
+    const elementIds = getAllElementIds(selectedNodeId, spatialTreeById);
+    if (elementIds.length === 0) return null;
+
+    return { [modelId]: new Set(elementIds) };
+  }, [selectedNodeId, fragments, spatialTreeById]);
+
+  const handleShowAll = () => {
+    if (!components) return;
+    const hider = components.get(OBC.Hider);
+    hider.set(true);
+    resetVisibility();
+  };
+
+  const handleIsolateMode = () => {
+    const fragmentMap = getSelectedFragmentsMap();
+    if (!components || !fragmentMap) return;
+    const hider = components.get(OBC.Hider);
+
+    hider.set(false);
+    hider.set(true, fragmentMap);
+
+    // Note: Isolate is complex to sync with Eye icons in the tree perfectly
+    // without tracking all visibility per-element, but we reset for simplicity
+    resetVisibility();
+    if (selectedNodeId) {
+      // Ideally we'd calculate which ones are NOT in the isolate map, but for now
+      // we focus on the core functionality.
+    }
+  };
 
   return (
     <div
@@ -42,20 +92,22 @@ export const LeftPanel = () => {
           )}
         </div>
 
-        <div className='p-3 bg-bim-bg-main border-t border-bim-border-light flex gap-2'>
+        <div className='p-3 flex flex-col gap-1.5 bg-bim-bg-main border-t border-bim-border-light '>
           <Button
             size='sm'
+            onClick={handleShowAll}
             disabled={isTreeLoading}
-            className='flex-1 border-1 border-bim-border-main text-[10px] font-bold uppercase tracking-wider h-8'
+            className='w-full border-1 border-bim-border-main text-[10px] font-bold uppercase tracking-wider h-8'
           >
-            Isolate
+            Show All
           </Button>
           <Button
             size='sm'
-            disabled={isTreeLoading}
-            className='flex-1 text-[10px] font-bold border-1 border-bim-border-main uppercase tracking-wider h-8'
+            onClick={handleIsolateMode}
+            disabled={isTreeLoading || !selectedNodeId}
+            className='w-full border-1 border-bim-border-main text-[10px] font-bold uppercase tracking-wider h-8'
           >
-            Hide
+            Isolate
           </Button>
         </div>
       </aside>
