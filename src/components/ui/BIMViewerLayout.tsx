@@ -1,7 +1,7 @@
 import { Header } from './Header';
 import { LeftPanel } from './LeftPanel';
 import { RightPanel } from './RightPanel';
-import { Toolbar } from './Toolbar';
+import { Toolbar } from './toolbar/Toolbar';
 import { StatusBar } from './StatusBar';
 
 interface BIMViewerLayoutProps {

@@ -50,7 +50,7 @@ export const Header = () => {
           <Button
             variant='destructive'
             size='icon'
-            className='w-8 h-8'
+            className='w-8 h-8 rounded-md'
             onClick={() => setBIMVisible(false)}
           >
             <X className='w-4 h-4' />

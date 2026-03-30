@@ -9,7 +9,7 @@ export const DarkMode = () => {
     <Button
       variant='ghost'
       size='icon'
-      className='w-8 h-8 rounded-full text-bim-text-muted hover:text-bim-text-main hover:bg-bim-bg-item-hover/50 transition-colors'
+      className='w-8 h-8 rounded-md text-bim-text-muted hover:text-bim-text-main hover:bg-bim-bg-item-hover/50 transition-colors'
       onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
       title={`Switch to ${theme === 'dark' ? 'light' : 'dark'} mode`}
     >
