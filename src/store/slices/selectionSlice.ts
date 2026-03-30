@@ -30,12 +30,31 @@ export const createSelectionSlice: StateCreator<
   [],
   [],
   SelectionSlice
-> = (set) => ({
+> = (set, get) => ({
   selectedElement: null,
   selectedNodeId: null,
   isHighlighting: false,
 
   setSelectedElement: (element) => set({ selectedElement: element }),
-  setSelectedNodeId: (id) => set({ selectedNodeId: id }),
+
+  setSelectedNodeId: (id) => {
+    set({ selectedNodeId: id });
+
+    // Tự động mở rộng các node cha nếu có ID được chọn
+    if (id !== null) {
+      const state = get();
+      const treeMap = state.spatialTreeById;
+      const nextExpanded = new Set(state.expandedIds);
+
+      let currentNode = treeMap[id];
+      while (currentNode && currentNode.parentId !== null) {
+        nextExpanded.add(currentNode.parentId);
+        currentNode = treeMap[currentNode.parentId];
+      }
+
+      set({ expandedIds: nextExpanded } as any);
+    }
+  },
+
   setIsHighlighting: (loading) => set({ isHighlighting: loading }),
 });

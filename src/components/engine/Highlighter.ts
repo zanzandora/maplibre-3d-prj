@@ -4,34 +4,56 @@ import { Color } from 'three';
 import type { Highlighter } from '@thatopen/components-front';
 import type { FragmentsManager, ModelIdMap, World } from '@thatopen/components';
 
+/**
+ * Cấu hình bộ công cụ Highlighter để xử lý việc chọn đối tượng trong scene 3D.
+ * Đồng bộ hóa dữ liệu thuộc tính và trạng thái lựa chọn với cây thư mục (Spatial Tree).
+ */
 export const setupHighlighter = (
   highlighter: Highlighter,
   world: World,
   fragments: FragmentsManager,
   setSelectedElement: (element: ISelectedElement | null) => void,
-  setIsHighlighting: (loading: boolean) => void
+  setIsHighlighting: (loading: boolean) => void,
+  setSelectedNodeId: (id: string | number | null) => void
 ) => {
-  highlighter.setup({
-    world,
-    selectMaterialDefinition: {
-      color: new Color('#bcf124'),
-      opacity: 1,
-      transparent: false,
-      renderedFaces: 0,
-    },
-  });
+  // Chỉ cấu hình nếu chưa được thiết lập (tránh reset material liên tục)
+  if (!highlighter.isSetup) {
+    highlighter.setup({
+      world,
+      selectMaterialDefinition: {
+        color: new Color('#bcf124'),
+        opacity: 1,
+        transparent: false,
+        renderedFaces: 0,
+      },
+    });
+  }
 
+  // Quan trọng: Bật highlighter để lắng nghe các sự kiện click trên scene
+  highlighter.enabled = true;
   highlighter.zoomToSelection = true;
 
+  /*
+    Xử lý khi một đối tượng được highlight (chọn) trên 3D.
+    1. Lấy ID để đồng bộ với Tree BIM.
+    2. Truy vấn dữ liệu thuộc tính (Properties/Psets) từ model fragments.
+  */
   const onHighlight = async (modelIdMap: ModelIdMap) => {
     setIsHighlighting(true);
     try {
       const promises = [];
+      let firstExpressId: number | null = null;
+
       for (const [modelId, localIds] of Object.entries(modelIdMap)) {
         const model = fragments.list.get(modelId);
         if (!model) continue;
 
-        // Request attributes and Property Set relations
+        // Lấy ID đầu tiên để đồng bộ với cây BIM ngay lập tức
+        if (firstExpressId === null && localIds.size > 0) {
+          firstExpressId = Array.from(localIds)[0];
+        }
+
+        // Truy vấn dữ liệu chi tiết và các quan hệ Property Set
         promises.push(
           model.getItemsData([...localIds], {
             attributesDefault: true,
@@ -49,12 +71,17 @@ export const setupHighlighter = (
         );
       }
 
+      // Cập nhật trạng thái Node đang chọn trên UI Tree
+      if (firstExpressId !== null) {
+        setSelectedNodeId(firstExpressId);
+      }
+
       const data = (await Promise.all(promises)).flat();
 
       if (data.length > 0) {
         const item = data[0];
 
-        // 1. Process Property Sets (Psets)
+        // 1. Xử lý Property Sets (Psets)
         const psets: Record<string, any> = {};
         if (item.IsDefinedBy && Array.isArray(item.IsDefinedBy)) {
           for (const pset of item.IsDefinedBy) {
@@ -77,12 +104,11 @@ export const setupHighlighter = (
           }
         }
 
-        // 2. Flatten and spread direct attributes
+        // 2. Xử lý các thuộc tính trực tiếp (Direct Attributes)
         const flatAttributes: Record<string, any> = {};
         for (const [key, val] of Object.entries(item)) {
-          if (key === 'IsDefinedBy') continue; // Handled separately
+          if (key === 'IsDefinedBy') continue;
 
-          // Extract .value if it exists (common pattern in That Open fragments)
           if (val && typeof val === 'object' && 'value' in val) {
             flatAttributes[key] = val.value;
           } else {
@@ -96,14 +122,18 @@ export const setupHighlighter = (
         });
       }
     } catch (e) {
-      console.error(e);
+      console.error('Highlighter Error:', e);
     } finally {
       setIsHighlighting(false);
     }
   };
 
+  /*
+    Xóa trạng thái lựa chọn khi click ra ngoài hoặc Clear Highlighter.
+  */
   const onClear = () => {
     setSelectedElement(null);
+    setSelectedNodeId(null);
   };
 
   highlighter.events.select.onHighlight.add(onHighlight);
@@ -113,6 +143,6 @@ export const setupHighlighter = (
     highlighter.enabled = false;
     highlighter.events.select.onHighlight.remove(onHighlight);
     highlighter.events.select.onClear.remove(onClear);
-    highlighter.dispose();
+    // Lưu ý: Không dispose highlighter ở đây nếu nó được quản lý bởi Components
   };
 };
