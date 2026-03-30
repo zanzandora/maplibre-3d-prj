@@ -7,6 +7,7 @@ import type { BIMState } from '../useBIMStore';
 */
 export interface UISlice {
   isBIMVisible: boolean;
+  isIsolateMode: boolean; // Trạng thái đang trong chế độ cô lập (Hide all except selection)
   activeTool:
     | 'select'
     | 'clip'
@@ -19,6 +20,7 @@ export interface UISlice {
   leftPanelOpen: boolean;
   rightPanelOpen: boolean;
   setBIMVisible: (visible: boolean) => void;
+  setIsIsolateMode: (active: boolean) => void;
   setActiveTool: (tool: UISlice['activeTool']) => void;
   setActiveSubTool: (toolId: string, subToolId: string) => void;
   toggleLeftPanel: () => void;
@@ -29,6 +31,7 @@ export const createUISlice: StateCreator<BIMState, [], [], UISlice> = (
   set
 ) => ({
   isBIMVisible: false,
+  isIsolateMode: false,
   activeTool: 'select',
   activeSubTools: {
     measure: 'length',
@@ -37,6 +40,7 @@ export const createUISlice: StateCreator<BIMState, [], [], UISlice> = (
   rightPanelOpen: true,
 
   setBIMVisible: (visible) => set({ isBIMVisible: visible }),
+  setIsIsolateMode: (active) => set({ isIsolateMode: active }),
   setActiveTool: (tool) => set({ activeTool: tool }),
   setActiveSubTool: (toolId, subToolId) =>
     set((state) => ({

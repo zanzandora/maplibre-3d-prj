@@ -1,10 +1,17 @@
-import { Search, Loader2, ChevronLeft, ChevronRight } from 'lucide-react';
+import {
+  Search,
+  Loader2,
+  ChevronLeft,
+  ChevronRight,
+  RotateCcw,
+  Layers2Icon,
+} from 'lucide-react';
 import { Button } from './elements/Button';
 import { useBIMStore } from '../../store/useBIMStore';
 import TreeNode from './TreeNode';
 import { useBIMContext } from '../../context/bim/BIMContext';
 import * as OBC from '@thatopen/components';
-import { useCallback } from 'react';
+import { useCallback, useEffect } from 'react';
 import { getAllElementIds } from '../../utils/getAllElementIds';
 
 export const LeftPanel = () => {
@@ -13,10 +20,12 @@ export const LeftPanel = () => {
   const roots = useBIMStore((s) => s.spatialTreeRoots);
   const isTreeLoading = useBIMStore((s) => s.isTreeLoading);
 
-  // Selection states from store
+  // Selection & Visibility states
   const selectedNodeId = useBIMStore((s) => s.selectedNodeId);
   const spatialTreeById = useBIMStore((s) => s.spatialTreeById);
   const resetVisibility = useBIMStore((s) => s.resetVisibility);
+  const isIsolateMode = useBIMStore((s) => s.isIsolateMode);
+  const setIsIsolateMode = useBIMStore((s) => s.setIsIsolateMode);
 
   const { components, fragments } = useBIMContext();
 
@@ -35,27 +44,49 @@ export const LeftPanel = () => {
     return { [modelId]: new Set(elementIds) };
   }, [selectedNodeId, fragments, spatialTreeById]);
 
-  const handleShowAll = () => {
-    if (!components) return;
-    const hider = components.get(OBC.Hider);
-    hider.set(true);
-    resetVisibility();
-  };
-
-  const handleIsolateMode = () => {
+  /*
+    Thực hiện logic Isolate: Ẩn toàn bộ model và chỉ hiện phần được chọn.
+  */
+  const executeIsolate = useCallback(() => {
     const fragmentMap = getSelectedFragmentsMap();
     if (!components || !fragmentMap) return;
     const hider = components.get(OBC.Hider);
 
-    hider.set(false);
-    hider.set(true, fragmentMap);
-
-    // Note: Isolate is complex to sync with Eye icons in the tree perfectly
-    // without tracking all visibility per-element, but we reset for simplicity
+    hider.set(false); // Ẩn tất cả
+    hider.set(true, fragmentMap); // Hiện chỉ vùng chọn
     resetVisibility();
-    if (selectedNodeId) {
-      // Ideally we'd calculate which ones are NOT in the isolate map, but for now
-      // we focus on the core functionality.
+  }, [components, getSelectedFragmentsMap, resetVisibility]);
+
+  /*
+    Thực hiện logic Reset: Hiện toàn bộ model.
+  */
+  const executeShowAll = useCallback(() => {
+    if (!components) return;
+    const hider = components.get(OBC.Hider);
+    hider.set(true); // Hiện tất cả
+    resetVisibility();
+    setIsIsolateMode(false);
+  }, [components, resetVisibility, setIsIsolateMode]);
+
+  /*
+    Auto-Isolate logic: Khi người dùng đang ở chế độ Isolate, 
+    bất kỳ thay đổi nào về selection sẽ tự động kích hoạt lại Isolate cho đối tượng mới.
+  */
+  useEffect(() => {
+    if (isIsolateMode && selectedNodeId) {
+      executeIsolate();
+    }
+  }, [selectedNodeId, isIsolateMode, executeIsolate]);
+
+  /*
+    Xử lý khi nhấn nút Isolate/Reset chính.
+  */
+  const handleToggleIsolate = () => {
+    if (isIsolateMode) {
+      executeShowAll();
+    } else {
+      setIsIsolateMode(true);
+      executeIsolate();
     }
   };
 
@@ -95,19 +126,25 @@ export const LeftPanel = () => {
         <div className='p-3 flex flex-col gap-1.5 bg-bim-bg-main border-t border-bim-border-light '>
           <Button
             size='sm'
-            onClick={handleShowAll}
-            disabled={isTreeLoading}
-            className='w-full border-1 border-bim-border-main text-[10px] font-bold uppercase tracking-wider h-8'
+            onClick={handleToggleIsolate}
+            disabled={isTreeLoading || (!isIsolateMode && !selectedNodeId)}
+            className={`w-full border-1 text-[10px] font-bold uppercase tracking-wider h-8 transition-all ${
+              isIsolateMode
+                ? 'bg-bim-primary text-white border-bim-primary shadow-lg shadow-bim-primary/30 hover:bg-bim-primary/90'
+                : 'border-bim-border-main text-bim-text-main'
+            }`}
           >
-            Show All
-          </Button>
-          <Button
-            size='sm'
-            onClick={handleIsolateMode}
-            disabled={isTreeLoading || !selectedNodeId}
-            className='w-full border-1 border-bim-border-main text-[10px] font-bold uppercase tracking-wider h-8'
-          >
-            Isolate
+            {isIsolateMode ? (
+              <>
+                <RotateCcw className='w-3 h-3' />
+                Reset View
+              </>
+            ) : (
+              <>
+                <Layers2Icon className='w-3 h-3' />
+                Isolate
+              </>
+            )}
           </Button>
         </div>
       </aside>
