@@ -64,8 +64,11 @@ export const setupHighlighter = (
             if (pset.HasProperties && Array.isArray(pset.HasProperties)) {
               for (const prop of pset.HasProperties) {
                 const name = (prop.Name as any)?.value;
-                const val = (prop.NominalValue as any)?.value;
+                let val = (prop.NominalValue as any)?.value;
                 if (name && val !== undefined) {
+                  if (typeof val === 'number') {
+                    val = Number(val.toFixed(2));
+                  }
                   props[name] = val;
                 }
               }
