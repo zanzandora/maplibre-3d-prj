@@ -72,7 +72,14 @@ export const setupHighlighter = (
       }
 
       // Cập nhật trạng thái Node đang chọn trên UI Tree
-      if (firstExpressId !== null) {
+      // Chỉ tự động chọn trên Tree nếu highlight duy nhất 1 đối tượng (thường là click 3D)
+      // Nếu highlight nhiều đối tượng (chọn từ Group/Storey), giữ nguyên selection hiện tại trên Tree.
+      const totalSelected = Object.values(modelIdMap).reduce(
+        (acc, ids) => acc + ids.size,
+        0
+      );
+
+      if (totalSelected === 1 && firstExpressId !== null) {
         setSelectedNodeId(firstExpressId);
       }
 

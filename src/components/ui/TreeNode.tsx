@@ -35,39 +35,38 @@ const TreeNode = memo(({ id, level }: TreeNodeProps) => {
   const handleSelect = async (e: React.MouseEvent) => {
     e.stopPropagation();
 
+    if (!components || !fragments) return;
+    const highlighter = components.get(Highlighter);
+    const modelId = fragments.list.keys().next().value;
+    if (!modelId) return;
+
     // Toggle logic: if already selected, clear selection
     if (isSelected) {
       setSelectedNodeId(null);
       setSelectedElement(null);
-      if (components) components.get(Highlighter).clear('select');
+      highlighter.clear('select');
       return;
     }
 
-    // Set as the only selected node in UI
+    // 1. Get all constituent elements to highlight
+    const elementsToHighlight = getAllElementIds(id, spatialTreeById);
+
+    // 2. Perform 3D highlight (highlightByID for 'select' tag replaces previous selection)
+    if (elementsToHighlight.length > 0) {
+      highlighter.highlightByID('select', {
+        [modelId]: new Set(elementsToHighlight as number[]),
+      });
+    }
+
+    // 3. Update UI state
     setSelectedNodeId(id);
 
-    if (components && fragments) {
-      const highlighter = components.get(Highlighter);
-      const modelId = fragments.list.keys().next().value;
-      if (!modelId) return;
-
-      // Clear previous 3D highlights
-      highlighter.clear('select');
-
-      // Get all constituent elements to highlight
-      const elementsToHighlight = getAllElementIds(id, spatialTreeById);
-
-      if (elementsToHighlight.length > 0) {
-        highlighter.highlightByID('select', {
-          [modelId]: new Set(elementsToHighlight as number[]),
-        });
-      }
-
-      if (!node.isGroup && node.type !== 'IfcBuildingStorey') {
-        // Properties will be handled elsewhere or if needed here
-      } else {
-        setSelectedElement(null);
-      }
+    if (
+      node.isGroup ||
+      node.type === 'IFCBUILDINGSTOREY' ||
+      node.type === 'CATEGORYGROUP'
+    ) {
+      setSelectedElement(null);
     }
   };
 
