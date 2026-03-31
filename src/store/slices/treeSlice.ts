@@ -27,12 +27,14 @@ export interface TreeSlice {
   totalElements: number;
   expandedIds: Set<string | number>;
   isTreeLoading: boolean;
+  searchQuery: string;
   setSpatialTree: (
     nodes: Record<string | number, ISpatialNode>,
     roots: (string | number)[]
   ) => void;
   toggleNode: (id: string | number) => void;
   setIsTreeLoading: (loading: boolean) => void;
+  setSearchQuery: (query: string) => void;
 }
 
 export const createTreeSlice: StateCreator<BIMState, [], [], TreeSlice> = (
@@ -43,11 +45,12 @@ export const createTreeSlice: StateCreator<BIMState, [], [], TreeSlice> = (
   totalElements: 0,
   expandedIds: new Set(),
   isTreeLoading: false,
+  searchQuery: '',
 
   setSpatialTree: (nodes, roots) => {
     // Tính tổng cấu kiện để hiển thị tổng quan thông tin model.
     const total = Object.values(nodes).reduce((acc, node) => {
-      if (node.isGroup && node.type === 'CategoryGroup' && node.count) {
+      if (node.isGroup && node.type === 'CATEGORYGROUP' && node.count) {
         return acc + node.count;
       }
       return acc;
@@ -72,4 +75,6 @@ export const createTreeSlice: StateCreator<BIMState, [], [], TreeSlice> = (
     }),
 
   setIsTreeLoading: (loading) => set({ isTreeLoading: loading }),
+
+  setSearchQuery: (query) => set({ searchQuery: query }),
 });

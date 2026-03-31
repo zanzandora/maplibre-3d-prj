@@ -1,10 +1,10 @@
 import {
-  Search,
   Loader2,
   ChevronLeft,
   ChevronRight,
   RotateCcw,
   Layers2Icon,
+  SearchX,
 } from 'lucide-react';
 import { Button } from './elements/Button';
 import { useBIMStore } from '../../store/useBIMStore';
@@ -14,13 +14,18 @@ import * as OBC from '@thatopen/components';
 import { useCallback, useEffect } from 'react';
 import { Virtuoso } from 'react-virtuoso';
 import { useFlattenTree } from '../../hooks/ui/useFlattenTree';
-import { getAllElementIds } from '../../utils';
+import { getAllElementIds } from '../../utils/getAllElementIds';
+import SearchInput from './SearchInput';
 
 export const LeftPanel = () => {
   const leftPanelOpen = useBIMStore((s) => s.leftPanelOpen);
   const toggleLeftPanel = useBIMStore((s) => s.toggleLeftPanel);
   const roots = useBIMStore((s) => s.spatialTreeRoots);
   const isTreeLoading = useBIMStore((s) => s.isTreeLoading);
+
+  // Search state từ Store (chỉ thay đổi sau khi debounce)
+  const searchQuery = useBIMStore((s) => s.searchQuery) ?? '';
+  const setSearchQuery = useBIMStore((s) => s.setSearchQuery);
 
   // Selection & Visibility states
   const selectedNodeId = useBIMStore((s) => s.selectedNodeId);
@@ -32,7 +37,20 @@ export const LeftPanel = () => {
 
   const { components, fragments } = useBIMContext();
 
-  const flattenedNodes = useFlattenTree(roots, spatialTreeById, expandedIds);
+  const flattenedNodes = useFlattenTree(
+    roots,
+    spatialTreeById,
+    expandedIds,
+    searchQuery
+  );
+
+  const noResults = searchQuery.trim() !== '' && flattenedNodes.length === 0;
+
+  const handleClearSearch = () => {
+    if (typeof setSearchQuery === 'function') {
+      setSearchQuery('');
+    }
+  };
 
   /*
     Tạo FragmentIdMap cho node đang được chọn để làm việc với FragmentsHider.
@@ -102,22 +120,43 @@ export const LeftPanel = () => {
       }`}
     >
       <aside className='pointer-events-auto min-w-72 h-full flex flex-col bg-bim-bg-panel/90 backdrop-blur-md border-y border-l border-bim-border-main rounded-l-lg overflow-hidden shadow-2xl'>
-        <div className='p-3 border-b border-bim-border-light flex items-center justify-between'>
-          <h2 className='text-xs font-bold text-bim-text-main uppercase tracking-widest'>
-            Model Browser
-          </h2>
-          <div className='flex gap-2'>
-            <Search className='w-3.5 h-3.5 text-bim-text-muted/70 hover:text-bim-text-main cursor-pointer transition-colors' />
+        <div className='p-3 border-b border-bim-border-light flex flex-col gap-2'>
+          <div className='flex items-center justify-between'>
+            <h2 className='text-xs font-bold text-bim-text-main uppercase tracking-widest'>
+              Model Browser
+            </h2>
           </div>
+
+          <SearchInput />
         </div>
 
-        <div className='flex-1 py-2 px-2'>
+        <div className='flex-1 py-2 px-2 relative'>
           {isTreeLoading ? (
             <div className='h-full z-10  flex flex-col items-center justify-center space-y-3'>
               <Loader2 className='w-8 h-8 text-bim-primary animate-spin' />
               <span className='text-[10px] font-bold text-bim-primary uppercase tracking-widest'>
                 Building Tree...
               </span>
+            </div>
+          ) : noResults ? (
+            <div className='h-full flex flex-col items-center justify-center text-bim-text-muted/50 space-y-3 animate-in fade-in duration-500'>
+              <div className='p-4 bg-bim-bg-main/30 rounded-full'>
+                <SearchX className='w-10 h-10 stroke-[1.5px]' />
+              </div>
+              <div className='text-center px-6'>
+                <p className='text-xs font-bold text-bim-text-main/80'>
+                  No results found
+                </p>
+                <p className='text-[10px] leading-relaxed'>
+                  We couldn't find anything matching "{searchQuery}"
+                </p>
+              </div>
+              <button
+                onClick={handleClearSearch}
+                className='text-[10px] text-bim-primary hover:underline font-bold uppercase tracking-tighter'
+              >
+                Clear Search
+              </button>
             </div>
           ) : (
             <Virtuoso
