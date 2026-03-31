@@ -123,6 +123,7 @@ export const BIMProvider: FC<{ children: ReactNode }> = ({ children }) => {
 
       fragments.init(url);
 
+      // bug: No camera initialized!
       world.camera.controls.addEventListener('update', () =>
         fragments.core.update()
       );
@@ -151,6 +152,7 @@ export const BIMProvider: FC<{ children: ReactNode }> = ({ children }) => {
     }
 
     // todo: Grid Setup
+    // bug: No scene initialized!
     const grids = components.get(OBC.Grids);
     const grid = grids.create(world);
 

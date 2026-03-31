@@ -21,10 +21,16 @@ export const useViewCube = (
   useEffect(() => {
     if (!isReady || !world || !container) return;
 
+    const { camera } = world;
+    const controls = camera?.controls;
+    const threeCamera = camera?.three;
+
     const viewCube = document.createElement('bim-view-cube') as any;
     viewCubeRef.current = viewCube;
 
-    viewCube.camera = world.camera.three;
+    if (threeCamera) {
+      viewCube.camera = threeCamera;
+    }
 
     // Static Styles
     viewCube.style.position = 'absolute';
@@ -36,15 +42,21 @@ export const useViewCube = (
 
     container.appendChild(viewCube);
 
-    const updateCube = () => viewCube.updateOrientation();
-    world.camera.controls?.addEventListener('update', updateCube);
+    const updateCube = () => {
+      if (viewCube && typeof viewCube.updateOrientation === 'function') {
+        viewCube.updateOrientation();
+      }
+    };
+
+    if (controls) {
+      controls.addEventListener('update', updateCube);
+    }
 
     const handleFaceClick = (
       offsetX: number,
       offsetY: number,
       offsetZ: number
     ) => {
-      const controls = world.camera.controls;
       if (!controls) return;
 
       const target = new Vector3();
@@ -82,11 +94,19 @@ export const useViewCube = (
     });
 
     return () => {
-      world.camera.controls?.removeEventListener('update', updateCube);
+      if (controls) {
+        try {
+          controls.removeEventListener('update', updateCube);
+        } catch (e) {
+          console.warn('ViewCube: Failed to remove update listener', e);
+        }
+      }
+
       Object.entries(listeners).forEach(([event, handler]) => {
         viewCube.removeEventListener(event, handler);
       });
-      if (container.contains(viewCube)) {
+
+      if (container && container.contains(viewCube)) {
         container.removeChild(viewCube);
       }
       viewCubeRef.current = null;

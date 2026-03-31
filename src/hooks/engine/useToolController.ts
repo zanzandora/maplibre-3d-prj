@@ -24,9 +24,11 @@ export const useToolController = ({
 }: ToolControllerProps) => {
   const activeTool = useBIMStore((s) => s.activeTool);
   const activeSubTools = useBIMStore((s) => s.activeSubTools);
+
   const setSelectedElement = useBIMStore((s) => s.setSelectedElement);
   const setSelectedNodeId = useBIMStore((s) => s.setSelectedNodeId);
   const setIsHighlighting = useBIMStore((s) => s.setIsHighlighting);
+
   const measureUnit = useBIMStore((s) => s.measureUnit);
   const measurePrecision = useBIMStore((s) => s.measurePrecision);
 

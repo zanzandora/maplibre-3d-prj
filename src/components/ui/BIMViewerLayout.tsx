@@ -27,7 +27,7 @@ export const BIMViewerLayout = ({ children }: BIMViewerLayoutProps) => {
         </div>
 
         {/* Bottom Status Bar */}
-        <StatusBar />
+        {/* <StatusBar /> */}
       </div>
     </div>
   );

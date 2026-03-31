@@ -1,4 +1,4 @@
-import * as React from 'react';
+import { forwardRef } from 'react';
 
 export interface ButtonProps
   extends React.ButtonHTMLAttributes<HTMLButtonElement> {
@@ -12,7 +12,7 @@ export interface ButtonProps
   size?: 'default' | 'sm' | 'lg' | 'icon';
 }
 
-const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
+const Button = forwardRef<HTMLButtonElement, ButtonProps>(
   (
     { className = '', variant = 'default', size = 'default', ...props },
     ref
