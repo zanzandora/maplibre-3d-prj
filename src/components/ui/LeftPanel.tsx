@@ -12,7 +12,9 @@ import TreeNode from './TreeNode';
 import { useBIMContext } from '../../context/bim/BIMContext';
 import * as OBC from '@thatopen/components';
 import { useCallback, useEffect } from 'react';
-import { getAllElementIds } from '../../utils/getAllElementIds';
+import { Virtuoso } from 'react-virtuoso';
+import { useFlattenTree } from '../../hooks/ui/useFlattenTree';
+import { getAllElementIds } from '../../utils';
 
 export const LeftPanel = () => {
   const leftPanelOpen = useBIMStore((s) => s.leftPanelOpen);
@@ -23,11 +25,14 @@ export const LeftPanel = () => {
   // Selection & Visibility states
   const selectedNodeId = useBIMStore((s) => s.selectedNodeId);
   const spatialTreeById = useBIMStore((s) => s.spatialTreeById);
+  const expandedIds = useBIMStore((s) => s.expandedIds);
   const resetVisibility = useBIMStore((s) => s.resetVisibility);
   const isIsolateMode = useBIMStore((s) => s.isIsolateMode);
   const setIsIsolateMode = useBIMStore((s) => s.setIsIsolateMode);
 
   const { components, fragments } = useBIMContext();
+
+  const flattenedNodes = useFlattenTree(roots, spatialTreeById, expandedIds);
 
   /*
     Tạo FragmentIdMap cho node đang được chọn để làm việc với FragmentsHider.
@@ -106,7 +111,7 @@ export const LeftPanel = () => {
           </div>
         </div>
 
-        <div className='flex-1 overflow-y-auto py-2 px-4'>
+        <div className='flex-1 py-2 px-2'>
           {isTreeLoading ? (
             <div className='h-full z-10  flex flex-col items-center justify-center space-y-3'>
               <Loader2 className='w-8 h-8 text-bim-primary animate-spin' />
@@ -115,11 +120,13 @@ export const LeftPanel = () => {
               </span>
             </div>
           ) : (
-            <div className='space-y-1'>
-              {roots.map((id) => (
-                <TreeNode key={id} id={id} level={0} />
-              ))}
-            </div>
+            <Virtuoso
+              style={{ height: '100%' }}
+              data={flattenedNodes}
+              itemContent={(_index, node) => (
+                <TreeNode id={node.id} level={node.level} />
+              )}
+            />
           )}
         </div>
 

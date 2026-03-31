@@ -22,6 +22,7 @@
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
     "react-map-gl": "^8.1.0",
+    "react-virtuoso": "^4.18.3",
     "stats.js": "^0.17.0",
     "tailwindcss": "^4.2.2",
     "three": "^0.183.2",

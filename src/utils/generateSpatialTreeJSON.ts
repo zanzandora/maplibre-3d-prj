@@ -91,7 +91,7 @@ export const generateSpatialTree = async (model: FragmentsModel) => {
         treeMap[groupId] = {
           id: groupId,
           label: categoryName,
-          type: 'CategoryGroup',
+          type: 'CATEGORYGROUP',
           isGroup: true,
           count: elementIds.length,
           children: elementIds,
@@ -102,7 +102,7 @@ export const generateSpatialTree = async (model: FragmentsModel) => {
       treeMap[storeyIdStr] = {
         id: storeyIdStr,
         label: storeyName,
-        type: 'IfcBuildingStorey',
+        type: 'IFCBUILDINGSTOREY',
         children: storeyChildren,
         parentId: null,
       };

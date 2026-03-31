@@ -1,15 +1,10 @@
 import { memo } from 'react';
 import { useBIMStore } from '../../store/useBIMStore';
-import {
-  Collapsible,
-  CollapsibleContent,
-  CollapsibleTrigger,
-} from './elements/Collapsible';
 import { ChevronDown, ChevronRight, Eye, EyeOff } from 'lucide-react';
 import { useBIMContext } from '../../context/bim/BIMContext';
 import { Highlighter } from '@thatopen/components-front';
-import { getAllElementIds } from '../../utils/getAllElementIds';
 import * as OBC from '@thatopen/components';
+import { getAllElementIds } from '../../utils';
 
 interface TreeNodeProps {
   id: string | number;
@@ -95,71 +90,60 @@ const TreeNode = memo(({ id, level }: TreeNodeProps) => {
     toggleVisibility(id);
   };
 
+  const handleToggleNode = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (hasChildren) {
+      toggleNode(id);
+    }
+  };
+
   return (
-    <Collapsible open={isExpanded} onOpenChange={() => toggleNode(id)}>
+    <div
+      className={`flex items-center gap-1 py-1 px-1.5 rounded cursor-pointer group transition-colors text-xs select-none ${
+        isSelected
+          ? 'bg-bim-primary/15 text-bim-text-main border-l-2 border-bim-primary'
+          : 'hover:bg-bim-bg-item-hover text-bim-text-muted hover:text-bim-text-main'
+      }`}
+      style={{ marginLeft: level * 8 }}
+    >
       <div
-        className={`flex items-center gap-1 py-1 px-1.5 rounded cursor-pointer group transition-colors text-xs select-none ${
-          isSelected
-            ? 'bg-bim-primary/15 text-bim-text-main border-l-2 border-bim-primary'
-            : 'hover:bg-bim-bg-item-hover text-bim-text-muted hover:text-bim-text-main'
-        }`}
-        style={{ marginLeft: level * 8 }}
+        onClick={handleToggleNode}
+        className='w-4 h-4 flex items-center justify-center hover:bg-bim-bg-item-hover rounded cursor-pointer'
       >
-        <CollapsibleTrigger
-          onClick={(e) => {
-            if (!hasChildren) {
-              e.preventDefault();
-            }
-            e.stopPropagation();
-          }}
-        >
-          <div className='w-4 h-4 flex items-center justify-center hover:bg-bim-bg-item-hover rounded'>
-            {hasChildren ? (
-              isExpanded ? (
-                <ChevronDown className='w-3 h-3 shrink-0' />
-              ) : (
-                <ChevronRight className='w-3 h-3 shrink-0' />
-              )
-            ) : (
-              <div className='w-3' />
-            )}
-          </div>
-        </CollapsibleTrigger>
-
-        {/* Visibility Icon */}
-        <button
-          onClick={handleToggleVisibility}
-          className={`w-5 h-5 flex items-center justify-center rounded transition-colors ${
-            isHidden
-              ? 'text-bim-text-muted/40'
-              : 'text-bim-primary hover:text-bim-primary/80'
-          }`}
-        >
-          {isHidden ? (
-            <EyeOff className='w-3.5 h-3.5' />
+        {hasChildren ? (
+          isExpanded ? (
+            <ChevronDown className='w-3 h-3 shrink-0' />
           ) : (
-            <Eye className='w-3.5 h-3.5' />
-          )}
-        </button>
-
-        <span className='flex-1 truncate ml-1' onClick={handleSelect}>
-          {node.label}{' '}
-          {node.isGroup && (
-            <span className='text-bim-text-muted/80'>({node.count})</span>
-          )}
-        </span>
+            <ChevronRight className='w-3 h-3 shrink-0' />
+          )
+        ) : (
+          <div className='w-3' />
+        )}
       </div>
 
-      {hasChildren && (
-        <CollapsibleContent>
-          <div className='mt-1 space-y-1'>
-            {node.children.map((childId) => (
-              <TreeNode key={childId} id={childId} level={level + 1} />
-            ))}
-          </div>
-        </CollapsibleContent>
-      )}
-    </Collapsible>
+      {/* Visibility Icon */}
+      <button
+        onClick={handleToggleVisibility}
+        className={`w-5 h-5 flex items-center justify-center rounded transition-colors ${
+          isHidden
+            ? 'text-bim-text-muted/40'
+            : 'text-bim-primary hover:text-bim-primary/80'
+        }`}
+      >
+        {isHidden ? (
+          <EyeOff className='w-3.5 h-3.5' />
+        ) : (
+          <Eye className='w-3.5 h-3.5' />
+        )}
+      </button>
+
+      <span className='flex-1 truncate ml-1' onClick={handleSelect}>
+        {node.label}{' '}
+        {node.isGroup && (
+          <span className='text-bim-text-muted/80'>({node.count})</span>
+        )}
+      </span>
+    </div>
   );
 });
 

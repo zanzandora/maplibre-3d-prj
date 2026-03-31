@@ -1,26 +1,13 @@
-import React from 'react';
 import { Edit3, Loader2, ChevronLeft, ChevronRight } from 'lucide-react';
-import { useBIMStore, type ISelectedElement } from '../../store/useBIMStore';
+import { useBIMStore } from '../../store/useBIMStore';
+import { Virtuoso } from 'react-virtuoso';
+import { flattenedProperties } from '../../hooks/ui/useFlattenedProperties';
 
 export const RightPanel = () => {
   const rightPanelOpen = useBIMStore((s) => s.rightPanelOpen);
   const selectedElement = useBIMStore((s) => s.selectedElement);
   const isHighlighting = useBIMStore((s) => s.isHighlighting);
   const toggleRightPanel = useBIMStore((s) => s.toggleRightPanel);
-
-  // Helper to filter out internal or handled properties and null/undefined/empty values
-  const getDisplayAttributes = (element: ISelectedElement) => {
-    const skip = ['psets'];
-    return Object.entries(element).filter(
-      ([key, val]) =>
-        !skip.includes(key) &&
-        !key.startsWith('_') &&
-        typeof val !== 'object' &&
-        val !== null &&
-        val !== undefined &&
-        val !== ''
-    );
-  };
 
   return (
     <div
@@ -47,7 +34,7 @@ export const RightPanel = () => {
           </h2>
         </div>
 
-        <div className='flex-1 overflow-y-auto p-4 space-y-6 relative'>
+        <div className='flex-1 relative'>
           {isHighlighting && (
             <div className='absolute inset-0 z-10 bg-bim-bg-main/60 backdrop-blur-[2px] flex flex-col items-center justify-center space-y-3'>
               <Loader2 className='w-8 h-8 text-bim-primary animate-spin' />
@@ -56,78 +43,53 @@ export const RightPanel = () => {
               </span>
             </div>
           )}
+
           {selectedElement ? (
-            <>
-              <section>
-                <h3 className='text-base font-bold text-bim-primary mb-0.5'>
-                  {selectedElement.Name ||
-                    selectedElement.name ||
-                    'Unknown Element'}
-                </h3>
-                <p className='text-xs text-bim-text-muted uppercase tracking-wider'>
-                  GUID: {selectedElement._guid || 'N/A'}
-                </p>
-                <p className='text-xs text-bim-text-muted uppercase tracking-wider'>
-                  LocalId: {selectedElement._localId}
-                </p>
-              </section>
-
-              {/* Base Attributes Section */}
-              {getDisplayAttributes(selectedElement).length > 0 && (
-                <section className='space-y-2'>
-                  <h4 className='text-[10px] font-bold text-bim-primary uppercase tracking-wider border-b border-bim-border-light pb-1'>
-                    General Attributes
-                  </h4>
-                  <div className='grid grid-cols-2 gap-y-1.5  text-xs'>
-                    {getDisplayAttributes(selectedElement).map(([key, val]) => (
-                      <React.Fragment key={key}>
-                        <span className='text-bim-text-muted'>{key}</span>
-                        <span
-                          className='text-right text-bim-text-main pl-2 truncate'
-                          title={String(val)}
-                        >
-                          {String(val)}
-                        </span>
-                      </React.Fragment>
-                    ))}
-                  </div>
-                </section>
-              )}
-
-              {/* Property Sets Sections */}
-              {Object.entries(selectedElement.psets || {}).map(
-                ([psetName, props]) => {
-                  const validProps = Object.entries(props).filter(
-                    ([_, v]) => v !== null && v !== undefined && v !== ''
-                  );
-
-                  if (validProps.length === 0) return null;
-
+            <Virtuoso
+              style={{ height: '100%' }}
+              data={flattenedProperties(selectedElement)}
+              itemContent={(_index, item) => {
+                if (item.type === 'basic') {
                   return (
-                    <section key={psetName} className='space-y-2'>
-                      <h4 className='text-[10px] font-bold text-bim-primary uppercase tracking-wider border-b border-bim-border-light pb-1'>
-                        {psetName}
-                      </h4>
-                      <div className='grid grid-cols-2 gap-y-1.5 text-xs'>
-                        {validProps.map(([propName, val]) => (
-                          <React.Fragment key={propName}>
-                            <span className='text-bim-text-muted'>
-                              {propName}
-                            </span>
-                            <span
-                              className='text-right text-bim-text-main font-mono  pl-2'
-                              title={String(val)}
-                            >
-                              {String(val)}
-                            </span>
-                          </React.Fragment>
-                        ))}
-                      </div>
+                    <section className='p-4 pb-2'>
+                      <h3 className='text-base font-bold text-bim-primary mb-0.5'>
+                        {item.name}
+                      </h3>
+                      <p className='text-xs text-bim-text-muted uppercase tracking-wider'>
+                        GUID: {item.guid}
+                      </p>
+                      <p className='text-xs text-bim-text-muted uppercase tracking-wider'>
+                        LocalId: {item.localId}
+                      </p>
                     </section>
                   );
                 }
-              )}
-            </>
+
+                if (item.type === 'header') {
+                  return (
+                    <div className='px-4 pt-4 pb-1'>
+                      <h4 className='text-[10px] font-bold text-bim-primary uppercase tracking-wider border-b border-bim-border-light pb-1'>
+                        {item.label}
+                      </h4>
+                    </div>
+                  );
+                }
+
+                return (
+                  <div className='px-4 py-1 flex justify-between gap-2 text-xs hover:bg-bim-bg-item-hover transition-colors'>
+                    <span className='text-bim-text-muted shrink-0'>
+                      {item.key}
+                    </span>
+                    <span
+                      className='text-right text-bim-text-main font-mono truncate'
+                      title={String(item.value)}
+                    >
+                      {String(item.value)}
+                    </span>
+                  </div>
+                );
+              }}
+            />
           ) : (
             <div className='h-full flex flex-col items-center justify-center text-bim-text-muted/50 space-y-2'>
               <Edit3 className='w-8 h-8 ' />
