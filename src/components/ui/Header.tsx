@@ -43,7 +43,6 @@ export const Header = () => {
               {project.name}
             </NativeSelectOption>
           ))}
-          {/* Loading nếu model đang được tải */}
         </NativeSelect>
       </div>
 

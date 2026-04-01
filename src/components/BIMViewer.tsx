@@ -98,7 +98,7 @@ export default function BIMViewer() {
 
   return (
     <BIMViewerLayout>
-      <div ref={containerRef} className='w-full h-full' />
+      <div ref={containerRef} className='w-full h-full cursor-context-menu' />
     </BIMViewerLayout>
   );
 }

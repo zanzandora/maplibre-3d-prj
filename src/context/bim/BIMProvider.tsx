@@ -32,6 +32,7 @@ export const BIMProvider: FC<{ children: ReactNode }> = ({ children }) => {
   const worldRef = useRef<BIMWorld | null>(null);
   const fragmentsRef = useRef<OBC.FragmentsManager | null>(null);
   const workerUrlRef = useRef<string | null>(null);
+  const cameraUpdateListenerRef = useRef<(() => void) | null>(null);
 
   const { theme } = useTheme();
 
@@ -42,11 +43,30 @@ export const BIMProvider: FC<{ children: ReactNode }> = ({ children }) => {
     isMountedRef.current = true;
     return () => {
       isMountedRef.current = false;
+      setIsReady(false);
+
+      if (cameraUpdateListenerRef.current && worldRef.current) {
+        worldRef.current.camera.controls?.removeEventListener(
+          'update',
+          cameraUpdateListenerRef.current
+        );
+      }
 
       if (componentsRef.current) {
-        componentsRef.current.dispose();
+        const components = componentsRef.current;
+
+        try {
+          const raycasters = components.get(OBC.Raycasters);
+          raycasters.enabled = false;
+          raycasters.dispose();
+        } catch (e) {
+          console.log('Error when stopping raycaster: ', e);
+        }
+
+        components.dispose();
         componentsRef.current = null;
       }
+
       if (workerUrlRef.current) {
         URL.revokeObjectURL(workerUrlRef.current);
       }
@@ -123,9 +143,9 @@ export const BIMProvider: FC<{ children: ReactNode }> = ({ children }) => {
       fragments.init(url);
 
       // bug: No camera initialized!
-      world.camera.controls.addEventListener('update', () =>
-        fragments.core.update()
-      );
+      const onCameraUpdate = () => fragments.core.update();
+      world.camera.controls.addEventListener('update', onCameraUpdate);
+      cameraUpdateListenerRef.current = onCameraUpdate;
 
       fragments.core.models.materials.list.onItemSet.add(
         ({ value: material }) => {
@@ -146,7 +166,6 @@ export const BIMProvider: FC<{ children: ReactNode }> = ({ children }) => {
       });
 
       setIsReady(true);
-
     } catch (error) {
       console.error('BIM Provider initialization error:', error);
     }

@@ -8,6 +8,7 @@ import type { BIMWorld } from '../../context/bim/BIMProvider';
 import { FragmentsManager, type Components } from '@thatopen/components';
 import {
   BufferGeometry,
+  Color,
   Float32BufferAttribute,
   Mesh,
   MeshBasicMaterial,
@@ -52,13 +53,10 @@ export const setupMeasure = (
   measurement.world = world;
   measurement.enabled = true;
   measurement.pickerSize = 12;
+  measurement.color = new Color('#3183ff');
 
-  const pickingMeshes: Mesh[] = [];
-  const uniqueGeometries = new Set<BufferGeometry>();
-  const pickingMaterial = new MeshBasicMaterial({ visible: false });
-
-  let isSynchronousSet = false;
-  const pastDelay = measurement.delay;
+  // Clear existing measurements when tool is activated
+  measurement.list.clear();
 
   if ('units' in measurement) {
     measurement.units = unit as
@@ -74,59 +72,66 @@ export const setupMeasure = (
   const setupSynchronousPicking = async () => {
     if (fragments.list.size === 0) return;
 
-    const geometries = new Map<string, BufferGeometry>();
-
-    for (const [, model] of fragments.list) {
+    for (const [modelId, model] of fragments.list) {
       const idsWithGeometry = await model.getItemsIdsWithGeometry();
+
       const allMeshesData = await model.getItemsGeometry(idsWithGeometry);
 
       for (const itemId in allMeshesData) {
         const meshData = allMeshesData[itemId];
+
         for (const geomData of meshData) {
-          if (
-            !geomData.positions ||
-            !geomData.indices ||
-            !geomData.transform ||
-            !geomData.representationId
-          ) {
+          if (!geomData.positions || !geomData.indices || !geomData.transform)
             continue;
-          }
 
-          const representationId = geomData.representationId.toString();
-          if (!geometries.has(representationId)) {
-            const geometry = new BufferGeometry();
-            geometry.setAttribute(
-              'position',
-              new Float32BufferAttribute(geomData.positions, 3)
-            );
-            geometry.setIndex(Array.from(geomData.indices));
-            geometries.set(representationId, geometry);
-            uniqueGeometries.add(geometry);
-          }
+          const geometry = new BufferGeometry();
+          geometry.setAttribute(
+            'position',
+            new Float32BufferAttribute(geomData.positions, 3)
+          );
+          geometry.setIndex(Array.from(geomData.indices));
 
-          const geometry = geometries.get(representationId)!;
+          // BẮT BUỘC: Tính toán Bounding Box để Raycaster hoạt động chính xác
+          geometry.computeBoundingBox();
+          geometry.computeBoundingSphere();
+
+          uniqueGeometries.add(geometry);
 
           const mesh = new Mesh(geometry, pickingMaterial);
           mesh.applyMatrix4(geomData.transform);
           mesh.updateWorldMatrix(true, true);
+
+          mesh.userData = {
+            modelId: modelId,
+            expressID: Number(itemId),
+            fragments: model,
+          };
+
           pickingMeshes.push(mesh);
         }
       }
     }
 
-    // Enable synchronous picking
     measurement.pickerMode = GraphicVertexPickerMode.SYNCHRONOUS;
     measurement.delay = 0;
+
     for (const mesh of pickingMeshes) {
-      world.meshes.add(mesh);
+      world.meshes.add(mesh); // Thêm mesh ẩn vào world để Raycaster có cái bắn tia vào
     }
+
     isSynchronousSet = true;
+    console.log(
+      '✅ Synchronous Picking đã sẵn sàng với',
+      pickingMeshes.length,
+      'meshes.'
+    );
   };
 
-  setupSynchronousPicking();
+  // setupSynchronousPicking();
 
   const handleClick = () => {
     if (measurement.enabled) {
+      measurement.list.clear();
       measurement.create();
     }
   };
@@ -141,6 +146,7 @@ export const setupMeasure = (
         break;
       case 'Delete':
       case 'Backspace':
+      case 'Escape':
         measurement.delete();
         break;
       default:
@@ -158,6 +164,9 @@ export const setupMeasure = (
 
   return () => {
     measurement.enabled = false;
+
+    handleClearAll();
+
     container.removeEventListener('dblclick', handleClick);
     window.removeEventListener('keydown', handleKeyDown);
     window.removeEventListener('bim-measure-delete-all', handleClearAll);

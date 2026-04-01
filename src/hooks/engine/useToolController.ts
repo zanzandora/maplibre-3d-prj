@@ -6,6 +6,7 @@ import { setupHighlighter } from '../../components/engine/Highlighter';
 import { setupClipper } from '../../components/engine/Clipper';
 import { setupMeasure } from '../../components/engine/Measure';
 import type { BIMWorld } from '../../context/bim/BIMProvider';
+import { UNIT_OPTIONS } from '../../store/slices/measureSlice';
 
 interface ToolControllerProps {
   components: OBC.Components | null;
@@ -29,7 +30,7 @@ export const useToolController = ({
   const setSelectedNodeId = useBIMStore((s) => s.setSelectedNodeId);
   const setIsHighlighting = useBIMStore((s) => s.setIsHighlighting);
 
-  const measureUnit = useBIMStore((s) => s.measureUnit);
+  const measureBaseUnitIndex = useBIMStore((s) => s.measureBaseUnitIndex);
   const measurePrecision = useBIMStore((s) => s.measurePrecision);
 
   useEffect(() => {
@@ -56,7 +57,8 @@ export const useToolController = ({
         cleanup = setupClipper(clipper, world, container);
         break;
       case 'measure': {
-        const subTool = activeSubTools['measure'];
+        const subTool = activeSubTools['measure'] || 'length';
+        const unit = UNIT_OPTIONS[subTool][measureBaseUnitIndex];
         cleanup = setupMeasure(
           components,
           world,
@@ -89,7 +91,7 @@ export const useToolController = ({
     setSelectedElement,
     setSelectedNodeId,
     setIsHighlighting,
-    measureUnit,
+    measureBaseUnitIndex,
     measurePrecision,
   ]);
 };
