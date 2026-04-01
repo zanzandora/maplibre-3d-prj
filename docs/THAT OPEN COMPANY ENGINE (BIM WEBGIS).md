@@ -118,6 +118,43 @@ export function setupBIMViewer(container: HTMLDivElement) {
 
   // 6. QUY TẮC CLEANUP (Bắt buộc)
   return () => {
-    components.dispose(); // Sẽ dọn dẹp cả Core và Front
+  components.dispose(); // Sẽ dọn dẹp cả Core và Front
   };
-}
+  }
+
+  ---
+
+  ## PHẦN 4: KINH NGHIỆM THỰC CHIẾN & BÀI HỌC (LESSONS LEARNED)
+
+  ### 4.1. Cơ chế Picking & Raycasting (Trái tim tương tác)
+  - **Vấn đề:** Các công cụ như `Highlighter`, `Measurement`, `Clipper` sẽ không thể tìm thấy bất kỳ điểm nào (raycast hit) nếu các lưới (meshes) không được đăng ký vào `world.meshes`.
+  - **Giải pháp:** Sau khi nạp model qua `fragments.core.load`, bắt buộc phải lặp qua các con (children) của model và thêm các `FragmentMesh` vào `world.meshes`.
+  ```typescript
+  for (const mesh of model.children) {
+  if (mesh instanceof THREE.Mesh) world.meshes.add(mesh);
+  }
+  ```
+  - **Lưu ý:** Không nên tạo lưới giả (fake mesh) từ geometry thô để làm picking, vì các công cụ nâng cao như `VolumeMeasurement` yêu cầu metadata (modelId, expressID) và cấu trúc vertex map phức tạp chỉ có trên `FragmentMesh` gốc.
+
+  ### 4.2. Quản lý Vòng đời (Lifecycle) và Renderer Error
+  - **Lỗi:** "A renderer is needed for the raycaster to work!" xảy ra khi component chứa Viewer bị unmount (ví dụ khi user Log Out).
+  - **Nguyên nhân:** `Raycasters` cố gắng cập nhật trong khi renderer đã bị hủy.
+  - **Quy tắc Cleanup:** Phải dispose `Raycasters` một cách tường minh trước khi gọi `components.dispose()`.
+  ```typescript
+  try {
+  const raycasters = components.get(OBC.Raycasters);
+  raycasters.enabled = false;
+  raycasters.dispose();
+  } catch (e) {}
+  components.dispose();
+  ```
+
+  ### 4.3. Đồng bộ hóa Đơn vị đo lường (Unit Strategy)
+  - Khi ứng dụng có nhiều công cụ đo (Dài, Diện tích, Thể tích), không nên lưu trữ đơn vị dưới dạng string đơn lẻ (vd: 'm').
+  - **Chiến lược:** Sử dụng một **Base Unit Index** (vd: 0 cho mm, 1 cho cm, 2 cho m). Khi chuyển đổi công cụ, chỉ cần dùng index này để tra cứu trong bảng map `UNIT_OPTIONS` tương ứng (vd: Index 2 sẽ map thành 'm' ở Length nhưng là 'm2' ở Area). Điều này giúp UI luôn đồng bộ và logic không bị sai lệch.
+
+  ### 4.4. Tối ưu hóa UI React với Engine
+  - Để tránh việc Engine bị khởi tạo lại (re-init) quá nhiều lần gây giật lag:
+  - Sử dụng `useRef` cho `components`, `world`, `fragments`.
+  - Sử dụng `useEffect` với dependency array cực kỳ chặt chẽ (vd: chỉ dùng `activeTool` thay vì toàn bộ `activeSubTools` object).
+  - Tách biệt logic Engine (setup/cleanup) ra khỏi logic render UI.

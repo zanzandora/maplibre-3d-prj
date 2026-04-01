@@ -2,7 +2,6 @@ import { Header } from './Header';
 import { LeftPanel } from './LeftPanel';
 import { RightPanel } from './RightPanel';
 import { Toolbar } from './toolbar/Toolbar';
-import { StatusBar } from './StatusBar';
 
 interface BIMViewerLayoutProps {
   children?: React.ReactNode;
@@ -25,9 +24,6 @@ export const BIMViewerLayout = ({ children }: BIMViewerLayoutProps) => {
           <RightPanel />
           <Toolbar />
         </div>
-
-        {/* Bottom Status Bar */}
-        {/* <StatusBar /> */}
       </div>
     </div>
   );

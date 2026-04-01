@@ -1,5 +1,31 @@
 # Developer Changelog - BIM Tooling Refactor
 
+## 📅 Date: 2026-04-01
+## 🛠 Changes: UI Theme Integration & Measure Tool Synchronization
+
+### 1. Đồng bộ hóa Hệ thống Đơn vị (Unit Synchronization)
+Đã tái cấu trúc cách quản lý đơn vị đo lường để đảm bảo tính nhất quán giữa Length, Area và Volume.
+- **Store mới:** Chuyển `measureUnit` sang `measureBaseUnitIndex` (0: mm, 1: cm, 2: m, 3: km).
+- **Logic:** Khi người dùng chọn 'm' tại Length, Area sẽ tự động chuyển sang 'm2' và Volume là 'm3'.
+- **File:** `src/store/slices/measureSlice.ts`, `src/hooks/engine/useToolController.ts`.
+
+### 2. Sửa lỗi Measure Tool & Raycasting
+Giải quyết các vấn đề nghiêm trọng liên quan đến việc đo đạc và chọn đối tượng (Picking).
+- **Lỗi Area/Volume:** Sửa lỗi double-click kết thúc quá trình tạo đường đo quá sớm. Hiện tại đã sử dụng sự kiện `onBeforeCreate` của thư viện để quản lý vòng đời đo đạc.
+- **Lỗi Volume TypeError:** Fix lỗi `Cannot read properties of undefined (reading 'modelId')` bằng cách đảm bảo các Fragment Mesh thực tế được đăng ký vào `world.meshes` ngay khi tải model.
+- **Tối ưu hóa Picking:** Loại bỏ logic "Fake Mesh" (tạo lưới giả) trong `Measure.ts`, thay vào đó sử dụng lưới Fragment gốc để đảm bảo độ chính xác và metadata (modelId, expressID) luôn sẵn có.
+
+### 3. Theme Integration (Custom CSS Variables)
+Tích hợp các UI Elements với hệ thống Theme (Light/Dark) sử dụng CSS Variables.
+- **NativeSelect:** Refactor để sử dụng `--bim-bg-item`, `--bim-text-main`, v.v. Đảm bảo giao diện đồng nhất mà không cần viết quá nhiều class Tailwind `dark:`.
+- **BIM Viewer Background:** Tự động cập nhật màu nền của Scene Three.js dựa trên `theme` hiện tại (`#202932` cho Dark, `#ddf2f7` cho Light).
+
+### 4. Quản lý Vòng đời & Cleanup (Lifecycle Fixes)
+- **Lỗi Logout/Unmount:** Giải quyết lỗi `A renderer is needed for the raycaster to work!` bằng cách thực hiện cleanup theo thứ tự: Dispose `Raycasters` trước khi dispose toàn bộ `Components`.
+- **Model Cleanup:** Đã thêm logic xóa các mesh con khỏi `world.meshes` khi chuyển đổi dự án hoặc đóng viewer để tránh rò rỉ bộ nhớ (Memory Leak).
+
+---
+
 ## 📅 Date: 2026-03-23
 ## 🛠 Changes: Refactor Tool Management System
 
