@@ -65,7 +65,7 @@ export const useToolController = ({
           container,
           subTool,
           fragments,
-          measureUnit,
+          unit,
           measurePrecision
         );
         break;

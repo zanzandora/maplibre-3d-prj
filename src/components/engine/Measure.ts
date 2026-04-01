@@ -2,17 +2,10 @@ import {
   LengthMeasurement,
   AreaMeasurement,
   VolumeMeasurement,
-  GraphicVertexPickerMode,
 } from '@thatopen/components-front';
 import type { BIMWorld } from '../../context/bim/BIMProvider';
-import { FragmentsManager, type Components } from '@thatopen/components';
-import {
-  BufferGeometry,
-  Color,
-  Float32BufferAttribute,
-  Mesh,
-  MeshBasicMaterial,
-} from 'three';
+import { type FragmentsManager, type Components } from '@thatopen/components';
+import { Color } from 'three';
 
 /**
  * Main Setup for Measurement tool
@@ -29,7 +22,7 @@ export const setupMeasure = (
   world: BIMWorld,
   container: HTMLElement,
   subTool: string,
-  fragments: FragmentsManager,
+  _fragments: FragmentsManager,
   unit: string,
   precision: number = 2
 ) => {
@@ -69,68 +62,9 @@ export const setupMeasure = (
     measurement.rounding = precision;
   }
 
-  const setupSynchronousPicking = async () => {
-    if (fragments.list.size === 0) return;
-
-    for (const [modelId, model] of fragments.list) {
-      const idsWithGeometry = await model.getItemsIdsWithGeometry();
-
-      const allMeshesData = await model.getItemsGeometry(idsWithGeometry);
-
-      for (const itemId in allMeshesData) {
-        const meshData = allMeshesData[itemId];
-
-        for (const geomData of meshData) {
-          if (!geomData.positions || !geomData.indices || !geomData.transform)
-            continue;
-
-          const geometry = new BufferGeometry();
-          geometry.setAttribute(
-            'position',
-            new Float32BufferAttribute(geomData.positions, 3)
-          );
-          geometry.setIndex(Array.from(geomData.indices));
-
-          // BẮT BUỘC: Tính toán Bounding Box để Raycaster hoạt động chính xác
-          geometry.computeBoundingBox();
-          geometry.computeBoundingSphere();
-
-          uniqueGeometries.add(geometry);
-
-          const mesh = new Mesh(geometry, pickingMaterial);
-          mesh.applyMatrix4(geomData.transform);
-          mesh.updateWorldMatrix(true, true);
-
-          mesh.userData = {
-            modelId: modelId,
-            expressID: Number(itemId),
-            fragments: model,
-          };
-
-          pickingMeshes.push(mesh);
-        }
-      }
-    }
-
-    measurement.pickerMode = GraphicVertexPickerMode.SYNCHRONOUS;
-    measurement.delay = 0;
-
-    for (const mesh of pickingMeshes) {
-      world.meshes.add(mesh); // Thêm mesh ẩn vào world để Raycaster có cái bắn tia vào
-    }
-
-    isSynchronousSet = true;
-    console.log(
-      '✅ Synchronous Picking đã sẵn sàng với',
-      pickingMeshes.length,
-      'meshes.'
-    );
-  };
-
-  // setupSynchronousPicking();
-
   const handleClick = () => {
     if (measurement.enabled) {
+      // Clear existing measurements before creating a new one (as requested)
       measurement.list.clear();
       measurement.create();
     }
@@ -164,28 +98,8 @@ export const setupMeasure = (
 
   return () => {
     measurement.enabled = false;
-
-    handleClearAll();
-
     container.removeEventListener('dblclick', handleClick);
     window.removeEventListener('keydown', handleKeyDown);
     window.removeEventListener('bim-measure-delete-all', handleClearAll);
-
-    if (isSynchronousSet) {
-      measurement.pickerMode = GraphicVertexPickerMode.DEFAULT;
-      measurement.delay = pastDelay;
-      for (const mesh of pickingMeshes) {
-        world.meshes.delete(mesh);
-      }
-    }
-
-    pickingMeshes.length = 0;
-
-    for (const geom of uniqueGeometries) {
-      geom.dispose();
-    }
-    uniqueGeometries.clear();
-
-    pickingMaterial.dispose();
   };
 };
