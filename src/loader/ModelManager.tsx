@@ -63,16 +63,9 @@ export const ModelManager = ({
     };
   });
 
-  // todo: Initial Data Fetch
+  
   useEffect(() => {
-    console.log("BASE_URL = ", import.meta.env.BASE_URL);
-    fetch('/map3d/ivory/buildings.json')
-      .then(res => {
-        console.log('STATUS:', res.status);
-        console.log('URL:', res.url);
-        return res.text();
-      })
-      .then(text => console.log(text));
+
     fetch('/map3d/ivory/buildings.json')
       .then((res) => res.json())
       .then((data: ModelData[]) => {
