@@ -2,10 +2,17 @@ import { Box, X } from 'lucide-react';
 import { Button } from './elements/Button';
 import { useBIMStore } from '../../store/useBIMStore';
 import { DarkMode } from './DarkMode';
+import { NativeSelect, NativeSelectOption } from './elements/NativeSelect';
 
 export const Header = () => {
   const setBIMVisible = useBIMStore((state) => state.setBIMVisible);
   const totalElements = useBIMStore((state) => state.totalElements);
+
+  // Lấy dữ liệu dự án và hàm thay đổi từ Store
+  const projects = useBIMStore((state) => state.projects);
+  const currentProjectId = useBIMStore((state) => state.currentProjectId);
+  const setCurrentProject = useBIMStore((state) => state.setCurrentProject);
+  const isModelLoading = useBIMStore((state) => state.isModelLoading);
 
   return (
     <header className='h-14 flex items-center justify-between px-4 bg-bim-bg-panel/80 backdrop-blur-md border-b border-bim-border-light pointer-events-auto transition-colors duration-300'>
@@ -21,20 +28,27 @@ export const Header = () => {
 
         <div className='h-4 w-px bg-bim-border-light mx-2' />
 
-        <div className='flex flex-col'>
-          <h1 className='text-sm font-medium text-bim-text-main'>
-            Project: Horizon Corporate Plaza
-          </h1>
-          <span className='text-[10px] text-bim-text-muted'>v2.4_Stable</span>
-        </div>
+        {/* Select Model  */}
+        <NativeSelect
+          value={currentProjectId || ''}
+          onChange={(e) => setCurrentProject(e.target.value)}
+          disabled={isModelLoading}
+        >
+          {projects.map((project) => (
+            <NativeSelectOption
+              key={project.id}
+              value={project.id}
+              className='text-bim-text-main'
+            >
+              {project.name}
+            </NativeSelectOption>
+          ))}
+          {/* Loading nếu model đang được tải */}
+        </NativeSelect>
       </div>
 
       <div className='flex items-center gap-6'>
         <div className='hidden lg:flex items-center gap-4 text-[10px] uppercase tracking-wider text-bim-text-muted'>
-          <div className='flex items-center gap-1.5'>
-            <span className='italic'>LOD:</span>
-            <span className='text-bim-text-main'>400</span>
-          </div>
           <div className='h-3 w-px bg-bim-border-light' />
           <div className='flex items-center gap-1.5'>
             <span className='italic'>Elements:</span>

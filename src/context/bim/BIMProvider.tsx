@@ -108,9 +108,8 @@ export const BIMProvider: FC<{ children: ReactNode }> = ({ children }) => {
 
     // todo: load fragment
     try {
-      const githubUrl =
-        'https://thatopen.github.io/engine_fragment/resources/worker.mjs';
-      const fetchedUrl = await fetch(githubUrl);
+      const workerUrl = '/worker.mjs';
+      const fetchedUrl = await fetch(workerUrl);
       const workerBlob = await fetchedUrl.blob();
 
       if (!isMountedRef.current) return;
@@ -147,6 +146,7 @@ export const BIMProvider: FC<{ children: ReactNode }> = ({ children }) => {
       });
 
       setIsReady(true);
+
     } catch (error) {
       console.error('BIM Provider initialization error:', error);
     }

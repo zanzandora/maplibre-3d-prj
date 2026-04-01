@@ -183,7 +183,7 @@ export const LeftPanel = () => {
             {isIsolateMode ? (
               <>
                 <RotateCcw className='w-3 h-3' />
-                Reset View
+                Layers
               </>
             ) : (
               <>
