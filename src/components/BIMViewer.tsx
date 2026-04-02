@@ -4,6 +4,7 @@ import { BIMViewerLayout } from './ui/BIMViewerLayout';
 import { generateSpatialTree } from '../utils';
 import { useBIMStore } from '../store/useBIMStore';
 import { useViewCube } from '../hooks/engine/useViewCube';
+import * as THREE from 'three';
 
 export default function BIMViewer() {
   const containerRef = useRef<HTMLDivElement>(null);
@@ -40,17 +41,38 @@ export default function BIMViewer() {
     if (!project) return;
 
     const loadFragments = async () => {
-      // Safe cleanup: Xóa models cũ khỏi Scene và bộ nhớ
+      // GPU MEMORY OPTIMIZATION: Deep cleanup of Three.js resources
       if (fragments.list.size > 0) {
         for (const [, group] of fragments.list) {
-          // Xóa object 3D khỏi Three.js scene để không để lại rác trên màn hình
           if (group.object && world) {
             world.scene.three.remove(group.object);
+
+            // Deep dispose Three.js geometries and materials
+            group.object.traverse((child) => {
+              if (child instanceof THREE.Mesh || child instanceof THREE.InstancedMesh) {
+                if (child.geometry) {
+                  child.geometry.dispose();
+                }
+                if (child.material) {
+                  if (Array.isArray(child.material)) {
+                    child.material.forEach((mat) => mat.dispose());
+                  } else {
+                    child.material.dispose();
+                  }
+                }
+              }
+            });
           }
           group.dispose();
         }
-        // Cập nhật lại core sau khi xóa
+
+        fragments.list.clear();
         fragments.core.update(true);
+
+        // Force the WebGLRenderer to drop any stale state information
+        if (world && world.renderer && world.renderer.three) {
+            world.renderer.three.renderLists.dispose();
+        }
       }
 
       // Reset UI state trước khi tải model mới
