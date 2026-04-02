@@ -4,15 +4,27 @@ import { useBIMStore } from '../../store/useBIMStore';
 import { DarkMode } from './DarkMode';
 import { NativeSelect, NativeSelectOption } from './elements/NativeSelect';
 
-export const Header = () => {
-  const setBIMVisible = useBIMStore((state) => state.setBIMVisible);
-  const totalElements = useBIMStore((state) => state.totalElements);
+import { useShallow } from 'zustand/react/shallow';
+import { memo } from 'react';
 
-  // Lấy dữ liệu dự án và hàm thay đổi từ Store
-  const projects = useBIMStore((state) => state.projects);
-  const currentProjectId = useBIMStore((state) => state.currentProjectId);
-  const setCurrentProject = useBIMStore((state) => state.setCurrentProject);
-  const isModelLoading = useBIMStore((state) => state.isModelLoading);
+export const Header = memo(() => {
+  const {
+    setBIMVisible,
+    totalElements,
+    projects,
+    currentProjectId,
+    setCurrentProject,
+    isModelLoading,
+  } = useBIMStore(
+    useShallow((state) => ({
+      setBIMVisible: state.setBIMVisible,
+      totalElements: state.totalElements,
+      projects: state.projects,
+      currentProjectId: state.currentProjectId,
+      setCurrentProject: state.setCurrentProject,
+      isModelLoading: state.isModelLoading,
+    }))
+  );
 
   return (
     <header className='h-14 flex items-center justify-between px-4 bg-bim-bg-panel/80 backdrop-blur-md border-b border-bim-border-light pointer-events-auto transition-colors duration-300'>
@@ -72,4 +84,6 @@ export const Header = () => {
       </div>
     </header>
   );
-};
+});
+
+Header.displayName = 'Header';

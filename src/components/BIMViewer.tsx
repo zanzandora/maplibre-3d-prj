@@ -6,18 +6,30 @@ import { useBIMStore } from '../store/useBIMStore';
 import { useViewCube } from '../hooks/engine/useViewCube';
 import { InstancedMesh, Mesh } from 'three';
 
-export default function BIMViewer() {
+import { useShallow } from 'zustand/react/shallow';
+import { memo } from 'react';
+
+const BIMViewer = memo(() => {
   const containerRef = useRef<HTMLDivElement>(null);
   const { mount, fragments, isReady, world, container } = useBIMContext();
 
-  // State và Actions từ Store
-  const setSpatialTree = useBIMStore((s) => s.setSpatialTree);
-  const setIsTreeLoading = useBIMStore((s) => s.setIsTreeLoading);
-
-  const currentProjectId = useBIMStore((s) => s.currentProjectId);
-  const projects = useBIMStore((s) => s.projects);
-  const resetBIMState = useBIMStore((s) => s.resetBIMState);
-  const setIsModelLoading = useBIMStore((s) => s.setIsModelLoading);
+  const {
+    setSpatialTree,
+    setIsTreeLoading,
+    currentProjectId,
+    projects,
+    resetBIMState,
+    setIsModelLoading,
+  } = useBIMStore(
+    useShallow((s) => ({
+      setSpatialTree: s.setSpatialTree,
+      setIsTreeLoading: s.setIsTreeLoading,
+      currentProjectId: s.currentProjectId,
+      projects: s.projects,
+      resetBIMState: s.resetBIMState,
+      setIsModelLoading: s.setIsModelLoading,
+    }))
+  );
 
   /*
     Khởi tạo môi trường BIM (Canvas, Scene, Camera) khi component mount.
@@ -123,4 +135,7 @@ export default function BIMViewer() {
       <div ref={containerRef} className='w-full h-full cursor-context-menu' />
     </BIMViewerLayout>
   );
-}
+});
+
+BIMViewer.displayName = 'BIMViewer';
+export default BIMViewer;

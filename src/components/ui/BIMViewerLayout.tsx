@@ -7,7 +7,9 @@ interface BIMViewerLayoutProps {
   children?: React.ReactNode;
 }
 
-export const BIMViewerLayout = ({ children }: BIMViewerLayoutProps) => {
+import { memo } from 'react';
+
+export const BIMViewerLayout = memo(({ children }: BIMViewerLayoutProps) => {
   return (
     <div className='relative w-screen h-screen overflow-hidden bg-bim-bg-page transition-colors duration-500'>
       {/* Base Layer: 3D Rendering (Z-index 0) */}
@@ -27,4 +29,6 @@ export const BIMViewerLayout = ({ children }: BIMViewerLayoutProps) => {
       </div>
     </div>
   );
-};
+});
+
+BIMViewerLayout.displayName = 'BIMViewerLayout';

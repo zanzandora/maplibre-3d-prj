@@ -2,12 +2,78 @@ import { Edit3, Loader2, ChevronLeft, ChevronRight } from 'lucide-react';
 import { useBIMStore } from '../../store/useBIMStore';
 import { Virtuoso } from 'react-virtuoso';
 import { flattenedProperties } from '../../hooks/ui/useFlattenedProperties';
+import { useShallow } from 'zustand/react/shallow';
+import { memo } from 'react';
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const MemoizedPropertyItem = memo(({ item }: { item: any }) => {
+  if (item.type === 'basic') {
+    return (
+      <section className='p-4 pb-2'>
+        <h3 className='text-base font-bold text-bim-primary mb-0.5'>
+          {item.name}
+        </h3>
+        <p className='text-xs text-bim-text-muted uppercase tracking-wider'>
+          GUID: {item.guid}
+        </p>
+        <p className='text-xs text-bim-text-muted uppercase tracking-wider'>
+          LocalId: {item.localId}
+        </p>
+      </section>
+    );
+  }
+
+  if (item.type === 'header') {
+    return (
+      <div className='px-4 pt-4 pb-1'>
+        <h4 className='text-[10px] font-bold text-bim-primary uppercase tracking-wider border-b border-bim-border-light pb-1'>
+          {item.label}
+        </h4>
+      </div>
+    );
+  }
+
+  return (
+    <div className='px-4 py-1 flex justify-between gap-2 text-xs hover:bg-bim-bg-item-hover transition-colors'>
+      <span className='text-bim-text-muted shrink-0'>
+        {item.key}
+      </span>
+      <span
+        className='text-right text-bim-text-main font-mono truncate'
+        title={String(item.value)}
+      >
+        {String(item.value)}
+      </span>
+    </div>
+  );
+}, (prevProps, nextProps) => {
+  // Custom comparison for memoization because flattenedProperties returns new objects
+  return (
+    prevProps.item.type === nextProps.item.type &&
+    prevProps.item.key === nextProps.item.key &&
+    prevProps.item.value === nextProps.item.value &&
+    prevProps.item.name === nextProps.item.name &&
+    prevProps.item.guid === nextProps.item.guid &&
+    prevProps.item.localId === nextProps.item.localId &&
+    prevProps.item.label === nextProps.item.label
+  );
+});
+MemoizedPropertyItem.displayName = 'MemoizedPropertyItem';
 
 export const RightPanel = () => {
-  const rightPanelOpen = useBIMStore((s) => s.rightPanelOpen);
-  const selectedElement = useBIMStore((s) => s.selectedElement);
-  const isHighlighting = useBIMStore((s) => s.isHighlighting);
-  const toggleRightPanel = useBIMStore((s) => s.toggleRightPanel);
+  const {
+    rightPanelOpen,
+    selectedElement,
+    isHighlighting,
+    toggleRightPanel,
+  } = useBIMStore(
+    useShallow((s) => ({
+      rightPanelOpen: s.rightPanelOpen,
+      selectedElement: s.selectedElement,
+      isHighlighting: s.isHighlighting,
+      toggleRightPanel: s.toggleRightPanel,
+    }))
+  );
 
   return (
     <div
@@ -48,47 +114,7 @@ export const RightPanel = () => {
             <Virtuoso
               style={{ height: '100%' }}
               data={flattenedProperties(selectedElement)}
-              itemContent={(_index, item) => {
-                if (item.type === 'basic') {
-                  return (
-                    <section className='p-4 pb-2'>
-                      <h3 className='text-base font-bold text-bim-primary mb-0.5'>
-                        {item.name}
-                      </h3>
-                      <p className='text-xs text-bim-text-muted uppercase tracking-wider'>
-                        GUID: {item.guid}
-                      </p>
-                      <p className='text-xs text-bim-text-muted uppercase tracking-wider'>
-                        LocalId: {item.localId}
-                      </p>
-                    </section>
-                  );
-                }
-
-                if (item.type === 'header') {
-                  return (
-                    <div className='px-4 pt-4 pb-1'>
-                      <h4 className='text-[10px] font-bold text-bim-primary uppercase tracking-wider border-b border-bim-border-light pb-1'>
-                        {item.label}
-                      </h4>
-                    </div>
-                  );
-                }
-
-                return (
-                  <div className='px-4 py-1 flex justify-between gap-2 text-xs hover:bg-bim-bg-item-hover transition-colors'>
-                    <span className='text-bim-text-muted shrink-0'>
-                      {item.key}
-                    </span>
-                    <span
-                      className='text-right text-bim-text-main font-mono truncate'
-                      title={String(item.value)}
-                    >
-                      {String(item.value)}
-                    </span>
-                  </div>
-                );
-              }}
+              itemContent={(_index, item) => <MemoizedPropertyItem item={item} />}
             />
           ) : (
             <div className='h-full flex flex-col items-center justify-center text-bim-text-muted/50 space-y-2'>
