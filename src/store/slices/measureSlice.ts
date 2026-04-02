@@ -4,7 +4,6 @@ import type { BIMState } from '../useBIMStore';
 export const UNIT_OPTIONS: Record<string, string[]> = {
   length: ['mm', 'cm', 'm', 'km'],
   area: ['mm2', 'cm2', 'm2', 'km2'],
-  volume: ['mm3', 'cm3', 'm3', 'km3'],
 };
 
 /*

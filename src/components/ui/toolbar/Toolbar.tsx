@@ -5,7 +5,6 @@ import {
   type LucideIcon,
   Settings,
   Square,
-  Maximize,
   Trash2,
 } from 'lucide-react';
 import { useBIMStore } from '../../../store/useBIMStore';
@@ -51,7 +50,6 @@ export const Toolbar = () => {
       subTools: [
         { id: 'length', icon: Ruler, label: 'Length' },
         { id: 'area', icon: Square, label: 'Area' },
-        { id: 'volume', icon: Maximize, label: 'Volume' },
         { divider: true },
         {
           id: 'clear-all',
@@ -86,16 +84,6 @@ export const Toolbar = () => {
           if (item.id === 'settings') {
             return <SettingsDialog key={item.id} />;
           }
-
-          // if (item.id === 'measure') {
-          //   return (
-          //     <MeasureDialog
-          //       key={item.id}
-          //       isActive={isActive}
-          //       onMainClick={onMainClick}
-          //     />
-          //   );
-          // }
 
           if (item.subTools) {
             return (
