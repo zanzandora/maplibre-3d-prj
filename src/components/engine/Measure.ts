@@ -2,6 +2,7 @@ import {
   LengthMeasurement,
   AreaMeasurement,
   VolumeMeasurement,
+  GraphicVertexPickerMode,
 } from '@thatopen/components-front';
 import type { BIMWorld } from '../../context/bim/BIMProvider';
 import { type FragmentsManager, type Components } from '@thatopen/components';
@@ -47,6 +48,13 @@ export const setupMeasure = (
   measurement.enabled = true;
   measurement.pickerSize = 12;
   measurement.color = new Color('#3183ff');
+
+  // Explicitly set the picker mode to DEFAULT instead of SYNCHRONOUS
+  // This prevents the tool from generating heavy fake meshes for raycasting,
+  // avoiding memory leaks and GC pauses when dealing with thousands of elements.
+  if ('pickerMode' in measurement) {
+    (measurement as any).pickerMode = GraphicVertexPickerMode.DEFAULT;
+  }
 
   // Clear existing measurements when tool is activated
   measurement.list.clear();
