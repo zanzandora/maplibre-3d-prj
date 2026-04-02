@@ -8,6 +8,9 @@ importers:
 
   .:
     dependencies:
+      '@photo-sphere-viewer/core':
+        specifier: ^5.14.1
+        version: 5.14.1
       '@react-three/drei':
         specifier: ^10.7.7
         version: 10.7.7(@react-three/fiber@9.5.0(@types/react@19.2.14)(react-dom@19.2.4(react@19.2.4))(react@19.2.4)(three@0.183.2))(@types/react@19.2.14)(@types/three@0.183.1)(react-dom@19.2.4(react@19.2.4))(react@19.2.4)(three@0.183.2)
@@ -436,6 +439,9 @@ packages:
     resolution: {integrity: sha512-2Z0FATFHaoYJ8b+Y4y4Hgfn3FRFwuU5zRrk+9dFWp4uGAdHGqVEdP7HP+gLA3X469KXHmfupJaUbKo1b/aDKIg==}
     peerDependencies:
       three: '>= 0.159.0'
+
+  '@photo-sphere-viewer/core@5.14.1':
+    resolution: {integrity: sha512-qrwUudrX9YZms4c2shlY/H3jUP0oh9FyGEqIDr/95ulNZgKbhQ6C/i8zDQ4j8ooFR4+z5FDORQtGvLgPyX8VCA==}
 
   '@react-three/drei@10.7.7':
     resolution: {integrity: sha512-ff+J5iloR0k4tC++QtD/j9u3w5fzfgFAWDtAGQah9pF2B1YgOq/5JxqY0/aVoQG5r3xSZz0cv5tk2YuBob4xEQ==}
@@ -1405,6 +1411,9 @@ packages:
     peerDependencies:
       three: '>=0.128.0'
 
+  three@0.179.1:
+    resolution: {integrity: sha512-5y/elSIQbrvKOISxpwXCR4sQqHtGiOI+MKLc3SsBdDXA2hz3Mdp3X59aUp8DyybMa34aeBwbFTpdoLJaUDEWSw==}
+
   three@0.183.2:
     resolution: {integrity: sha512-di3BsL2FEQ1PA7Hcvn4fyJOlxRRgFYBpMTcyOgkwJIaDOdJMebEFPA+t98EvjuljDx4hNulAGwF6KIjtwI5jgQ==}
 
@@ -1922,6 +1931,10 @@ snapshots:
     dependencies:
       promise-worker-transferable: 1.0.4
       three: 0.183.2
+
+  '@photo-sphere-viewer/core@5.14.1':
+    dependencies:
+      three: 0.179.1
 
   '@react-three/drei@10.7.7(@react-three/fiber@9.5.0(@types/react@19.2.14)(react-dom@19.2.4(react@19.2.4))(react@19.2.4)(three@0.183.2))(@types/react@19.2.14)(@types/three@0.183.1)(react-dom@19.2.4(react@19.2.4))(react@19.2.4)(three@0.183.2)':
     dependencies:
@@ -2886,6 +2899,8 @@ snapshots:
       fflate: 0.6.10
       potpack: 1.0.2
       three: 0.183.2
+
+  three@0.179.1: {}
 
   three@0.183.2: {}
 
