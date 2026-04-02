@@ -9,7 +9,7 @@ import {
 import * as OBC from '@thatopen/components';
 import { BIMContext } from './BIMContext';
 import { PostproductionRenderer } from '@thatopen/components-front';
-import { Color, Scene } from 'three';
+import { Color, Mesh, Scene } from 'three';
 import { useTheme } from '../theme/ThemeContext';
 import { useToolController } from '../../hooks/engine/useToolController';
 
@@ -165,7 +165,7 @@ export const BIMProvider: FC<{ children: ReactNode }> = ({ children }) => {
         // Cực kỳ quan trọng: Thêm children của model vào world.meshes
         // để Raycaster (và các tool như Highlighter, Measure) có thể pick trúng đối tượng.
         for (const child of model.object.children) {
-          world.meshes.add(child as THREE.Mesh);
+          world.meshes.add(child as Mesh);
         }
 
         fragments.core.update(true);
