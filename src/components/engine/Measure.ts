@@ -53,7 +53,7 @@ export const setupMeasure = (
   // This prevents the tool from generating heavy fake meshes for raycasting,
   // avoiding memory leaks and GC pauses when dealing with thousands of elements.
   if ('pickerMode' in measurement) {
-    (measurement as any).pickerMode = GraphicVertexPickerMode.DEFAULT;
+    measurement.pickerMode = GraphicVertexPickerMode.DEFAULT;
   }
 
   // Clear existing measurements when tool is activated
