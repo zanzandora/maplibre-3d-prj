@@ -1,35 +1,65 @@
-import { useState } from 'react'
-import reactLogo from './assets/react.svg'
-import viteLogo from '/vite.svg'
-import './App.css'
+import { useState } from 'react';
+import MapComponent from './components/MapComponent';
+import StreetViewComponent from './components/StreetViewComponent';
+import { useStreetViewData, type Spot } from './hooks/ui/useStreetViewData';
+import './App.css';
 
-function App() {
-  const [count, setCount] = useState(0)
+export default function App() {
+  const { spots, psvNodes, loading, error } = useStreetViewData();
+  const [activeSpotId, setActiveSpotId] = useState<string | null>(null);
+  const [isStreetViewOpen, setIsStreetViewOpen] = useState(false);
+  const [mapCenter, setMapCenter] = useState<[number, number]>([
+    105.809737, 21.021254,
+  ]);
+
+  if (loading)
+    return (
+      <div style={{ padding: 20, fontFamily: 'sans-serif' }}>
+        Loading Street View Data...
+      </div>
+    );
+  if (error)
+    return (
+      <div style={{ padding: 20, color: 'red', fontFamily: 'sans-serif' }}>
+        Error loading data: {error.message}
+      </div>
+    );
+
+  const handleMarkerClick = (spot: Spot) => {
+    setActiveSpotId(spot.id);
+    setMapCenter([spot.lon, spot.lat]);
+    setIsStreetViewOpen(true);
+  };
+
+  const handleNodeChange = (nodeId: string, gps: [number, number]) => {
+    setActiveSpotId(nodeId);
+    setMapCenter([gps[0], gps[1]]);
+  };
 
   return (
-    <>
-      <div>
-        <a href="https://vite.dev" target="_blank">
-          <img src={viteLogo} className="logo" alt="Vite logo" />
-        </a>
-        <a href="https://react.dev" target="_blank">
-          <img src={reactLogo} className="logo react" alt="React logo" />
-        </a>
-      </div>
-      <h1>Vite + React</h1>
-      <div className="card">
-        <button onClick={() => setCount((count) => count + 1)}>
-          count is {count}
-        </button>
-        <p>
-          Edit <code>src/App.tsx</code> and save to test HMR
-        </p>
-      </div>
-      <p className="read-the-docs">
-        Click on the Vite and React logos to learn more
-      </p>
-    </>
-  )
-}
+    <div
+      style={{
+        width: '100vw',
+        height: '100vh',
+        position: 'relative',
+        overflow: 'hidden',
+      }}
+    >
+      <MapComponent
+        spots={spots}
+        activeSpotId={activeSpotId}
+        onMarkerClick={handleMarkerClick}
+        center={mapCenter}
+      />
 
-export default App
+      {isStreetViewOpen && activeSpotId && psvNodes.length > 0 && (
+        <StreetViewComponent
+          nodes={psvNodes}
+          startNodeId={activeSpotId}
+          onNodeChange={handleNodeChange}
+          onClose={() => setIsStreetViewOpen(false)}
+        />
+      )}
+    </div>
+  );
+}
