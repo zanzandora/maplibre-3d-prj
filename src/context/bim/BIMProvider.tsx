@@ -47,7 +47,7 @@ export const BIMProvider: FC<{ children: ReactNode }> = ({ children }) => {
 
       if (cameraUpdateListenerRef.current && worldRef.current) {
         worldRef.current.camera.controls?.removeEventListener(
-          'update', // Changed from 'update' to 'controlend'
+          'control', // Changed from 'control' to 'controlend'
           cameraUpdateListenerRef.current
         );
       }
@@ -145,7 +145,7 @@ export const BIMProvider: FC<{ children: ReactNode }> = ({ children }) => {
       // OPTIMIZATION: Only update the engine when the camera STOPS moving.
       // This prevents the main thread and worker from choking during drag operations.
       const onCameraUpdate = () => fragments.core.update();
-      world.camera.controls.addEventListener('update', onCameraUpdate);
+      world.camera.controls.addEventListener('control', onCameraUpdate);
       cameraUpdateListenerRef.current = onCameraUpdate;
 
       fragments.core.models.materials.list.onItemSet.add(
