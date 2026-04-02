@@ -52,23 +52,6 @@ export const setupHighlighter = (
         if (firstExpressId === null && localIds.size > 0) {
           firstExpressId = Array.from(localIds)[0];
         }
-
-        // Truy vấn dữ liệu chi tiết và các quan hệ Property Set
-        promises.push(
-          model.getItemsData([...localIds], {
-            attributesDefault: true,
-            relations: {
-              IsDefinedBy: {
-                attributes: true,
-                relations: true,
-              },
-              HasProperties: {
-                attributes: true,
-                relations: true,
-              },
-            },
-          })
-        );
       }
 
       // Cập nhật trạng thái Node đang chọn trên UI Tree
@@ -79,8 +62,35 @@ export const setupHighlighter = (
         0
       );
 
+      // Optimize: Only fetch detailed properties if a single element is selected to avoid freezing the UI.
       if (totalSelected === 1 && firstExpressId !== null) {
         setSelectedNodeId(firstExpressId);
+
+        for (const [modelId, localIds] of Object.entries(modelIdMap)) {
+          const model = fragments.list.get(modelId);
+          if (!model) continue;
+
+          // Truy vấn dữ liệu chi tiết và các quan hệ Property Set
+          promises.push(
+            model.getItemsData([...localIds], {
+              attributesDefault: true,
+              relations: {
+                IsDefinedBy: {
+                  attributes: true,
+                  relations: true,
+                },
+                HasProperties: {
+                  attributes: true,
+                  relations: true,
+                },
+              },
+            })
+          );
+        }
+      } else if (totalSelected > 1) {
+        // Clear properties if selecting multiple elements
+        setSelectedElement(null);
+        return; // Early return, don't fetch any data
       }
 
       const data = (await Promise.all(promises)).flat();
