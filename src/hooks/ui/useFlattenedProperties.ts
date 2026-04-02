@@ -4,7 +4,7 @@ import { getDisplayAttributes } from '../../utils';
 type FlatPropertyItem =
   | { type: 'basic'; name: string; guid: string; localId: string | number }
   | { type: 'header'; label: string }
-  | { type: 'property'; key: string; value: any };
+  | { type: 'property'; key: string; value: any }; // eslint-disable-line @typescript-eslint/no-explicit-any
 
 export const flattenedProperties = (selectedElement: ISelectedElement) => {
   if (!selectedElement) return [];
@@ -30,6 +30,7 @@ export const flattenedProperties = (selectedElement: ISelectedElement) => {
   // 3. Property Sets (psets)
   Object.entries(selectedElement.psets || {}).forEach(([psetName, props]) => {
     const validProps = Object.entries(props).filter(
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
       ([_, v]) => v !== null && v !== undefined && v !== ''
     );
     if (validProps.length > 0) {

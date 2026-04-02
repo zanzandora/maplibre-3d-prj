@@ -79,6 +79,7 @@ export const Toolbar = () => {
           }
 
           const isActive = activeTool === item.id;
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
           const onMainClick = () => setActiveTool(item.id as any);
 
           if (item.id === 'settings') {
@@ -95,6 +96,7 @@ export const Toolbar = () => {
                 activeSubToolId={activeSubTools[item.id]}
                 onSubClick={(subId) => {
                   setActiveSubTool(item.id, subId);
+                  // eslint-disable-next-line @typescript-eslint/no-explicit-any
                   setActiveTool(item.id as any);
                 }}
               />
