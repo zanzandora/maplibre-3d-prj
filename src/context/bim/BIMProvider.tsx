@@ -161,6 +161,13 @@ export const BIMProvider: FC<{ children: ReactNode }> = ({ children }) => {
       fragments.list.onItemSet.add(({ value: model }) => {
         model.useCamera(world.camera.three);
         world.scene.three.add(model.object);
+
+        // Cực kỳ quan trọng: Thêm children của model vào world.meshes
+        // để Raycaster (và các tool như Highlighter, Measure) có thể pick trúng đối tượng.
+        for (const child of model.object.children) {
+          world.meshes.add(child as THREE.Mesh);
+        }
+
         fragments.core.update(true);
 
         world.camera.controls.fitToSphere(model.object, true);

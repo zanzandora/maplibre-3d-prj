@@ -59,6 +59,11 @@ const BIMViewer = memo(() => {
           if (group.object && world) {
             world.scene.three.remove(group.object);
 
+            // Remove objects from world.meshes so Raycaster doesn't crash on invalid references
+            for (const child of group.object.children) {
+              world.meshes.delete(child as Mesh);
+            }
+
             // Deep dispose Three.js geometries and materials
             group.object.traverse((child) => {
               if (child instanceof Mesh || child instanceof InstancedMesh) {
