@@ -63,6 +63,27 @@ export const BIMProvider: FC<{ children: ReactNode }> = ({ children }) => {
           console.log('Error when stopping raycaster: ', e);
         }
 
+        // Deep sweep before engine unmounts
+        if (worldRef.current && worldRef.current.scene) {
+           const scene = worldRef.current.scene.three;
+           scene.traverse((child: any) => {
+             if (child.isMesh || child.isInstancedMesh) {
+                if (child.geometry) child.geometry.dispose();
+                if (child.material) {
+                   if (Array.isArray(child.material)) {
+                      child.material.forEach((mat: any) => mat.dispose());
+                   } else {
+                      child.material.dispose();
+                   }
+                }
+             }
+           });
+
+           if (worldRef.current.renderer && worldRef.current.renderer.three) {
+              worldRef.current.renderer.three.renderLists.dispose();
+           }
+        }
+
         components.dispose();
         componentsRef.current = null;
       }

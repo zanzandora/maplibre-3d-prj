@@ -77,6 +77,7 @@ export const setupMeasure = (
   const pickingMaterial = new MeshBasicMaterial({ visible: false });
 
   let isSynchronousSet = false;
+  let isCancelled = false;
   const pastDelay = measurement.delay;
 
   const setupSynchronousPicking = async () => {
@@ -84,11 +85,13 @@ export const setupMeasure = (
 
     // Lặp qua tất cả các fragments (models) đã load
     for (const [modelId, model] of fragments.list) {
+      if (isCancelled) return;
       const idsWithGeometry = await model.getItemsIdsWithGeometry();
 
       const allMeshesData = await model.getItemsGeometry(idsWithGeometry);
 
       for (const itemId in allMeshesData) {
+        if (isCancelled) return;
         const meshData = allMeshesData[itemId];
 
         for (const geomData of meshData) {
@@ -122,6 +125,8 @@ export const setupMeasure = (
         }
       }
     }
+
+    if (isCancelled) return;
 
     measurement.pickerMode = GraphicVertexPickerMode.SYNCHRONOUS;
     measurement.delay = 0;
@@ -175,6 +180,7 @@ export const setupMeasure = (
   window.addEventListener('bim-measure-delete-all', handleClearAll);
 
   return () => {
+    isCancelled = true;
     measurement.enabled = false;
 
     container.removeEventListener('dblclick', handleClick);
@@ -190,11 +196,17 @@ export const setupMeasure = (
       }
     }
 
+    // Ensure all meshes are removed from the world before disposing
+    for (const mesh of pickingMeshes) {
+      world.meshes.delete(mesh);
+    }
+
     pickingMeshes.length = 0;
+
     for (const geom of uniqueGeometries) {
       geom.dispose(); // Giải phóng GPU Memory
     }
     uniqueGeometries.clear();
-    pickingMaterial.dispose();
+    pickingMaterial.dispose(); // Dispose the shared material correctly
   };
 };

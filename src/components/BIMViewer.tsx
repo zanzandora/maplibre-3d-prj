@@ -37,8 +37,12 @@ export default function BIMViewer() {
   useEffect(() => {
     if (!isReady || !fragments || !currentProjectId) return;
 
+    let isCancelled = false;
+
     const project = projects.find((p) => p.id === currentProjectId);
     if (!project) return;
+
+    const controller = new AbortController();
 
     const loadFragments = async () => {
       // GPU MEMORY OPTIMIZATION: Deep cleanup of Three.js resources
@@ -82,28 +86,47 @@ export default function BIMViewer() {
       setIsTreeLoading(true);
 
       try {
-        const file = await fetch(project.url);
+        const signal = controller.signal;
+
+        const file = await fetch(project.url, { signal });
         if (!file.ok) throw new Error(`Failed to fetch model: ${project.url}`);
 
         const buffer = await file.arrayBuffer();
+
+        if (isCancelled) return;
+
         const model = await fragments.core.load(buffer, {
           modelId: project.id,
         });
 
+        if (isCancelled) {
+          model.dispose();
+          return;
+        }
+
         // Tự động sinh Spatial Tree từ model vừa tải
         const result = await generateSpatialTree(model);
-        if (result) {
+        if (!isCancelled && result) {
           setSpatialTree(result.nodes, result.roots);
         }
       } catch (error) {
-        console.error('BIMViewer: Error switching project:', error);
+        if (!isCancelled) {
+          console.error('BIMViewer: Error switching project:', error);
+        }
       } finally {
-        setIsModelLoading(false);
-        setIsTreeLoading(false);
+        if (!isCancelled) {
+          setIsModelLoading(false);
+          setIsTreeLoading(false);
+        }
       }
     };
 
     loadFragments();
+
+    return () => {
+      isCancelled = true;
+      controller.abort();
+    };
   }, [
     isReady,
     fragments,
