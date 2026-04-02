@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useMemo } from 'react';
 
 export interface Spot {
   id: string;
@@ -21,53 +21,61 @@ export interface PSVNode {
   links: PSVLink[];
 }
 
-export interface StreetViewDataResponse {
-  spots: Spot[];
-}
-
 const BASE_URL = 'https://maps.vgm.ai';
-const API_URL = 'https://maps.vgm.ai/api/images360?site=hlu&floor=T1';
 
 export function useStreetViewData() {
-  const [spots, setSpots] = useState<Spot[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<Error | null>(null);
+  const [loading] = useState(false);
+  const [error] = useState<Error | null>(null);
 
-  useEffect(() => {
-    async function fetchData() {
-      try {
-        setLoading(true);
-        const response = await fetch(API_URL);
-        if (!response.ok) {
-          throw new Error('Failed to fetch street view data');
-        }
-        const data: StreetViewDataResponse = await response.json();
-        setSpots(data.spots);
-      } catch (err) {
-        setError(
-          err instanceof Error ? err : new Error('An unknown error occurred')
-        );
-      } finally {
-        setLoading(false);
-      }
-    }
-
-    fetchData();
-  }, []);
+  // Dữ liệu Mock chuẩn để kiểm tra hướng (37 là tâm, 26 phía Bắc, 17 phía Đông)
+  const mockSpots: Spot[] = [
+    {
+      id: 'spot37',
+      name: 'spot37',
+      pano: '/panoramas/hlu/T1/spot37.jpg',
+      lon: 105.8095698,
+      lat: 21.021498,
+      floor: 0,
+    },
+    {
+      id: 'spot26',
+      name: 'spot26',
+      pano: '/panoramas/hlu/T1/spot26.jpg',
+      lon: 105.809645,
+      lat: 21.0216288,
+      floor: 0,
+    },
+    {
+      id: 'spot17',
+      name: 'spot17',
+      pano: '/panoramas/hlu/T1/spot17.jpg',
+      lon: 105.8095155,
+      lat: 21.0213724,
+      floor: 0,
+    },
+    {
+      id: 'spot36',
+      name: 'spot36',
+      pano: '/panoramas/hlu/T1/spot36.jpg',
+      lon: 105.8094313,
+      lat: 21.0215462,
+      floor: 0,
+    },
+  ];
 
   const psvNodes = useMemo<PSVNode[]>(() => {
-    return spots.map((spot) => ({
+    return mockSpots.map((spot) => ({
       id: spot.id,
       panorama: `${BASE_URL}${spot.pano}`,
       gps: [spot.lon, spot.lat],
       name: spot.name,
-      links: spots
+      links: mockSpots
         .filter((otherSpot) => otherSpot.id !== spot.id)
         .map((otherSpot) => ({
           nodeId: otherSpot.id,
         })),
     }));
-  }, [spots]);
+  }, []);
 
-  return { spots, psvNodes, loading, error };
+  return { spots: mockSpots, psvNodes, loading, error };
 }
