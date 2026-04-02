@@ -4,7 +4,7 @@ import { BIMViewerLayout } from './ui/BIMViewerLayout';
 import { generateSpatialTree } from '../utils';
 import { useBIMStore } from '../store/useBIMStore';
 import { useViewCube } from '../hooks/engine/useViewCube';
-import * as THREE from 'three';
+import { InstancedMesh, Mesh } from 'three';
 
 export default function BIMViewer() {
   const containerRef = useRef<HTMLDivElement>(null);
@@ -49,7 +49,7 @@ export default function BIMViewer() {
 
             // Deep dispose Three.js geometries and materials
             group.object.traverse((child) => {
-              if (child instanceof THREE.Mesh || child instanceof THREE.InstancedMesh) {
+              if (child instanceof Mesh || child instanceof InstancedMesh) {
                 if (child.geometry) {
                   child.geometry.dispose();
                 }
@@ -71,7 +71,7 @@ export default function BIMViewer() {
 
         // Force the WebGLRenderer to drop any stale state information
         if (world && world.renderer && world.renderer.three) {
-            world.renderer.three.renderLists.dispose();
+          world.renderer.three.renderLists.dispose();
         }
       }
 
