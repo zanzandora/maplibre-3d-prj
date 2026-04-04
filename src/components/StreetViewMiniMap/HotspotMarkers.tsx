@@ -7,6 +7,10 @@ interface HotspotMarkersProps {
   onHotspotClick: (nodeId: string) => void;
 }
 
+/*
+  Renders all available panorama points (hotspots) as interactive markers on the map.
+  Excludes the active node to avoid overlapping with the FOV radar.
+*/
 const HotspotMarkers = ({
   nodes,
   currentLngLat,
@@ -18,7 +22,6 @@ const HotspotMarkers = ({
         const nodeGps = node.gps || (node.position && node.position.gps);
         if (!nodeGps) return null;
 
-        // Bỏ qua node đang hiện tại
         if (
           nodeGps[0] === currentLngLat[0] &&
           nodeGps[1] === currentLngLat[1]

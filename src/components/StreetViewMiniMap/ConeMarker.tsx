@@ -8,18 +8,26 @@ interface ConeMarkerProps {
   coneColor: string;
 }
 
+/*
+  Represents the viewer's field-of-view (FOV) on the map.
+  Synchronizes rotation with the 360 viewer's yaw.
+*/
 const ConeMarker = ({ viewer, currentLngLat, coneColor }: ConeMarkerProps) => {
   const [rotation, setRotation] = useState(0);
   const prevYawRef = useRef(0);
   const cumulativeYawRef = useRef(0);
 
+  /*
+    Logic to calculate the shortest rotation path. 
+    Prevents the marker from spinning 350+ degrees when passing 
+    the 0/360 boundary (North).
+  */
   useEffect(() => {
     if (!viewer) return;
 
     const handlePositionUpdated = (e: any) => {
       const newYawDeg = (e.position.yaw * 180) / Math.PI;
 
-      // Shortest Path Rotation logic
       let delta = newYawDeg - prevYawRef.current;
       if (delta > 180) delta -= 360;
       if (delta < -180) delta += 360;

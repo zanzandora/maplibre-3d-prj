@@ -13,6 +13,10 @@ interface StreetViewComponentProps {
   onClose: () => void;
 }
 
+/*
+  A specialized viewer for 360-degree panoramic photos.
+  Integrates a virtual tour plugin and a radar-style mini-map overlay.
+*/
 export default function StreetViewComponent({
   nodes,
   startNodeId,
@@ -23,7 +27,10 @@ export default function StreetViewComponent({
   const viewerRef = useRef<Viewer | null>(null);
   const [viewerReady, setViewerReady] = useState(false);
 
-  // Tính toán tọa độ hiện tại dựa trên startNodeId
+  /*
+    Memoize coordinates to prevent unnecessary re-renders of the mini-map 
+    when only unrelated props change.
+  */
   const currentLngLat = useMemo<[number, number]>(() => {
     const node = nodes.find((n) => n.id === startNodeId);
     if (node && node.gps) {
@@ -32,22 +39,27 @@ export default function StreetViewComponent({
     return [0, 0];
   }, [nodes, startNodeId]);
 
-  // Dùng ref để bọc hàm callback, tránh việc useEffect bị trigger
-  // mỗi khi reference của onNodeChange bị thay đổi từ component cha
+  /*
+    Wrap callback in a ref to allow standard dependency management in effects 
+    without triggering them when the parent identity changes.
+  */
   const onNodeChangeRef = useRef(onNodeChange);
   useEffect(() => {
     onNodeChangeRef.current = onNodeChange;
   }, [onNodeChange]);
 
-  // LUỒNG 1: KHỞI TẠO VIEWER CHỈ 1 LẦN DUY NHẤT
+  /*
+    Initializes the viewer instance.
+    Uses a small delay to bypass React 18 StrictMode's double-mount behavior,
+    ensuring a single clean WebGL context.
+  */
   useEffect(() => {
     if (!containerRef.current || !nodes.length || !startNodeId) return;
-    if (viewerRef.current) return; // Nếu đã có instance, tuyệt đối không tạo lại
+    if (viewerRef.current) return;
 
     let isUnmounted = false;
     let viewer: Viewer | null = null;
 
-    // Dùng setTimeout (50ms) để bypass qua cái "bẫy" double-mount của React 18 StrictMode
     const initTimer = setTimeout(() => {
       if (isUnmounted) return;
 
@@ -97,7 +109,10 @@ export default function StreetViewComponent({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [nodes.length === 0]);
 
-  // LUỒNG 2: CẬP NHẬT DỮ LIỆU KHÔNG GÂY RÒ RỈ BỘ NHỚ
+  /* 
+    Update nodes silently via the plugin API when the data array changes 
+    to avoid full viewer re-initialization.
+  */
   useEffect(() => {
     if (viewerRef.current && nodes.length > 0) {
       const plugin = viewerRef.current.getPlugin(
@@ -109,7 +124,10 @@ export default function StreetViewComponent({
     }
   }, [nodes]);
 
-  // LUỒNG 3: CHUYỂN CẢNH
+  /* 
+    Triggers a scene transition when the startNodeId is updated 
+    (e.g., from an external 2D map click).
+  */
   useEffect(() => {
     if (viewerRef.current && startNodeId) {
       const plugin = viewerRef.current.getPlugin(

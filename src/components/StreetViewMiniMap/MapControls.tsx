@@ -4,6 +4,10 @@ interface MapControlsProps {
   onReset: () => void;
 }
 
+/*
+  Floating UI controls for the mini-map.
+  Handles zoom resetting and map expansion.
+*/
 export const MapControls = ({
   isExpanded,
   onToggleExpand,
@@ -27,10 +31,12 @@ export const MapControls = ({
     <div
       style={{
         position: 'absolute',
-        top: '12px',
+        bottom: '12px',
         right: '12px',
+        left: '12px',
         display: 'flex',
-        flexDirection: 'column',
+        alignItems: 'center',
+        justifyContent: 'space-between',
         gap: '8px',
       }}
     >

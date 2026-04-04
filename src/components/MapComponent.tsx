@@ -11,6 +11,10 @@ interface MapComponentProps {
   center: [number, number];
 }
 
+/*
+  Global 2D Map component used for overall navigation.
+  Provides a birds-eye view of all available photography points (spots).
+*/
 export default function MapComponent({
   spots,
   activeSpotId,

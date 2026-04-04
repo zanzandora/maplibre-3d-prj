@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState, useCallback } from 'react';
+import { useEffect, useRef, useState, useCallback } from 'react';
 import { Map, type MapRef } from 'react-map-gl/maplibre';
 import 'maplibre-gl/dist/maplibre-gl.css';
 import type { StreetViewMiniMapProps } from './types';
@@ -6,6 +6,10 @@ import { MapControls } from './MapControls';
 import ConeMarker from './ConeMarker';
 import HotspotMarkers from './HotspotMarkers';
 
+/*
+  A radar-style overlay map that tracks the panorama's position and orientation.
+  Supports expansion for a more interactive view.
+*/
 const StreetViewMiniMap = ({
   viewer,
   currentLngLat,
@@ -20,42 +24,47 @@ const StreetViewMiniMap = ({
   const [isExpanded, setIsExpanded] = useState(false);
   const [isTransitioning, setIsTransitioning] = useState(false);
 
-  // ViewState khởi tạo
+  // Initial map state
   const [viewState, setViewState] = useState({
     longitude: currentLngLat[0],
     latitude: currentLngLat[1],
     zoom: zoom,
   });
 
-  // 1. Khi nhấn nút Expand/Collapse
+  /*
+    Trigger an overlay when expanding/collapsing to hide visual artifacts 
+    caused by the map not resizing instantly during CSS transitions.
+  */
   const toggleExpand = () => {
-    setIsTransitioning(true); // Hiện lớp phủ trắng ngay lập tức
+    setIsTransitioning(true);
     setIsExpanded(!isExpanded);
   };
 
-  // 2. Xử lý khi kết thúc Animation Transition của CSS
+  /*
+    Resizes the WebGL context and snaps to the active node once 
+    the container's CSS transition completes.
+  */
   const handleTransitionEnd = (e: React.TransitionEvent) => {
-    // Chỉ bắt sự kiện transition của chính container (width/height)
     if (e.propertyName === 'width' || e.propertyName === 'height') {
       if (mapRef.current) {
-        // Resize để map nhận kích thước container mới
         mapRef.current.resize();
-
-        // Căn giữa map vào currentLngLat ngay lập tức
         mapRef.current.jumpTo({
           center: currentLngLat,
           zoom: zoom,
         });
       }
 
-      // Tắt lớp phủ trắng sau khi map đã sẵn sàng
+      // Briefly delay hiding the overlay to ensure the map has fully rendered.
       setTimeout(() => {
         setIsTransitioning(false);
       }, 50);
     }
   };
 
-  // 3. Auto-centering khi chuyển node (chỉ chạy khi user KHÔNG tương tác và KHÔNG trong lúc transition)
+  /*
+    Automatically pans the map to follow the current panorama node,
+    unless the user is actively interacting (panning/zooming) with the map.
+  */
   useEffect(() => {
     if (!isUserInteractingRef.current && !isTransitioning && mapRef.current) {
       mapRef.current.easeTo({
@@ -93,7 +102,6 @@ const StreetViewMiniMap = ({
         backgroundColor: 'white',
       }}
     >
-      {/* Lớp phủ trắng (Overlay) khi đang phóng to/thu nhỏ */}
       <div
         style={{
           position: 'absolute',
@@ -110,9 +118,7 @@ const StreetViewMiniMap = ({
           alignItems: 'center',
           justifyContent: 'center',
         }}
-      >
-        {/* Có thể thêm logo hoặc spinner ở đây nếu muốn */}
-      </div>
+      />
 
       <Map
         ref={mapRef}
@@ -128,14 +134,12 @@ const StreetViewMiniMap = ({
         mapStyle={mapStyleUrl}
         attributionControl={false}
       >
-        {/* Nón thị giác (Radar) */}
         <ConeMarker
           viewer={viewer}
           currentLngLat={currentLngLat}
           coneColor={coneColor}
         />
 
-        {/* Các điểm hotspots */}
         <HotspotMarkers
           nodes={nodes}
           currentLngLat={currentLngLat}
@@ -149,7 +153,6 @@ const StreetViewMiniMap = ({
         />
       </Map>
 
-      {/* Actions Map */}
       <MapControls
         isExpanded={isExpanded}
         onToggleExpand={toggleExpand}
