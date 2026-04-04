@@ -32,8 +32,8 @@ export const createProjectSlice: StateCreator<
 > = (set) => ({
   // Danh sách dự án mặc định (Mock Data)
   projects: [
-    { id: 'small_test', name: 'Mô hình Test', url: '/small_test.frag' },
-    { id: 'school_str', name: 'Trường học', url: '/school_str.frag' },
+    { id: 'school_str', name: 'Nhà A', url: '/school_str.frag' },
+    { id: 'small_test', name: 'Nhà B', url: '/small_test.frag' },    
   ],
   currentProjectId: 'small_test',
   isModelLoading: false,
