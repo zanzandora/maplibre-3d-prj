@@ -7,6 +7,8 @@ export interface Spot {
   lon: number;
   lat: number;
   floor: number;
+  heading?: number;
+  links: PSVLink[];
 }
 
 export interface PSVLink {
@@ -36,6 +38,18 @@ export function useStreetViewData() {
       lon: 105.8095698,
       lat: 21.021498,
       floor: 0,
+      heading: 230,
+      links: [
+        {
+          nodeId: 'spot26',
+        },
+        {
+          nodeId: 'spot17',
+        },
+        {
+          nodeId: 'spot36',
+        },
+      ],
     },
     {
       id: 'spot26',
@@ -44,6 +58,12 @@ export function useStreetViewData() {
       lon: 105.809645,
       lat: 21.0216288,
       floor: 0,
+      heading: 230,
+      links: [
+        {
+          nodeId: 'spot37',
+        },
+      ],
     },
     {
       id: 'spot17',
@@ -52,6 +72,12 @@ export function useStreetViewData() {
       lon: 105.8095155,
       lat: 21.0213724,
       floor: 0,
+      heading: 150,
+      links: [
+        {
+          nodeId: 'spot37',
+        },
+      ],
     },
     {
       id: 'spot36',
@@ -60,6 +86,12 @@ export function useStreetViewData() {
       lon: 105.8094313,
       lat: 21.0215462,
       floor: 0,
+      heading: 150,
+      links: [
+        {
+          nodeId: 'spot37',
+        },
+      ],
     },
   ];
 
@@ -69,11 +101,8 @@ export function useStreetViewData() {
       panorama: `${BASE_URL}${spot.pano}`,
       gps: [spot.lon, spot.lat],
       name: spot.name,
-      links: mockSpots
-        .filter((otherSpot) => otherSpot.id !== spot.id)
-        .map((otherSpot) => ({
-          nodeId: otherSpot.id,
-        })),
+      sphereCorrection: { pan: `${spot.heading || 0}deg` },
+      links: spot.links,
     }));
   }, []);
 
