@@ -6,7 +6,7 @@ import { MapControls } from './MapControls';
 import ConeMarker from './ConeMarker';
 import HotspotMarkers from './HotspotMarkers';
 
-const StreetViewMiniMap: React.FC<StreetViewMiniMapProps> = ({
+const StreetViewMiniMap = ({
   viewer,
   currentLngLat,
   nodes,
@@ -14,7 +14,7 @@ const StreetViewMiniMap: React.FC<StreetViewMiniMapProps> = ({
   zoom = 18,
   mapStyleUrl = 'https://basemaps.cartocdn.com/gl/positron-gl-style/style.json',
   coneColor = 'rgba(30, 120, 230, 0.4)',
-}) => {
+}: StreetViewMiniMapProps) => {
   const mapRef = useRef<MapRef>(null);
   const isUserInteractingRef = useRef(false);
   const [isExpanded, setIsExpanded] = useState(false);

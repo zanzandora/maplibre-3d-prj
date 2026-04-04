@@ -1,4 +1,3 @@
-import React from 'react';
 import { Marker } from 'react-map-gl/maplibre';
 import type { PSVNode } from './types';
 
@@ -8,11 +7,11 @@ interface HotspotMarkersProps {
   onHotspotClick: (nodeId: string) => void;
 }
 
-const HotspotMarkers: React.FC<HotspotMarkersProps> = ({
+const HotspotMarkers = ({
   nodes,
   currentLngLat,
   onHotspotClick,
-}) => {
+}: HotspotMarkersProps) => {
   return (
     <>
       {nodes.map((node) => {

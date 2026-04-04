@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Marker } from 'react-map-gl/maplibre';
 import type { Viewer } from '@photo-sphere-viewer/core';
 
@@ -8,11 +8,7 @@ interface ConeMarkerProps {
   coneColor: string;
 }
 
-const ConeMarker: React.FC<ConeMarkerProps> = ({
-  viewer,
-  currentLngLat,
-  coneColor,
-}) => {
+const ConeMarker = ({ viewer, currentLngLat, coneColor }: ConeMarkerProps) => {
   const [rotation, setRotation] = useState(0);
   const prevYawRef = useRef(0);
   const cumulativeYawRef = useRef(0);

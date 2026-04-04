@@ -1,16 +1,14 @@
-import React from 'react';
-
 interface MapControlsProps {
   isExpanded: boolean;
   onToggleExpand: () => void;
   onReset: () => void;
 }
 
-export const MapControls: React.FC<MapControlsProps> = ({
+export const MapControls = ({
   isExpanded,
   onToggleExpand,
   onReset,
-}) => {
+}: MapControlsProps) => {
   const btnStyle: React.CSSProperties = {
     width: '30px',
     height: '30px',

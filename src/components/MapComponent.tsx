@@ -1,8 +1,8 @@
-import * as React from 'react';
 import Map, { Marker, type MapRef } from 'react-map-gl/maplibre';
 import maplibregl from 'maplibre-gl';
 import 'maplibre-gl/dist/maplibre-gl.css';
 import type { Spot } from '../hooks/ui/useStreetViewData';
+import { useEffect, useRef } from 'react';
 
 interface MapComponentProps {
   spots: Spot[];
@@ -17,9 +17,9 @@ export default function MapComponent({
   onMarkerClick,
   center,
 }: MapComponentProps) {
-  const mapRef = React.useRef<MapRef>(null);
+  const mapRef = useRef<MapRef>(null);
 
-  React.useEffect(() => {
+  useEffect(() => {
     if (mapRef.current) {
       mapRef.current.flyTo({ center: center, zoom: 18, duration: 1000 });
     }
