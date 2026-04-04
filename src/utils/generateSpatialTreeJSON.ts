@@ -43,7 +43,7 @@ export const generateSpatialTree = async (model: FragmentsModel) => {
     for (let sIndex = 0; sIndex < storeyIds.length; sIndex++) {
       const storeyId = storeyIds[sIndex];
       const storeyIdStr = storeyId.toString();
-      const storeyName = storeysData[sIndex]?.Name?.value || `Tầng ${storeyId}`;
+      const storeyName = (storeysData[sIndex]?.Name as any)?.value || `Tầng ${storeyId}`;
 
       const childrenIds = await model.getItemsChildren([storeyId]);
 
@@ -67,7 +67,7 @@ export const generateSpatialTree = async (model: FragmentsModel) => {
 
         if (!data) continue;
 
-        const rawCategory = data._category?.value || 'UNKNOWN_CATEGORY';
+        const rawCategory = (data._category as any)?.value || 'UNKNOWN_CATEGORY';
         const displayCategory = rawCategory.replace('IFC', '');
 
         if (!typeGroups[displayCategory]) typeGroups[displayCategory] = [];
@@ -75,7 +75,7 @@ export const generateSpatialTree = async (model: FragmentsModel) => {
 
         treeMap[childId] = {
           id: childId,
-          label: data.Name?.value || `Element ${childId}`,
+          label: (data.Name as any)?.value || `Element ${childId}`,
           type: displayCategory,
           children: [],
           parentId: `GROUP_${storeyIdStr}_${displayCategory}`,

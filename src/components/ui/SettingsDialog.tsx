@@ -9,28 +9,22 @@ import {
   DialogTrigger,
 } from './elements/Dialog';
 import { RadioGroup, RadioGroupItem } from './elements/RadioGroup';
-
-const UNIT_OPTIONS: Record<string, string[]> = {
-  length: ['mm', 'cm', 'm', 'km'],
-  area: ['mm2', 'cm2', 'm2', 'km2'],
-  volume: ['mm3', 'cm3', 'm3', 'km3'],
-};
+import { UNIT_OPTIONS } from '../../store/slices/measureSlice';
 
 const SettingsDialog = () => {
   const activeSubTools = useBIMStore((s) => s.activeSubTools);
-  const activeSubToolId = activeSubTools['measure'] || 'length';
+  const activeSubToolId = (activeSubTools['measure'] || 'length') as
+    | 'length'
+    | 'area'
+    | 'volume';
 
-  const measureUnit = useBIMStore((s) => s.measureUnit);
-  const setMeasureUnit = useBIMStore((s) => s.setMeasureUnit);
+  const baseUnitIndex = useBIMStore((s) => s.measureBaseUnitIndex);
+  const setBaseUnitIndex = useBIMStore((s) => s.setMeasureBaseUnitIndex);
   const measurePrecision = useBIMStore((s) => s.measurePrecision);
   const setMeasurePrecision = useBIMStore((s) => s.setMeasurePrecision);
 
   const currentUnitsList =
     UNIT_OPTIONS[activeSubToolId] || UNIT_OPTIONS['length'];
-
-  const displayUnit = currentUnitsList.includes(measureUnit)
-    ? measureUnit
-    : currentUnitsList[0];
 
   return (
     <Dialog>
@@ -69,11 +63,15 @@ const SettingsDialog = () => {
             <div className='p-3 bg-bim-bg-item/40 rounded-xl border border-bim-border-light/50'>
               <RadioGroup
                 className='grid grid-cols-4 gap-2'
-                value={displayUnit}
-                onValueChange={setMeasureUnit}
+                value={baseUnitIndex.toString()}
+                onValueChange={(val) => setBaseUnitIndex(parseInt(val))}
               >
-                {currentUnitsList.map((unit) => (
-                  <RadioGroupItem key={unit} id={unit} value={unit}>
+                {currentUnitsList.map((unit, index) => (
+                  <RadioGroupItem
+                    key={unit}
+                    id={unit}
+                    value={index.toString()}
+                  >
                     {unit}
                   </RadioGroupItem>
                 ))}

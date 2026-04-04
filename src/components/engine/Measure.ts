@@ -5,13 +5,8 @@ import {
   GraphicVertexPickerMode,
 } from '@thatopen/components-front';
 import type { BIMWorld } from '../../context/bim/BIMProvider';
-import { FragmentsManager, type Components } from '@thatopen/components';
-import {
-  BufferGeometry,
-  Float32BufferAttribute,
-  Mesh,
-  MeshBasicMaterial,
-} from 'three';
+import { type FragmentsManager, type Components } from '@thatopen/components';
+import { Color } from 'three';
 
 /**
  * Main Setup for Measurement tool
@@ -28,7 +23,7 @@ export const setupMeasure = (
   world: BIMWorld,
   container: HTMLElement,
   subTool: string,
-  fragments: FragmentsManager,
+  _fragments: FragmentsManager,
   unit: string,
   precision: number = 2
 ) => {
@@ -52,13 +47,17 @@ export const setupMeasure = (
   measurement.world = world;
   measurement.enabled = true;
   measurement.pickerSize = 12;
+  measurement.color = new Color('#3183ff');
 
-  const pickingMeshes: Mesh[] = [];
-  const uniqueGeometries = new Set<BufferGeometry>();
-  const pickingMaterial = new MeshBasicMaterial({ visible: false });
+  // Explicitly set the picker mode to DEFAULT instead of SYNCHRONOUS
+  // This prevents the tool from generating heavy fake meshes for raycasting,
+  // avoiding memory leaks and GC pauses when dealing with thousands of elements.
+  if ('pickerMode' in measurement) {
+    measurement.pickerMode = GraphicVertexPickerMode.DEFAULT;
+  }
 
-  let isSynchronousSet = false;
-  const pastDelay = measurement.delay;
+  // Clear existing measurements when tool is activated
+  measurement.list.clear();
 
   if ('units' in measurement) {
     measurement.units = unit as
@@ -71,62 +70,10 @@ export const setupMeasure = (
     measurement.rounding = precision;
   }
 
-  const setupSynchronousPicking = async () => {
-    if (fragments.list.size === 0) return;
-
-    const geometries = new Map<string, BufferGeometry>();
-
-    for (const [, model] of fragments.list) {
-      const idsWithGeometry = await model.getItemsIdsWithGeometry();
-      const allMeshesData = await model.getItemsGeometry(idsWithGeometry);
-
-      for (const itemId in allMeshesData) {
-        const meshData = allMeshesData[itemId];
-        for (const geomData of meshData) {
-          if (
-            !geomData.positions ||
-            !geomData.indices ||
-            !geomData.transform ||
-            !geomData.representationId
-          ) {
-            continue;
-          }
-
-          const representationId = geomData.representationId.toString();
-          if (!geometries.has(representationId)) {
-            const geometry = new BufferGeometry();
-            geometry.setAttribute(
-              'position',
-              new Float32BufferAttribute(geomData.positions, 3)
-            );
-            geometry.setIndex(Array.from(geomData.indices));
-            geometries.set(representationId, geometry);
-            uniqueGeometries.add(geometry);
-          }
-
-          const geometry = geometries.get(representationId)!;
-
-          const mesh = new Mesh(geometry, pickingMaterial);
-          mesh.applyMatrix4(geomData.transform);
-          mesh.updateWorldMatrix(true, true);
-          pickingMeshes.push(mesh);
-        }
-      }
-    }
-
-    // Enable synchronous picking
-    measurement.pickerMode = GraphicVertexPickerMode.SYNCHRONOUS;
-    measurement.delay = 0;
-    for (const mesh of pickingMeshes) {
-      world.meshes.add(mesh);
-    }
-    isSynchronousSet = true;
-  };
-
-  setupSynchronousPicking();
-
   const handleClick = () => {
     if (measurement.enabled) {
+      // Clear existing measurements before creating a new one (as requested)
+      measurement.list.clear();
       measurement.create();
     }
   };
@@ -141,6 +88,7 @@ export const setupMeasure = (
         break;
       case 'Delete':
       case 'Backspace':
+      case 'Escape':
         measurement.delete();
         break;
       default:
@@ -161,22 +109,5 @@ export const setupMeasure = (
     container.removeEventListener('dblclick', handleClick);
     window.removeEventListener('keydown', handleKeyDown);
     window.removeEventListener('bim-measure-delete-all', handleClearAll);
-
-    if (isSynchronousSet) {
-      measurement.pickerMode = GraphicVertexPickerMode.DEFAULT;
-      measurement.delay = pastDelay;
-      for (const mesh of pickingMeshes) {
-        world.meshes.delete(mesh);
-      }
-    }
-
-    pickingMeshes.length = 0;
-
-    for (const geom of uniqueGeometries) {
-      geom.dispose();
-    }
-    uniqueGeometries.clear();
-
-    pickingMaterial.dispose();
   };
 };

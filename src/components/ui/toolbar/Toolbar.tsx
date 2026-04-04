@@ -1,10 +1,7 @@
 import {
   Ruler,
-  Search,
   Scissors,
-  User,
   Box,
-  Orbit,
   type LucideIcon,
   Settings,
   Square,
@@ -47,7 +44,6 @@ export const Toolbar = () => {
   const tools: ToolbarItem[] = [
     { id: 'settings', icon: Settings, label: 'Settings' },
     { divider: true },
-    { id: 'orbit', icon: Orbit, label: 'Orbit' },
     {
       id: 'measure',
       icon: Ruler,
@@ -67,11 +63,8 @@ export const Toolbar = () => {
         },
       ],
     },
-    { id: 'search', icon: Search, label: 'Search' },
-    { divider: true },
     { id: 'select', icon: Box, label: 'Select' },
     { id: 'clip', icon: Scissors, label: 'Clip' },
-    { id: 'profile', icon: User, label: 'Profile' },
   ];
 
   return (
