@@ -9,7 +9,7 @@ import {
 import * as OBC from '@thatopen/components';
 import { BIMContext } from './BIMContext';
 import { PostproductionRenderer } from '@thatopen/components-front';
-import { Color, Scene } from 'three';
+import { Color, Mesh, Scene } from 'three';
 import { useTheme } from '../theme/ThemeContext';
 import { useToolController } from '../../hooks/engine/useToolController';
 
@@ -47,7 +47,7 @@ export const BIMProvider: FC<{ children: ReactNode }> = ({ children }) => {
 
       if (cameraUpdateListenerRef.current && worldRef.current) {
         worldRef.current.camera.controls?.removeEventListener(
-          'update',
+          'control', // Changed from 'control' to 'controlend'
           cameraUpdateListenerRef.current
         );
       }
@@ -142,9 +142,10 @@ export const BIMProvider: FC<{ children: ReactNode }> = ({ children }) => {
 
       fragments.init(url);
 
-      // bug: No camera initialized!
+      // OPTIMIZATION: Only update the engine when the camera STOPS moving.
+      // This prevents the main thread and worker from choking during drag operations.
       const onCameraUpdate = () => fragments.core.update();
-      world.camera.controls.addEventListener('update', onCameraUpdate);
+      world.camera.controls.addEventListener('control', onCameraUpdate);
       cameraUpdateListenerRef.current = onCameraUpdate;
 
       fragments.core.models.materials.list.onItemSet.add(
@@ -160,6 +161,13 @@ export const BIMProvider: FC<{ children: ReactNode }> = ({ children }) => {
       fragments.list.onItemSet.add(({ value: model }) => {
         model.useCamera(world.camera.three);
         world.scene.three.add(model.object);
+
+        // Cực kỳ quan trọng: Thêm children của model vào world.meshes
+        // để Raycaster (và các tool như Highlighter, Measure) có thể pick trúng đối tượng.
+        for (const child of model.object.children) {
+          world.meshes.add(child as Mesh);
+        }
+
         fragments.core.update(true);
 
         world.camera.controls.fitToSphere(model.object, true);

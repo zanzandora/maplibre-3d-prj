@@ -13,6 +13,7 @@ export const useViewCube = (
   world: BIMWorld | null,
   container: HTMLElement | null
 ) => {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const viewCubeRef = useRef<any>(null);
 
   const rightPanelOpen = useBIMStore((s) => s.rightPanelOpen);
@@ -25,6 +26,7 @@ export const useViewCube = (
     const controls = camera?.controls;
     const threeCamera = camera?.three;
 
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const viewCube = document.createElement('bim-view-cube') as any;
     viewCubeRef.current = viewCube;
 

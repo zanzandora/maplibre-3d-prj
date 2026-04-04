@@ -4,19 +4,32 @@ import { BIMViewerLayout } from './ui/BIMViewerLayout';
 import { generateSpatialTree } from '../utils';
 import { useBIMStore } from '../store/useBIMStore';
 import { useViewCube } from '../hooks/engine/useViewCube';
+import { InstancedMesh, Mesh } from 'three';
 
-export default function BIMViewer() {
+import { useShallow } from 'zustand/react/shallow';
+import { memo } from 'react';
+
+const BIMViewer = memo(() => {
   const containerRef = useRef<HTMLDivElement>(null);
   const { mount, fragments, isReady, world, container } = useBIMContext();
 
-  // State và Actions từ Store
-  const setSpatialTree = useBIMStore((s) => s.setSpatialTree);
-  const setIsTreeLoading = useBIMStore((s) => s.setIsTreeLoading);
-
-  const currentProjectId = useBIMStore((s) => s.currentProjectId);
-  const projects = useBIMStore((s) => s.projects);
-  const resetBIMState = useBIMStore((s) => s.resetBIMState);
-  const setIsModelLoading = useBIMStore((s) => s.setIsModelLoading);
+  const {
+    setSpatialTree,
+    setIsTreeLoading,
+    currentProjectId,
+    projects,
+    resetBIMState,
+    setIsModelLoading,
+  } = useBIMStore(
+    useShallow((s) => ({
+      setSpatialTree: s.setSpatialTree,
+      setIsTreeLoading: s.setIsTreeLoading,
+      currentProjectId: s.currentProjectId,
+      projects: s.projects,
+      resetBIMState: s.resetBIMState,
+      setIsModelLoading: s.setIsModelLoading,
+    }))
+  );
 
   /*
     Khởi tạo môi trường BIM (Canvas, Scene, Camera) khi component mount.
@@ -40,17 +53,43 @@ export default function BIMViewer() {
     if (!project) return;
 
     const loadFragments = async () => {
-      // Safe cleanup: Xóa models cũ khỏi Scene và bộ nhớ
+      // GPU MEMORY OPTIMIZATION: Deep cleanup of Three.js resources
       if (fragments.list.size > 0) {
         for (const [, group] of fragments.list) {
-          // Xóa object 3D khỏi Three.js scene để không để lại rác trên màn hình
           if (group.object && world) {
             world.scene.three.remove(group.object);
+
+            // Remove objects from world.meshes so Raycaster doesn't crash on invalid references
+            for (const child of group.object.children) {
+              world.meshes.delete(child as Mesh);
+            }
+
+            // Deep dispose Three.js geometries and materials
+            group.object.traverse((child) => {
+              if (child instanceof Mesh || child instanceof InstancedMesh) {
+                if (child.geometry) {
+                  child.geometry.dispose();
+                }
+                if (child.material) {
+                  if (Array.isArray(child.material)) {
+                    child.material.forEach((mat) => mat.dispose());
+                  } else {
+                    child.material.dispose();
+                  }
+                }
+              }
+            });
           }
           group.dispose();
         }
-        // Cập nhật lại core sau khi xóa
+
+        fragments.list.clear();
         fragments.core.update(true);
+
+        // Force the WebGLRenderer to drop any stale state information
+        if (world && world.renderer && world.renderer.three) {
+          world.renderer.three.renderLists.dispose();
+        }
       }
 
       // Reset UI state trước khi tải model mới
@@ -101,4 +140,7 @@ export default function BIMViewer() {
       <div ref={containerRef} className='w-full h-full cursor-context-menu' />
     </BIMViewerLayout>
   );
-}
+});
+
+BIMViewer.displayName = 'BIMViewer';
+export default BIMViewer;

@@ -17,25 +17,125 @@ import { useFlattenTree } from '../../hooks/ui/useFlattenTree';
 import { getAllElementIds } from '../../utils/getAllElementIds';
 import SearchInput from './SearchInput';
 
-export const LeftPanel = () => {
-  const leftPanelOpen = useBIMStore((s) => s.leftPanelOpen);
-  const toggleLeftPanel = useBIMStore((s) => s.toggleLeftPanel);
-  const roots = useBIMStore((s) => s.spatialTreeRoots);
-  const isTreeLoading = useBIMStore((s) => s.isTreeLoading);
+import { useShallow } from 'zustand/react/shallow';
+import { memo } from 'react';
 
-  // Search state từ Store (chỉ thay đổi sau khi debounce)
-  const searchQuery = useBIMStore((s) => s.searchQuery) ?? '';
-  const setSearchQuery = useBIMStore((s) => s.setSearchQuery);
-
-  // Selection & Visibility states
-  const selectedNodeId = useBIMStore((s) => s.selectedNodeId);
-  const spatialTreeById = useBIMStore((s) => s.spatialTreeById);
-  const expandedIds = useBIMStore((s) => s.expandedIds);
-  const resetVisibility = useBIMStore((s) => s.resetVisibility);
-  const isIsolateMode = useBIMStore((s) => s.isIsolateMode);
-  const setIsIsolateMode = useBIMStore((s) => s.setIsIsolateMode);
+const IsolateButton = memo(() => {
+  const {
+    selectedNodeId,
+    spatialTreeById,
+    resetVisibility,
+    isIsolateMode,
+    setIsIsolateMode,
+    isTreeLoading,
+  } = useBIMStore(
+    useShallow((s) => ({
+      selectedNodeId: s.selectedNodeId,
+      spatialTreeById: s.spatialTreeById,
+      resetVisibility: s.resetVisibility,
+      isIsolateMode: s.isIsolateMode,
+      setIsIsolateMode: s.setIsIsolateMode,
+      isTreeLoading: s.isTreeLoading,
+    }))
+  );
 
   const { components, fragments } = useBIMContext();
+
+  const getSelectedFragmentsMap = useCallback((): OBC.ModelIdMap | null => {
+    if (!selectedNodeId || !fragments) return null;
+
+    const modelId = fragments.list.keys().next().value;
+    if (!modelId) return null;
+
+    const elementIds = getAllElementIds(selectedNodeId, spatialTreeById);
+    if (elementIds.length === 0) return null;
+
+    return { [modelId]: new Set(elementIds) };
+  }, [selectedNodeId, fragments, spatialTreeById]);
+
+  const executeIsolate = useCallback(() => {
+    const fragmentMap = getSelectedFragmentsMap();
+    if (!components || !fragmentMap) return;
+    const hider = components.get(OBC.Hider);
+
+    hider.set(false); // Ẩn tất cả
+    hider.set(true, fragmentMap); // Hiện chỉ vùng chọn
+    resetVisibility();
+  }, [components, getSelectedFragmentsMap, resetVisibility]);
+
+  const executeShowAll = useCallback(() => {
+    if (!components) return;
+    const hider = components.get(OBC.Hider);
+    hider.set(true); // Hiện tất cả
+    resetVisibility();
+    setIsIsolateMode(false);
+  }, [components, resetVisibility, setIsIsolateMode]);
+
+  useEffect(() => {
+    if (isIsolateMode && selectedNodeId) {
+      executeIsolate();
+    }
+  }, [selectedNodeId, isIsolateMode, executeIsolate]);
+
+  const handleToggleIsolate = () => {
+    if (isIsolateMode) {
+      executeShowAll();
+    } else {
+      setIsIsolateMode(true);
+      executeIsolate();
+    }
+  };
+
+  return (
+    <Button
+      size='sm'
+      onClick={handleToggleIsolate}
+      disabled={isTreeLoading || (!isIsolateMode && !selectedNodeId)}
+      className={`w-full border-1 text-[10px] font-bold uppercase tracking-wider h-8 transition-all ${
+        isIsolateMode
+          ? 'bg-bim-primary text-white border-bim-primary shadow-lg shadow-bim-primary/30 hover:bg-bim-primary/90'
+          : 'border-bim-border-main text-bim-text-main'
+      }`}
+    >
+      {isIsolateMode ? (
+        <>
+          <RotateCcw className='w-3 h-3' />
+          Layers
+        </>
+      ) : (
+        <>
+          <Layers2Icon className='w-3 h-3' />
+          Isolate
+        </>
+      )}
+    </Button>
+  );
+});
+
+IsolateButton.displayName = 'IsolateButton';
+
+export const LeftPanel = memo(() => {
+  const {
+    leftPanelOpen,
+    toggleLeftPanel,
+    roots,
+    isTreeLoading,
+    searchQuery,
+    setSearchQuery,
+    spatialTreeById,
+    expandedIds,
+  } = useBIMStore(
+    useShallow((s) => ({
+      leftPanelOpen: s.leftPanelOpen,
+      toggleLeftPanel: s.toggleLeftPanel,
+      roots: s.spatialTreeRoots,
+      isTreeLoading: s.isTreeLoading,
+      searchQuery: s.searchQuery ?? '',
+      setSearchQuery: s.setSearchQuery,
+      spatialTreeById: s.spatialTreeById,
+      expandedIds: s.expandedIds,
+    }))
+  );
 
   const flattenedNodes = useFlattenTree(
     roots,
@@ -49,67 +149,6 @@ export const LeftPanel = () => {
   const handleClearSearch = () => {
     if (typeof setSearchQuery === 'function') {
       setSearchQuery('');
-    }
-  };
-
-  /*
-    Tạo FragmentIdMap cho node đang được chọn để làm việc với FragmentsHider.
-  */
-  const getSelectedFragmentsMap = useCallback((): OBC.ModelIdMap | null => {
-    if (!selectedNodeId || !fragments) return null;
-
-    const modelId = fragments.list.keys().next().value;
-    if (!modelId) return null;
-
-    const elementIds = getAllElementIds(selectedNodeId, spatialTreeById);
-    if (elementIds.length === 0) return null;
-
-    return { [modelId]: new Set(elementIds) };
-  }, [selectedNodeId, fragments, spatialTreeById]);
-
-  /*
-    Thực hiện logic Isolate: Ẩn toàn bộ model và chỉ hiện phần được chọn.
-  */
-  const executeIsolate = useCallback(() => {
-    const fragmentMap = getSelectedFragmentsMap();
-    if (!components || !fragmentMap) return;
-    const hider = components.get(OBC.Hider);
-
-    hider.set(false); // Ẩn tất cả
-    hider.set(true, fragmentMap); // Hiện chỉ vùng chọn
-    resetVisibility();
-  }, [components, getSelectedFragmentsMap, resetVisibility]);
-
-  /*
-    Thực hiện logic Reset: Hiện toàn bộ model.
-  */
-  const executeShowAll = useCallback(() => {
-    if (!components) return;
-    const hider = components.get(OBC.Hider);
-    hider.set(true); // Hiện tất cả
-    resetVisibility();
-    setIsIsolateMode(false);
-  }, [components, resetVisibility, setIsIsolateMode]);
-
-  /*
-    Auto-Isolate logic: Khi người dùng đang ở chế độ Isolate, 
-    bất kỳ thay đổi nào về selection sẽ tự động kích hoạt lại Isolate cho đối tượng mới.
-  */
-  useEffect(() => {
-    if (isIsolateMode && selectedNodeId) {
-      executeIsolate();
-    }
-  }, [selectedNodeId, isIsolateMode, executeIsolate]);
-
-  /*
-    Xử lý khi nhấn nút Isolate/Reset chính.
-  */
-  const handleToggleIsolate = () => {
-    if (isIsolateMode) {
-      executeShowAll();
-    } else {
-      setIsIsolateMode(true);
-      executeIsolate();
     }
   };
 
@@ -170,28 +209,7 @@ export const LeftPanel = () => {
         </div>
 
         <div className='p-3 flex flex-col gap-1.5 bg-bim-bg-main border-t border-bim-border-light '>
-          <Button
-            size='sm'
-            onClick={handleToggleIsolate}
-            disabled={isTreeLoading || (!isIsolateMode && !selectedNodeId)}
-            className={`w-full border-1 text-[10px] font-bold uppercase tracking-wider h-8 transition-all ${
-              isIsolateMode
-                ? 'bg-bim-primary text-white border-bim-primary shadow-lg shadow-bim-primary/30 hover:bg-bim-primary/90'
-                : 'border-bim-border-main text-bim-text-main'
-            }`}
-          >
-            {isIsolateMode ? (
-              <>
-                <RotateCcw className='w-3 h-3' />
-                Layers
-              </>
-            ) : (
-              <>
-                <Layers2Icon className='w-3 h-3' />
-                Isolate
-              </>
-            )}
-          </Button>
+          <IsolateButton />
         </div>
       </aside>
 
@@ -208,4 +226,6 @@ export const LeftPanel = () => {
       </button>
     </div>
   );
-};
+});
+
+LeftPanel.displayName = 'LeftPanel';

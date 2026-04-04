@@ -5,7 +5,6 @@ import {
   type LucideIcon,
   Settings,
   Square,
-  Maximize,
   Trash2,
 } from 'lucide-react';
 import { useBIMStore } from '../../../store/useBIMStore';
@@ -51,7 +50,6 @@ export const Toolbar = () => {
       subTools: [
         { id: 'length', icon: Ruler, label: 'Length' },
         { id: 'area', icon: Square, label: 'Area' },
-        { id: 'volume', icon: Maximize, label: 'Volume' },
         { divider: true },
         {
           id: 'clear-all',
@@ -81,21 +79,12 @@ export const Toolbar = () => {
           }
 
           const isActive = activeTool === item.id;
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
           const onMainClick = () => setActiveTool(item.id as any);
 
           if (item.id === 'settings') {
             return <SettingsDialog key={item.id} />;
           }
-
-          // if (item.id === 'measure') {
-          //   return (
-          //     <MeasureDialog
-          //       key={item.id}
-          //       isActive={isActive}
-          //       onMainClick={onMainClick}
-          //     />
-          //   );
-          // }
 
           if (item.subTools) {
             return (
@@ -107,6 +96,7 @@ export const Toolbar = () => {
                 activeSubToolId={activeSubTools[item.id]}
                 onSubClick={(subId) => {
                   setActiveSubTool(item.id, subId);
+                  // eslint-disable-next-line @typescript-eslint/no-explicit-any
                   setActiveTool(item.id as any);
                 }}
               />
