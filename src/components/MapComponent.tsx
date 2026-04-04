@@ -28,7 +28,7 @@ export default function MapComponent({
   return (
     <Map
       ref={mapRef}
-      mapLib={maplibregl as any}
+      mapLib={maplibregl as never}
       initialViewState={{
         longitude: 105.809737,
         latitude: 21.021254,

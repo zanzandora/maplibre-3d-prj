@@ -3,7 +3,8 @@ import { VirtualTourPlugin } from '@photo-sphere-viewer/virtual-tour-plugin';
 import '@photo-sphere-viewer/core/index.css';
 import '@photo-sphere-viewer/virtual-tour-plugin/index.css';
 import type { PSVNode } from '../hooks/ui/useStreetViewData';
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState, useMemo } from 'react';
+import StreetViewMiniMap from './StreetViewMiniMap/index';
 
 interface StreetViewComponentProps {
   nodes: PSVNode[];
@@ -20,6 +21,16 @@ export default function StreetViewComponent({
 }: StreetViewComponentProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const viewerRef = useRef<Viewer | null>(null);
+  const [viewerReady, setViewerReady] = useState(false);
+
+  // Tính toán tọa độ hiện tại dựa trên startNodeId
+  const currentLngLat = useMemo<[number, number]>(() => {
+    const node = nodes.find((n) => n.id === startNodeId);
+    if (node && node.gps) {
+      return [node.gps[0], node.gps[1]];
+    }
+    return [0, 0];
+  }, [nodes, startNodeId]);
 
   // Dùng ref để bọc hàm callback, tránh việc useEffect bị trigger
   // mỗi khi reference của onNodeChange bị thay đổi từ component cha
@@ -59,6 +70,8 @@ export default function StreetViewComponent({
       });
 
       viewerRef.current = viewer;
+      setViewerReady(true);
+
       const plugin = viewer.getPlugin(VirtualTourPlugin);
 
       const handleNodeChange = ({ node }: { node: PSVNode }) => {
@@ -69,7 +82,6 @@ export default function StreetViewComponent({
 
       if (plugin) {
         plugin.addEventListener('node-changed', handleNodeChange);
-        // Gắn lén hàm cleanup vào viewer để dễ gọi lúc unmount
       }
     }, 50);
 
@@ -79,30 +91,30 @@ export default function StreetViewComponent({
       if (viewer) {
         viewer.destroy();
         viewerRef.current = null;
+        setViewerReady(false);
       }
     };
-    // Chúng ta lừa React một chút: Chỉ trigger dependency dựa trên logic boolean.
-    // Khi nodes từ mảng rỗng [] sang mảng có data, nó nhảy từ true -> false (chạy 1 lần).
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [nodes.length === 0]);
 
   // LUỒNG 2: CẬP NHẬT DỮ LIỆU KHÔNG GÂY RÒ RỈ BỘ NHỚ
-  // Khi mảng nodes thay đổi, dùng API setNodes để update im lặng
   useEffect(() => {
     if (viewerRef.current && nodes.length > 0) {
-      const plugin = viewerRef.current.getPlugin(VirtualTourPlugin) as any;
+      const plugin = viewerRef.current.getPlugin(
+        VirtualTourPlugin
+      ) as VirtualTourPlugin;
       if (plugin) {
-        // PSV Plugin sẽ tự xử lý so sánh node mới/cũ mà không làm crash app
         plugin.setNodes(nodes);
       }
     }
   }, [nodes]);
 
   // LUỒNG 3: CHUYỂN CẢNH
-  // Khi user click điểm khác trên bản đồ 2D (startNodeId thay đổi)
   useEffect(() => {
     if (viewerRef.current && startNodeId) {
-      const plugin = viewerRef.current.getPlugin(VirtualTourPlugin) as any;
+      const plugin = viewerRef.current.getPlugin(
+        VirtualTourPlugin
+      ) as VirtualTourPlugin;
       if (plugin) {
         const currentNode = plugin.getCurrentNode();
         if (!currentNode || currentNode.id !== startNodeId) {
@@ -111,6 +123,17 @@ export default function StreetViewComponent({
       }
     }
   }, [startNodeId]);
+
+  const handleHotspotClick = (nodeId: string) => {
+    if (viewerRef.current) {
+      const plugin = viewerRef.current.getPlugin(
+        VirtualTourPlugin
+      ) as VirtualTourPlugin;
+      if (plugin) {
+        plugin.setCurrentNode(nodeId);
+      }
+    }
+  };
 
   return (
     <div
@@ -124,6 +147,16 @@ export default function StreetViewComponent({
       }}
     >
       <div ref={containerRef} style={{ width: '100%', height: '100%' }} />
+
+      {viewerReady && viewerRef.current && (
+        <StreetViewMiniMap
+          viewer={viewerRef.current}
+          currentLngLat={currentLngLat}
+          nodes={nodes}
+          onHotspotClick={handleHotspotClick}
+        />
+      )}
+
       <button
         onClick={onClose}
         style={{
