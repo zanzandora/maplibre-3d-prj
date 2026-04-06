@@ -1,4 +1,5 @@
 import { useState, useMemo } from 'react';
+import { datas } from '../../mock/data';
 
 export interface Spot {
   id: string;
@@ -21,6 +22,11 @@ export interface PSVNode {
   gps: [number, number, number?];
   name: string;
   links: PSVLink[];
+  sphereCorrection?: {
+    pan?: string | number;
+    tilt?: string | number;
+    roll?: string | number;
+  };
 }
 
 const BASE_URL = 'https://maps.vgm.ai';
@@ -29,7 +35,6 @@ export function useStreetViewData() {
   const [loading] = useState(false);
   const [error] = useState<Error | null>(null);
 
-  // Dữ liệu Mock chuẩn để kiểm tra hướng (37 là tâm, 26 phía Bắc, 17 phía Đông)
   const mockSpots: Spot[] = [
     {
       id: 'spot37',
@@ -38,7 +43,7 @@ export function useStreetViewData() {
       lon: 105.8095698,
       lat: 21.021498,
       floor: 0,
-      heading: 230,
+      // heading: 230,
       links: [
         {
           nodeId: 'spot26',
@@ -58,7 +63,7 @@ export function useStreetViewData() {
       lon: 105.809645,
       lat: 21.0216288,
       floor: 0,
-      heading: 230,
+      // heading: 230,
       links: [
         {
           nodeId: 'spot37',
@@ -72,7 +77,7 @@ export function useStreetViewData() {
       lon: 105.8095155,
       lat: 21.0213724,
       floor: 0,
-      heading: 150,
+      // heading: 150,
       links: [
         {
           nodeId: 'spot37',
@@ -86,7 +91,7 @@ export function useStreetViewData() {
       lon: 105.8094313,
       lat: 21.0215462,
       floor: 0,
-      heading: 150,
+      // heading: 150,
       links: [
         {
           nodeId: 'spot37',
@@ -96,15 +101,34 @@ export function useStreetViewData() {
   ];
 
   const psvNodes = useMemo<PSVNode[]>(() => {
-    return mockSpots.map((spot) => ({
+    return datas.map((spot) => ({
       id: spot.id,
       panorama: `${BASE_URL}${spot.pano}`,
       gps: [spot.lon, spot.lat],
       name: spot.name,
-      sphereCorrection: { pan: `${spot.heading || 0}deg` },
-      links: spot.links,
+      // sphereCorrection: { pan: `${spot.heading || 0}deg` },
+      // links: spot.links.map((link) => {
+      //   if ('yaw' in link.position) {
+      //     const { yaw, pitch } = flipPosition(
+      //       link.position.yaw,
+      //       link.position.pitch
+      //     );
+
+      //     return {
+      //       ...link,
+      //       position: { yaw, pitch }, // Trả về vị trí đã được đảo ngược 180 độ
+      //     };
+      //   }
+      //   return link;
+      // }),
+
+      links: datas
+        .filter((otherSpot) => otherSpot.id !== spot.id)
+        .map((otherSpot) => ({
+          nodeId: otherSpot.id,
+        })),
     }));
   }, []);
 
-  return { spots: mockSpots, psvNodes, loading, error };
+  return { spots: datas, psvNodes, loading, error };
 }
