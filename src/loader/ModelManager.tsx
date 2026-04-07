@@ -5,6 +5,7 @@ import {
   useRef,
   useCallback,
   Suspense,
+  useLayoutEffect,
 } from 'react';
 import { InstanceRenderer } from '../engine/InstanceRenderer';
 import {
@@ -12,23 +13,57 @@ import {
   getRelativeRotation,
   isWithinBounds,
 } from '../utils/coordinate';
-import { Vector3 } from 'three';
+import { InstancedMesh, Object3D, Vector3 } from 'three';
 import { type Map, type MapSourceDataEvent } from 'maplibre-gl';
 import type {
   CenterCoordinate,
   GroupedInstances,
+  InstanceData,
   ModelData,
 } from '../utils/types';
 import { Bvh, Preload } from '@react-three/drei';
 import { useIsMounted } from '../hooks/useIsMounted';
 import { MODEL_HEIGHT_OFFSET } from '../utils/constants';
+import { SITES_LIST } from '../utils/siteList';
+import { fetchBuildingModels } from '../lib/action/map3d';
 
 interface ModelManagerProps {
   centerCoord: CenterCoordinate;
   map: Map;
   isVisible: boolean;
   onLoadComplete?: () => void;
+  siteId?: number; // Optional prop to specify site
 }
+
+const DUMMY = new Object3D();
+
+const FallbackBox = ({ instances }: { instances: InstanceData[] }) => {
+  const meshRef = useRef<InstancedMesh>(null);
+
+  useLayoutEffect(() => {
+    if (!meshRef.current || instances.length === 0) return;
+    instances.forEach((inst, i) => {
+      DUMMY.position.copy(inst.position);
+      // Tạm thời hiển thị các box to để đánh dấu vị trí
+      const s = inst.scale ? inst.scale.x * 10 : 10;
+      DUMMY.scale.set(s, s, s);
+      DUMMY.updateMatrix();
+      meshRef.current!.setMatrixAt(i, DUMMY.matrix);
+    });
+    meshRef.current.instanceMatrix.needsUpdate = true;
+  }, [instances]);
+
+  return (
+    <instancedMesh
+      ref={meshRef}
+      args={[undefined, undefined, instances.length]}
+    >
+      <boxGeometry args={[1, 1, 1]} />
+      {/* Box màu đỏ/cam nhạt để biết nó đang loading */}
+      <meshStandardMaterial color='#ff9900' wireframe />
+    </instancedMesh>
+  );
+};
 
 /**
  * ModelManager with Optimized Tile Loading & Elevation Snapping.
@@ -39,6 +74,7 @@ export const ModelManager = ({
   map,
   isVisible,
   onLoadComplete,
+  siteId = 13, // Default to Utopia
 }: ModelManagerProps) => {
   const [rawData, setRawData] = useState<ModelData[]>([]);
   // note: Initialize with empty Float32Array to ensure stable reference and no null-flicker
@@ -52,6 +88,11 @@ export const ModelManager = ({
   const boundsRafRef = useRef<number>(0);
   const initializedRef = useRef<boolean>(false);
 
+  const currentSite = useMemo(
+    () => SITES_LIST.find((s) => s.site_id === siteId) || SITES_LIST[0],
+    [siteId]
+  );
+
   // todo: Track visible bounds to filter models
   const [visibleBounds, setVisibleBounds] = useState(() => {
     const b = map.getBounds();
@@ -63,16 +104,17 @@ export const ModelManager = ({
     };
   });
 
-  // todo: Initial Data Fetch
+  // todo: Initial Data Fetch from new API
   useEffect(() => {
-    fetch('/map3d/ivory/buildings.json')
-      .then((res) => res.json())
-      .then((data: ModelData[]) => {
-        setRawData(data);
-        setElevations(new Float32Array(data.length).fill(0));
+    fetchBuildingModels(currentSite)
+      .then((buildings) => {
+        if (isMounted()) {
+          setRawData(buildings);
+          setElevations(new Float32Array(buildings.length).fill(0));
+        }
       })
-      .catch((err) => console.error('Error loading buildings:', err));
-  }, []);
+      .catch((err) => console.error('Error loading buildings from API:', err));
+  }, [currentSite, isMounted]);
 
   // note: Caching static properties (Rotation/Scale) to avoid GC pressure and unnecessary re-calcs
   const staticProperties = useMemo(() => {
@@ -238,17 +280,12 @@ export const ModelManager = ({
   return (
     <group visible={isVisible}>
       <Bvh firstHitOnly>
-        <Suspense fallback={null}>
-          {Object.entries(groupedModels).map(([url, instances]) => (
-            <InstanceRenderer
-              key={url}
-              url={url}
-              instances={instances}
-              zoom={zoom}
-            />
-          ))}
-          <Preload all />
-        </Suspense>
+        {Object.entries(groupedModels).map(([url, instances]) => (
+          <Suspense key={url} fallback={<FallbackBox instances={instances} />}>
+            <InstanceRenderer url={url} instances={instances} zoom={zoom} />
+          </Suspense>
+        ))}
+        <Preload all />
       </Bvh>
     </group>
   );
