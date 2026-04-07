@@ -118,9 +118,7 @@ const MapView = () => {
     ] as [[number, number], [number, number]];
   }, []);
 
-  const MAPTILER_STYLE_URL = `https://api.maptiler.com/maps/satellite/style.json?key=${
-    import.meta.env.VITE_MAPTILER_API_KEY
-  }`;
+  const MAPTILER_STYLE_URL = `https://api.maptiler.com/maps/satellite/style.json?key=qsnCKTeh4edupyr3wmzP`;
   return (
     <div style={{ width: '100vw', height: '100vh', position: 'relative' }}>
       {isLoading3D && <Loading3D />}
