@@ -1,4 +1,6 @@
-export const datas = [
+import type { Spot } from '../hooks/ui/useStreetViewData';
+
+export const datas: Spot[] = [
   {
     id: 'spot1',
     name: 'spot1',
@@ -6,6 +8,7 @@ export const datas = [
     lon: 105.809737,
     lat: 21.021254,
     floor: 0,
+    links: [{ nodeId: 'spot9' }],
   },
   {
     id: 'spot2',
@@ -14,6 +17,7 @@ export const datas = [
     lon: 105.80975,
     lat: 21.021458,
     floor: 0,
+    links: [{ nodeId: 'spot5' }, { nodeId: 'spot8' }],
   },
   {
     id: 'spot3',
@@ -22,6 +26,7 @@ export const datas = [
     lon: 105.809867,
     lat: 21.02148,
     floor: 0,
+    links: [{ nodeId: 'spot4' }, { nodeId: 'spot5' }],
   },
   {
     id: 'spot4',
@@ -30,6 +35,7 @@ export const datas = [
     lon: 105.809949,
     lat: 21.021439,
     floor: 0,
+    links: [{ nodeId: 'spot7' }, { nodeId: 'spot3' }],
   },
   {
     id: 'spot5',
@@ -38,6 +44,7 @@ export const datas = [
     lon: 105.809783,
     lat: 21.021522,
     floor: 0,
+    links: [{ nodeId: 'spot3' }, { nodeId: 'spot2' }],
   },
   {
     id: 'spot6',
@@ -46,6 +53,7 @@ export const datas = [
     lon: 105.809891,
     lat: 21.021335,
     floor: 0,
+    links: [{ nodeId: 'spot9' }, { nodeId: 'spot7' }],
   },
   {
     id: 'spot7',
@@ -54,6 +62,7 @@ export const datas = [
     lon: 105.809918,
     lat: 21.021374,
     floor: 0,
+    links: [{ nodeId: 'spot6' }, { nodeId: 'spot4' }],
   },
   {
     id: 'spot8',
@@ -62,6 +71,7 @@ export const datas = [
     lon: 105.80971,
     lat: 21.021392,
     floor: 0,
+    links: [{ nodeId: 'spot2' }, { nodeId: 'spot37' }, { nodeId: 'spot9' }],
   },
   {
     id: 'spot9',
@@ -70,6 +80,7 @@ export const datas = [
     lon: 105.809789,
     lat: 21.021341,
     floor: 0,
+    links: [{ nodeId: 'spot8' }, { nodeId: 'spot1' }, { nodeId: 'spot6' }],
   },
   {
     id: 'spot10',
@@ -78,6 +89,7 @@ export const datas = [
     lon: 105.8100724,
     lat: 21.0208981,
     floor: 0,
+    links: [{ nodeId: 'spot12' }, { nodeId: 'spot20' }, { nodeId: 'spot38' }],
   },
   {
     id: 'spot11',
@@ -86,6 +98,7 @@ export const datas = [
     lon: 105.809199,
     lat: 21.0211958,
     floor: 0,
+    links: [{ nodeId: 'spot33' }, { nodeId: 'spot36' }],
   },
   {
     id: 'spot12',
@@ -94,6 +107,7 @@ export const datas = [
     lon: 105.8102394,
     lat: 21.0208593,
     floor: 0,
+    links: [{ nodeId: 'spot19' }, { nodeId: 'spot10' }],
   },
   {
     id: 'spot13',
@@ -102,6 +116,7 @@ export const datas = [
     lon: 105.8098388,
     lat: 21.021025,
     floor: 0,
+    links: [{ nodeId: 'spot38' }, { nodeId: 'spot23' }],
   },
   {
     id: 'spot14',
@@ -110,6 +125,7 @@ export const datas = [
     lon: 105.810074,
     lat: 21.0214418,
     floor: 0,
+    links: [{ nodeId: 'spot21' }, { nodeId: 'spot28' }],
   },
   {
     id: 'spot15',
@@ -118,6 +134,7 @@ export const datas = [
     lon: 105.8095036,
     lat: 21.0212114,
     floor: 0,
+    links: [{ nodeId: 'spot29' }, { nodeId: 'spot24' }],
   },
   {
     id: 'spot16',
@@ -126,6 +143,7 @@ export const datas = [
     lon: 105.8102276,
     lat: 21.0213394,
     floor: 0,
+    links: [{ nodeId: 'spot41' }, { nodeId: 'spot21' }],
   },
   {
     id: 'spot17',
@@ -134,6 +152,7 @@ export const datas = [
     lon: 105.8095155,
     lat: 21.0213724,
     floor: 0,
+    links: [{ nodeId: 'spot24' }, { nodeId: 'spot37' }],
   },
   {
     id: 'spot18',
@@ -142,6 +161,7 @@ export const datas = [
     lon: 105.8098238,
     lat: 21.0216316,
     floor: 0,
+    links: [{ nodeId: 'spot25' }, { nodeId: 'spot39' }],
   },
   {
     id: 'spot19',
@@ -150,6 +170,7 @@ export const datas = [
     lon: 105.8102652,
     lat: 21.0210916,
     floor: 0,
+    links: [{ nodeId: 'spot12' }, { nodeId: 'spot27' }],
   },
   {
     id: 'spot20',
@@ -158,6 +179,7 @@ export const datas = [
     lon: 105.8099974,
     lat: 21.0208118,
     floor: 0,
+    links: [{ nodeId: 'spot10' }, { nodeId: 'spot42' }],
   },
   {
     id: 'spot21',
@@ -166,6 +188,12 @@ export const datas = [
     lon: 105.8101793,
     lat: 21.0213874,
     floor: 0,
+    links: [
+      { nodeId: 'spot16' },
+      { nodeId: 'spot35' },
+      { nodeId: 'spot45' },
+      { nodeId: 'spot14' },
+    ],
   },
   {
     id: 'spot22',
@@ -174,6 +202,7 @@ export const datas = [
     lon: 105.8094892,
     lat: 21.0210513,
     floor: 0,
+    links: [{ nodeId: 'spot32' }, { nodeId: 'spot33' }],
   },
   {
     id: 'spot23',
@@ -182,6 +211,7 @@ export const datas = [
     lon: 105.8097868,
     lat: 21.0210563,
     floor: 0,
+    links: [{ nodeId: 'spot13' }, { nodeId: 'spot40' }],
   },
   {
     id: 'spot24',
@@ -190,6 +220,7 @@ export const datas = [
     lon: 105.8094555,
     lat: 21.0212795,
     floor: 0,
+    links: [{ nodeId: 'spot15' }, { nodeId: 'spot17' }],
   },
   {
     id: 'spot25',
@@ -198,6 +229,7 @@ export const datas = [
     lon: 105.8099028,
     lat: 21.0216009,
     floor: 0,
+    links: [{ nodeId: 'spot28' }, { nodeId: 'spot18' }],
   },
   {
     id: 'spot26',
@@ -206,6 +238,7 @@ export const datas = [
     lon: 105.809645,
     lat: 21.0216288,
     floor: 0,
+    links: [{ nodeId: 'spot30' }, { nodeId: 'spot37' }],
   },
   {
     id: 'spot27',
@@ -214,6 +247,7 @@ export const datas = [
     lon: 105.810366,
     lat: 21.0212911,
     floor: 0,
+    links: [{ nodeId: 'spot34' }, { nodeId: 'spot19' }, { nodeId: 'spot41' }],
   },
   {
     id: 'spot28',
@@ -222,6 +256,7 @@ export const datas = [
     lon: 105.8100764,
     lat: 21.0214474,
     floor: 0,
+    links: [{ nodeId: 'spot14' }, { nodeId: 'spot25' }],
   },
   {
     id: 'spot29',
@@ -230,6 +265,7 @@ export const datas = [
     lon: 105.8096432,
     lat: 21.0211214,
     floor: 0,
+    links: [{ nodeId: 'spot40' }, { nodeId: 'spot15' }],
   },
   {
     id: 'spot30',
@@ -238,6 +274,7 @@ export const datas = [
     lon: 105.8096991,
     lat: 21.0216892,
     floor: 0,
+    links: [{ nodeId: 'spot39' }, { nodeId: 'spot26' }],
   },
   {
     id: 'spot31',
@@ -246,6 +283,7 @@ export const datas = [
     lon: 105.8095589,
     lat: 21.0217829,
     floor: 0,
+    links: [{ nodeId: 'spot30' }, { nodeId: 'spot36' }],
   },
   {
     id: 'spot32',
@@ -254,6 +292,7 @@ export const datas = [
     lon: 105.8096903,
     lat: 21.0209555,
     floor: 0,
+    links: [{ nodeId: 'spot42' }, { nodeId: 'spot22' }],
   },
   {
     id: 'spot33',
@@ -262,6 +301,7 @@ export const datas = [
     lon: 105.8093117,
     lat: 21.0211455,
     floor: 0,
+    links: [{ nodeId: 'spot22' }, { nodeId: 'spot11' }],
   },
   {
     id: 'spot34',
@@ -270,6 +310,7 @@ export const datas = [
     lon: 105.8105792,
     lat: 21.021285,
     floor: 0,
+    links: [{ nodeId: 'spot27' }],
   },
   {
     id: 'spot35',
@@ -278,6 +319,7 @@ export const datas = [
     lon: 105.8102246,
     lat: 21.0214676,
     floor: 0,
+    links: [{ nodeId: 'spot21' }],
   },
   {
     id: 'spot36',
@@ -286,6 +328,7 @@ export const datas = [
     lon: 105.8094313,
     lat: 21.0215462,
     floor: 0,
+    links: [{ nodeId: 'spot37' }, { nodeId: 'spot11' }, { nodeId: 'spot31' }],
   },
   {
     id: 'spot37',
@@ -294,6 +337,12 @@ export const datas = [
     lon: 105.8095698,
     lat: 21.021498,
     floor: 0,
+    links: [
+      { nodeId: 'spot8' },
+      { nodeId: 'spot17' },
+      { nodeId: 'spot26' },
+      { nodeId: 'spot36' },
+    ],
   },
   {
     id: 'spot38',
@@ -302,6 +351,7 @@ export const datas = [
     lon: 105.8099523,
     lat: 21.0209848,
     floor: 0,
+    links: [{ nodeId: 'spot10' }, { nodeId: 'spot13' }],
   },
   {
     id: 'spot39',
@@ -310,6 +360,7 @@ export const datas = [
     lon: 105.8097093,
     lat: 21.0216881,
     floor: 0,
+    links: [{ nodeId: 'spot18' }, { nodeId: 'spot30' }, { nodeId: 'spot31' }],
   },
   {
     id: 'spot40',
@@ -318,6 +369,7 @@ export const datas = [
     lon: 105.8097704,
     lat: 21.0210629,
     floor: 0,
+    links: [{ nodeId: 'spot23' }, { nodeId: 'spot29' }],
   },
   {
     id: 'spot41',
@@ -326,6 +378,7 @@ export const datas = [
     lon: 105.8102812,
     lat: 21.0213343,
     floor: 0,
+    links: [{ nodeId: 'spot27' }, { nodeId: 'spot16' }],
   },
   {
     id: 'spot42',
@@ -334,6 +387,7 @@ export const datas = [
     lon: 105.8098177,
     lat: 21.0209017,
     floor: 0,
+    links: [{ nodeId: 'spot20' }, { nodeId: 'spot32' }],
   },
   {
     id: 'spot43',
@@ -342,6 +396,12 @@ export const datas = [
     lon: 105.810112,
     lat: 21.021288,
     floor: 0,
+    links: [
+      { nodeId: 'spot44' },
+      { nodeId: 'spot47' },
+      { nodeId: 'spot45' },
+      { nodeId: 'spot21' },
+    ],
   },
   {
     id: 'spot44',
@@ -350,6 +410,7 @@ export const datas = [
     lon: 105.810059,
     lat: 21.021253,
     floor: 0,
+    links: [{ nodeId: 'spot48' }, { nodeId: 'spot43' }],
   },
   {
     id: 'spot45',
@@ -358,6 +419,12 @@ export const datas = [
     lon: 105.810106,
     lat: 21.021291,
     floor: 0,
+    links: [
+      { nodeId: 'spot43' },
+      { nodeId: 'spot21' },
+      { nodeId: 'spot44' },
+      { nodeId: 'spot47' },
+    ],
   },
   {
     id: 'spot46',
@@ -366,6 +433,7 @@ export const datas = [
     lon: 105.810097,
     lat: 21.021163,
     floor: 0,
+    links: [{ nodeId: 'spot47' }],
   },
   {
     id: 'spot47',
@@ -374,6 +442,7 @@ export const datas = [
     lon: 105.810107,
     lat: 21.021215,
     floor: 0,
+    links: [{ nodeId: 'spot46' }, { nodeId: 'spot43' }],
   },
   {
     id: 'spot48',
@@ -382,5 +451,6 @@ export const datas = [
     lon: 105.810023,
     lat: 21.021205,
     floor: 0,
+    links: [{ nodeId: 'spot44' }],
   },
 ];

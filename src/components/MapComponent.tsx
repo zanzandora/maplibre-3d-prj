@@ -39,7 +39,7 @@ export default function MapComponent({
         zoom: 18,
       }}
       style={{ width: '100%', height: '100%' }}
-      mapStyle='https://basemaps.cartocdn.com/gl/positron-gl-style/style.json'
+      mapStyle='https://api.maptiler.com/maps/satellite/style.json?key=qsnCKTeh4edupyr3wmzP'
     >
       {spots.map((spot) => (
         <Marker
