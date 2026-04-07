@@ -77,11 +77,11 @@ const MapView = () => {
     const map = e.target as MapLibreMap;
 
     // note: add sprite (MapLibre style: loadImage + addImage)
-    const ivorySite = SITES_LIST.find((s) => s.site_id === 10);
-    if (ivorySite && ivorySite.sprite) {
-      const spriteUrl = ivorySite.sprite.split('?')[0];
+    const currentSite = SITES_LIST[0];
+    if (currentSite && currentSite.sprite) {
+      const spriteUrl = currentSite.sprite.split('?')[0];
 
-      map.addSprite('ivory-sprite', spriteUrl);
+      map.addSprite(`${currentSite.schema}-sprite`, spriteUrl);
     }
 
     // note: Add Sky effect
@@ -129,7 +129,7 @@ const MapView = () => {
         mapLib={maplibregl}
         initialViewState={DEFAULT_VIEW_STATE}
         maxBounds={maxBounds}
-        minZoom={12}
+        minZoom={8}
         maxZoom={20}
         // note: Using HYBRID_V4 style for a clean, professional aesthetic (less CPU/GPU heavy than OUTDOOR).
         mapStyle={MAPTILER_STYLE_URL}

@@ -1,5 +1,7 @@
 import { SITES_LIST } from './siteList';
 
+export const API_BASE_URL = 'https://maps.vgm.ai';
+
 export const MAP_CENTER = {
   lng: SITES_LIST[0].coordinates[0],
   lat: SITES_LIST[0].coordinates[1],
@@ -8,7 +10,7 @@ export const MAP_CENTER = {
 export const DEFAULT_VIEW_STATE = {
   longitude: MAP_CENTER.lng,
   latitude: MAP_CENTER.lat,
-  zoom: 12,
+  zoom: SITES_LIST[0].initialZoom,
   pitch: SITES_LIST[0].initialPitch,
   bearing: SITES_LIST[0].initialBearing,
 };
