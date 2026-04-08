@@ -4,7 +4,8 @@ import StreetViewComponent from "./StreetViewComponent";
 import { useStreetViewData } from "../hooks/ui/useStreetViewData";
 
 export default function StreetViewApp() {
-  const { spots, psvNodes, loading, error } = useStreetViewData();
+  // const { spots, psvNodes, loading, error } = useStreetViewData();
+  const { psvNodes, loading, error } = useStreetViewData();
   const [activeSpotId, setActiveSpotId] = useState(null);
   const [isStreetViewOpen, setIsStreetViewOpen] = useState(false);
   const [mapCenter, setMapCenter] = useState([105.809737, 21.021254]);
