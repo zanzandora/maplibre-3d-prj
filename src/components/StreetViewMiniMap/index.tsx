@@ -1,10 +1,21 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
 import { Map, type MapRef } from 'react-map-gl/maplibre';
 import 'maplibre-gl/dist/maplibre-gl.css';
-import type { StreetViewMiniMapProps } from './types';
 import { MapControls } from './MapControls';
 import ConeMarker from './ConeMarker';
 import HotspotMarkers from './HotspotMarkers';
+import type { Viewer } from '@photo-sphere-viewer/core';
+import type { PSVNode } from '../../hooks/ui/useStreetViewData';
+
+export interface StreetViewMiniMapProps {
+  viewer: Viewer;
+  currentLngLat: [number, number];
+  nodes: PSVNode[];
+  onHotspotClick: (nodeId: string) => void;
+  zoom?: number;
+  mapStyleUrl?: string;
+  coneColor?: string;
+}
 
 /*
   A radar-style overlay map that tracks the panorama's position and orientation.

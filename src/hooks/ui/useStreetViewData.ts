@@ -70,6 +70,7 @@ export function useStreetViewData() {
     // Bãi sân chính
     spot17: -65,
     spot30: 145,
+    spot26: 180,
 
     // hẻm vào ký túc xá
     spot33: 200,

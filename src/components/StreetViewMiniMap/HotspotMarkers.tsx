@@ -1,5 +1,5 @@
 import { Marker } from 'react-map-gl/maplibre';
-import type { PSVNode } from './types';
+import type { PSVNode } from '../../hooks/ui/useStreetViewData';
 
 interface HotspotMarkersProps {
   nodes: PSVNode[];
@@ -19,7 +19,7 @@ const HotspotMarkers = ({
   return (
     <>
       {nodes.map((node) => {
-        const nodeGps = node.gps || (node.position && node.position.gps);
+        const nodeGps = node.gps;
         if (!nodeGps) return null;
 
         if (
@@ -42,6 +42,7 @@ const HotspotMarkers = ({
                 e.stopPropagation();
                 onHotspotClick(node.id);
               }}
+              title={node.name}
               style={{
                 width: '12px',
                 height: '12px',
