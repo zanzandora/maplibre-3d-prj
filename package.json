@@ -7,7 +7,8 @@
     "dev": "vite",
     "build": "tsc -b && vite build",
     "lint": "eslint .",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "export-js": "rm -rf converted-js && pnpm dlx detype src converted-js && robocopy src converted-js /E /XF *.ts *.tsx"
   },
   "dependencies": {
     "@photo-sphere-viewer/core": "^5.14.1",
