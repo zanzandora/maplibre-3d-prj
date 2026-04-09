@@ -1,35 +1,39 @@
-import { useState } from 'react'
-import reactLogo from './assets/react.svg'
-import viteLogo from '/vite.svg'
-import './App.css'
+import BIMViewer from './components/BIMViewer';
+import { BIMProvider } from './context/bim/BIMProvider';
+import { Button } from './components/ui/elements/Button';
+import { useBIMStore } from './store/useBIMStore';
+import { ThemeProvider } from './context/theme/ThemeProvider';
 
 function App() {
-  const [count, setCount] = useState(0)
+  const isBIMVisible = useBIMStore((state) => state.isBIMVisible);
+  const setBIMVisible = useBIMStore((state) => state.setBIMVisible);
 
   return (
-    <>
-      <div>
-        <a href="https://vite.dev" target="_blank">
-          <img src={viteLogo} className="logo" alt="Vite logo" />
-        </a>
-        <a href="https://react.dev" target="_blank">
-          <img src={reactLogo} className="logo react" alt="React logo" />
-        </a>
-      </div>
-      <h1>Vite + React</h1>
-      <div className="card">
-        <button onClick={() => setCount((count) => count + 1)}>
-          count is {count}
-        </button>
-        <p>
-          Edit <code>src/App.tsx</code> and save to test HMR
-        </p>
-      </div>
-      <p className="read-the-docs">
-        Click on the Vite and React logos to learn more
-      </p>
-    </>
-  )
+    <div
+      id='app-container'
+      className='min-w-full h-screen overflow-hidden relative bg-slate-950 flex items-center justify-center'
+    >
+      {!isBIMVisible ? (
+        <div className='text-center space-y-4'>
+          <h1 className='text-3xl font-bold text-slate-100'>
+            MapLibre 3D Project
+          </h1>
+          <p className='text-slate-400'>
+            Click the button below to launch the BIM Viewer
+          </p>
+          <Button size='lg' onClick={() => setBIMVisible(true)}>
+            Enable BIM Viewer
+          </Button>
+        </div>
+      ) : (
+        <ThemeProvider defaultTheme='dark' storageKey='vite-ui-theme'>
+          <BIMProvider>
+            <BIMViewer />
+          </BIMProvider>
+        </ThemeProvider>
+      )}
+    </div>
+  );
 }
 
-export default App
+export default App;
