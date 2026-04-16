@@ -8,7 +8,7 @@ export default function StreetViewApp() {
   const [activeSpotId, setActiveSpotId] = useState<string | null>(null);
   const [isStreetViewOpen, setIsStreetViewOpen] = useState(false);
   const [mapCenter, setMapCenter] = useState<[number, number]>([
-    105.809737, 21.021254,
+    105.7029751, 20.5795143,
   ]);
 
   if (loading)

@@ -1,5 +1,5 @@
-import { useState, useMemo } from 'react';
-import { datas } from '../../mock/data';
+import { useState, useMemo, useEffect } from 'react';
+import type { StreetviewPoint } from '../../types/streetview_point';
 
 export interface Spot {
   id: string;
@@ -31,7 +31,9 @@ export interface PSVNode {
   };
 }
 
-const BASE_URL = 'https://maps.vgm.ai';
+// Placeholder for pano URL base if needed
+// const BASE_URL = 'https://maps.vgm.ai';
+const BASE_PANO_URL = '/panoramas/tour/';
 
 // Hàm tính góc Bearing (Phương vị) từ GPS
 function getBearing(lat1: number, lon1: number, lat2: number, lon2: number) {
@@ -46,81 +48,66 @@ function getBearing(lat1: number, lon1: number, lat2: number, lon2: number) {
 }
 
 export function useStreetViewData() {
-  const [loading] = useState(false);
-  const [error] = useState<Error | null>(null);
+  const [spots, setSpots] = useState<Spot[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<Error | null>(null);
 
-  const panOverrides: Record<string, number> = {
-    // Cổng chính
-    spot36: 45,
+  useEffect(() => {
+    fetch('/streetview_point/streetview_point.geojson')
+      .then((res) => {
+        if (!res.ok) throw new Error('Failed to fetch geojson');
+        return res.json();
+      })
+      .then((data: StreetviewPoint) => {
+        const features = data.features || [];
+        const transformedSpots: Spot[] = features.map((feat, index: number) => {
+          const id = feat.properties.ten || String(index + 1);
+          const [lon, lat] = feat.geometry.coordinates;
 
-    // Cửa chính
-    spot37: 90,
+          // Temporary links: link to previous and next node in the array
+          const links: PSVLink[] = [];
+          if (index > 0) {
+            links.push({
+              nodeId: features[index - 1].properties.ten || String(index),
+            });
+          }
+          if (index < features.length - 1) {
+            links.push({
+              nodeId: features[index + 1].properties.ten || String(index + 2),
+            });
+          }
 
-    // Tòa nhà chính
-    spot8: 90,
-    spot2: 45,
-    spot5: -45,
-    spot3: 45,
-    spot4: -120,
-    spot7: -45,
-    spot6: 45,
-    spot9: 90,
-    spot1: -45,
-
-    // Bãi sân chính
-    spot17: -65,
-    spot30: 145,
-    spot26: 180,
-
-    // hẻm vào ký túc xá
-    spot33: 200,
-    spot22: 30,
-    spot32: 45,
-    spot42: 120,
-    spot20: 180,
-
-    // Hẻm vào bãi đỗ xe bên phải
-    spot29: -65,
-    spot23: 45,
-    spot40: 45,
-    spot13: -45,
-    spot38: 220,
-
-    // Hẻm vào bãi đỗ xe bên trái
-    spot39: 120,
-    spot18: -45,
-    spot28: 220,
-    spot14: -45,
-    spot21: -90,
-
-    // Thư viện
-    spot45: -145,
-    spot43: -90,
-    spot44: -45,
-    spot48: 120,
-    spot47: 145,
-    spot46: 90,
-
-    // sân ký túc xá
-    spot41: -90,
-    spot27: -45,
-    spot12: 45,
-  };
+          return {
+            id,
+            name: `Điểm ${id}`,
+            pano: `${BASE_PANO_URL}${id}.jpg`,
+            lon,
+            lat,
+            floor: 0,
+            links,
+          };
+        });
+        setSpots(transformedSpots);
+        setLoading(false);
+      })
+      .catch((err) => {
+        console.error(err);
+        setError(err);
+        setLoading(false);
+      });
+  }, []);
 
   const psvNodes = useMemo<PSVNode[]>(() => {
-    const spotMap = new Map(datas.map((s) => [s.id, s]));
+    const spotMap = new Map(spots.map((s) => [s.id, s]));
 
-    return datas.map((spot) => {
-      // 2. Khởi tạo góc Pan mặc định
+    return spots.map((spot) => {
       let autoPan = 0;
 
-      // 3. Thuật toán Auto-Pan (Line-of-Sight) dựa trên link đầu tiên
       if (spot.links && spot.links.length > 0) {
         const targetNodeId = spot.links[0].nodeId;
         const targetNode = spotMap.get(targetNodeId);
 
         if (targetNode) {
-          // Tự động tính góc phương vị hướng về node tiếp theo
           autoPan = getBearing(
             spot.lat,
             spot.lon,
@@ -130,20 +117,19 @@ export function useStreetViewData() {
         }
       }
 
-      const override = panOverrides[spot.id] || 0;
-      const finalPan = (autoPan + override) % 360;
+      // No overrides for now as it's new data
+      const finalPan = autoPan % 360;
 
       return {
         id: spot.id,
-        panorama: `${BASE_URL}${spot.pano}`,
+        panorama: spot.pano,
         gps: [spot.lon, spot.lat],
         name: spot.name,
-        // Khớp hướng ảnh với la bàn thực tế
         sphereCorrection: { pan: `${Math.round(finalPan)}deg` },
         links: spot.links,
       };
     });
-  }, []);
+  }, [spots]);
 
-  return { spots: datas, psvNodes, loading, error };
+  return { spots, psvNodes, loading, error };
 }

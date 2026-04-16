@@ -34,8 +34,8 @@ export default function MapComponent({
       ref={mapRef}
       mapLib={maplibregl as never}
       initialViewState={{
-        longitude: 105.809737,
-        latitude: 21.021254,
+        longitude: 105.7029751,
+        latitude: 20.5795143,
         zoom: 18,
       }}
       style={{ width: '100%', height: '100%' }}
@@ -54,8 +54,8 @@ export default function MapComponent({
         >
           <div
             style={{
-              width: 16,
-              height: 16,
+              width: 12,
+              height: 12,
               backgroundColor: activeSpotId === spot.id ? '#ff0000' : '#0066ff',
               borderRadius: '50%',
               border: '3px solid white',
