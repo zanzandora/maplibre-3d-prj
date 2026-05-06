@@ -57,11 +57,13 @@ export const InstanceRenderer = ({ url, instances, zoom }: InstanceProps) => {
       DUMMY.updateMatrix();
       glbRefs.current.forEach((mesh) => mesh?.setMatrixAt(i, DUMMY.matrix));
 
-      // Matrix for low-poly Box (LOD 2)
+      // Matrix for low-poly Box (LOD 2) - COMMENTED OUT
+      /*
       const s = inst.scale ? inst.scale.x * 10 : 10;
       DUMMY.scale.set(s, s, s);
       DUMMY.updateMatrix();
       boxRef.current?.setMatrixAt(i, DUMMY.matrix);
+      */
     });
 
     // Notify updates and compute bounding volumes for frustum culling
@@ -72,17 +74,19 @@ export const InstanceRenderer = ({ url, instances, zoom }: InstanceProps) => {
         mesh.computeBoundingSphere();
       }
     });
+    /*
     if (boxRef.current) {
       boxRef.current.instanceMatrix.needsUpdate = true;
       boxRef.current.computeBoundingBox();
       boxRef.current.computeBoundingSphere();
     }
+    */
   }, [instances, meshParts]);
 
   return (
     <group>
-      {/* Detail Mode (Zoom 16+) */}
-      <group visible={zoom >= 16}>
+      {/* Detail Mode (Always visible) */}
+      <group>
         {meshParts.map((part, index) => (
           <instancedMesh
             key={`${url}-${index}`}
@@ -96,7 +100,8 @@ export const InstanceRenderer = ({ url, instances, zoom }: InstanceProps) => {
         ))}
       </group>
 
-      {/* Massing Mode (Zoom < 16) */}
+      {/* Massing Mode (Zoom < 16) - DISABLED */}
+      {/* 
       <instancedMesh
         visible={zoom < 16}
         ref={(el) => {
@@ -109,6 +114,7 @@ export const InstanceRenderer = ({ url, instances, zoom }: InstanceProps) => {
         <boxGeometry args={[1, 1, 1]} />
         <meshStandardMaterial color='#ffffff' transparent opacity={0.8} />
       </instancedMesh>
+      */}
     </group>
   );
 };

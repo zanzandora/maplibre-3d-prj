@@ -25,7 +25,7 @@ import { Bvh, Preload } from '@react-three/drei';
 import { useIsMounted } from '../hooks/useIsMounted';
 import { MODEL_HEIGHT_OFFSET } from '../utils/constants';
 import { SITES_LIST } from '../utils/siteList';
-import { fetchBuildingModels } from '../lib/action/map3d';
+// import { fetchBuildingModels } from '../lib/action/map3d';
 
 interface ModelManagerProps {
   centerCoord: CenterCoordinate;
@@ -104,8 +104,9 @@ export const ModelManager = ({
     };
   });
 
-  // todo: Initial Data Fetch from new API
+  // todo: Initial Data Fetch from JSON (API logic commented for future use)
   useEffect(() => {
+    /*
     fetchBuildingModels(currentSite)
       .then((buildings) => {
         if (isMounted()) {
@@ -114,7 +115,18 @@ export const ModelManager = ({
         }
       })
       .catch((err) => console.error('Error loading buildings from API:', err));
-  }, [currentSite, isMounted]);
+    */
+
+    fetch('/map3d/utopia/buildings_3dtiles_out.json')
+      .then((res) => res.json())
+      .then((buildings) => {
+        if (isMounted()) {
+          setRawData(buildings);
+          setElevations(new Float32Array(buildings.length).fill(0));
+        }
+      })
+      .catch((err) => console.error('Error loading buildings from JSON:', err));
+  }, [isMounted]);
 
   // note: Caching static properties (Rotation/Scale) to avoid GC pressure and unnecessary re-calcs
   const staticProperties = useMemo(() => {

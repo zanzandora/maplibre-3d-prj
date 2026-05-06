@@ -11,6 +11,7 @@
     "export-js": "rm -rf converted-js && pnpm dlx detype src converted-jsx && robocopy src converted-jsx /E /XF *.ts *.tsx"
   },
   "dependencies": {
+    "3d-tiles-renderer": "^0.4.24",
     "@react-three/drei": "^10.7.7",
     "@react-three/fiber": "^9.5.0",
     "maplibre-gl": "^5.19.0",

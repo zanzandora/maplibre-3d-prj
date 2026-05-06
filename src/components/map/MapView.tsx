@@ -16,15 +16,18 @@ import { SITES_LIST } from '../../utils/siteList';
 import Loading3D from '../Loading3D';
 import useLayerVisibility from '../../hooks/map/useLayerVisibility';
 import useTerrainLoading from '../../hooks/map/useTerrainLoading';
+import { UtopiaLayers } from './UtopiaLayers';
+import { Tiles3DLayer } from '../map3d/Tiles3DLayer';
 
 // note: Limit workers to avoid Main Thread congestion.
 maplibregl.setWorkerCount(
-  Math.min(Math.max(window.navigator.hardwareConcurrency - 1, 2), 4)
+  Math.min(Math.max(window.navigator.hardwareConcurrency - 1, 2), 4),
 );
 
 // note: Request Throttling: Limit parallel image/DEM requests (default is 16).
 maplibregl.setMaxParallelImageRequests(10);
 
+const CesiumIonToken = import.meta.env.VITE_CESIUM_TOKEN as string;
 /**
  * Main Viewport: MapLibre managed by react-map-gl with R3F Overlay.
  */
@@ -34,7 +37,7 @@ const MapView = () => {
   // note: Phát hiện thiết bị di động để tối ưu tài nguyên (CPU/GPU/Battery)
   const isMobile = useMemo(
     () => /iPhone|iPad|iPod|Android/i.test(window.navigator.userAgent),
-    []
+    [],
   );
 
   const { isTerrainActive, isLoading3D, setIsModelReady } =
@@ -45,7 +48,7 @@ const MapView = () => {
   // Center coordinate for relative positioning (Near the sample model).
   const centerCoord = useMemo(
     () => WGS84_TO_MERCATOR(MAP_CENTER.lng, MAP_CENTER.lat, 0),
-    []
+    [],
   );
 
   /**
@@ -70,7 +73,7 @@ const MapView = () => {
       }
       return { url };
     },
-    [isMobile]
+    [isMobile],
   );
 
   const onMapLoad = useCallback((e: any) => {
@@ -126,7 +129,7 @@ const MapView = () => {
       <Map
         mapLib={maplibregl}
         initialViewState={DEFAULT_VIEW_STATE}
-        maxBounds={maxBounds}
+        // maxBounds={maxBounds}
         minZoom={8}
         maxZoom={20}
         // note: Using HYBRID_V4 style for a clean, professional aesthetic (less CPU/GPU heavy than OUTDOOR).
@@ -141,8 +144,9 @@ const MapView = () => {
         transformRequest={transformRequest}
         style={{ width: '100%', height: '100%' }}
       >
-        {/* Ivory Vector Source and its Layers */}
-        <IvoryLayers show3D={isTerrainActive} />
+        {/* Vector Source and its Layers */}
+        {/* <IvoryLayers show3D={isTerrainActive} /> */}
+        <UtopiaLayers show3D={isTerrainActive} />
 
         {mapInstance && (
           <>
@@ -152,11 +156,20 @@ const MapView = () => {
               // beforeId='poi_outdoor'
             >
               {/* COMPONENTS 3D VÀ R3F*/}
-              <ModelManager
+              {/* <ModelManager
                 centerCoord={centerCoord}
                 map={mapInstance}
                 isVisible={isTerrainActive}
                 onLoadComplete={() => setIsModelReady(true)}
+              /> */}
+
+              {/* Tích hợp 3D Tiles OGC */}
+              <Tiles3DLayer
+                map={mapInstance}
+                centerCoord={centerCoord}
+                assetId='4662688'
+                ionToken={CesiumIonToken}
+                onLoad={() => setIsModelReady(true)}
               />
             </MapThreeLayer>
 

@@ -8,6 +8,9 @@ importers:
 
   .:
     dependencies:
+      3d-tiles-renderer:
+        specifier: ^0.4.24
+        version: 0.4.24(@react-three/fiber@9.5.0(@types/react@19.2.14)(react-dom@19.2.4(react@19.2.4))(react@19.2.4)(three@0.183.2))(react-dom@19.2.4(react@19.2.4))(react@19.2.4)(three@0.183.2)
       '@react-three/drei':
         specifier: ^10.7.7
         version: 10.7.7(@react-three/fiber@9.5.0(@types/react@19.2.14)(react-dom@19.2.4(react@19.2.4))(react@19.2.4)(three@0.183.2))(@types/react@19.2.14)(@types/three@0.183.1)(react-dom@19.2.4(react@19.2.4))(react@19.2.4)(three@0.183.2)
@@ -74,6 +77,29 @@ importers:
         version: 8.0.0(@types/node@24.12.0)(esbuild@0.27.3)
 
 packages:
+
+  3d-tiles-renderer@0.4.24:
+    resolution: {integrity: sha512-1n21vaWoV5e+N6rTfK1nv0Bsgu9ptbY6d9ICHnT6W1llloIhUGmGzx5/JH+B7t9XggjL0aJASn0Z5sFOXXvYjw==}
+    peerDependencies:
+      '@babylonjs/core': '>=8.0.0'
+      '@babylonjs/loaders': '>=8.0.0'
+      '@react-three/fiber': ^8.17.9 || ^9.0.0
+      react: ^18.3.1 || ^19.0.0
+      react-dom: ^18.3.1 || ^19.0.0
+      three: '>=0.167.0'
+    peerDependenciesMeta:
+      '@babylonjs/core':
+        optional: true
+      '@babylonjs/loaders':
+        optional: true
+      '@react-three/fiber':
+        optional: true
+      react:
+        optional: true
+      react-dom:
+        optional: true
+      three:
+        optional: true
 
   '@babel/code-frame@7.29.0':
     resolution: {integrity: sha512-9NhCeYjq9+3uxgdtp20LSiJXJvN0FeCtNGpJxuMFZ1Kv3cWUNb6DOhJwUvcVCzKGR66cw4njwM6hrJLqgOwbcw==}
@@ -1767,6 +1793,13 @@ packages:
         optional: true
 
 snapshots:
+
+  3d-tiles-renderer@0.4.24(@react-three/fiber@9.5.0(@types/react@19.2.14)(react-dom@19.2.4(react@19.2.4))(react@19.2.4)(three@0.183.2))(react-dom@19.2.4(react@19.2.4))(react@19.2.4)(three@0.183.2):
+    optionalDependencies:
+      '@react-three/fiber': 9.5.0(@types/react@19.2.14)(react-dom@19.2.4(react@19.2.4))(react@19.2.4)(three@0.183.2)
+      react: 19.2.4
+      react-dom: 19.2.4(react@19.2.4)
+      three: 0.183.2
 
   '@babel/code-frame@7.29.0':
     dependencies:
