@@ -37,12 +37,24 @@ const useTerrainLoading = (mapInstance: Map | null) => {
 
     handleTerrainChange();
 
+    // Safety fallback: if terrain active but idle event missed after 10s, force ready
+    let safetyTimer: ReturnType<typeof setTimeout>;
+    if (isTerrainActive && !isTerrainReady) {
+      safetyTimer = setTimeout(() => {
+        if (mapInstance.getTerrain() && !isTerrainReady) {
+          console.warn('[Terrain] Idle event timeout, forcing ready state');
+          setIsTerrainReady(true);
+        }
+      }, 10000);
+    }
+
     return () => {
       mapInstance.off('terrain', handleTerrainChange);
       mapInstance.off('styledata', handleTerrainChange);
       mapInstance.off('idle', handleMapIdle);
+      if (safetyTimer) clearTimeout(safetyTimer);
     };
-  }, [isTerrainActive, mapInstance]);
+  }, [isTerrainActive, isTerrainReady, mapInstance]);
 
   // Khóa Kép: Chỉ tắt Loading khi cả Model và Terrain đều sẵn sàng
   useEffect(() => {
