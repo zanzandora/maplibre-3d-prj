@@ -3,10 +3,8 @@ import { useState, useMemo, useCallback } from 'react';
 import Map, { Source, TerrainControl } from 'react-map-gl/maplibre';
 import 'maplibre-gl/dist/maplibre-gl.css';
 import { MapThreeLayer } from '../map3d/MapThreeLayer';
-import { ModelManager } from '../../loader/ModelManager';
 import { WGS84_TO_MERCATOR } from '../../utils/coordinate';
 import maplibregl, { Map as MapLibreMap } from 'maplibre-gl';
-import { IvoryLayers } from './IvoryLayers';
 import {
   MAP_CENTER,
   DEFAULT_VIEW_STATE,
@@ -42,6 +40,8 @@ const MapView = () => {
 
   const { isTerrainActive, isLoading3D, setIsModelReady } =
     useTerrainLoading(mapInstance);
+
+  const handleModelReady = useCallback(() => setIsModelReady(true), [setIsModelReady]);
 
   useLayerVisibility(mapInstance, isTerrainActive);
 
@@ -155,21 +155,13 @@ const MapView = () => {
               centerCoord={centerCoord}
               // beforeId='poi_outdoor'
             >
-              {/* COMPONENTS 3D VÀ R3F*/}
-              {/* <ModelManager
-                centerCoord={centerCoord}
-                map={mapInstance}
-                isVisible={isTerrainActive}
-                onLoadComplete={() => setIsModelReady(true)}
-              /> */}
-
               {/* Tích hợp 3D Tiles OGC */}
               <Tiles3DLayer
                 map={mapInstance}
                 centerCoord={centerCoord}
                 assetId='4662688'
                 ionToken={CesiumIonToken}
-                onLoad={() => setIsModelReady(true)}
+                onLoad={handleModelReady}
               />
             </MapThreeLayer>
 

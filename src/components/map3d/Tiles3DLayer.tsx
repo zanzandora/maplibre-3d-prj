@@ -117,7 +117,7 @@ const TilesetContent = ({
   ionToken: string;
   onLoad?: () => void;
 }) => {
-  const tileCount = useRef(0);
+  // const tileCount = useRef(0);
   const loadingResolved = useRef(false);
 
   useEffect(() => {
@@ -143,12 +143,12 @@ const TilesetContent = ({
     }
   };
 
-  const handleTileLoad = () => {
-    tileCount.current++;
-    if (tileCount.current % 10 === 0) {
-      console.log(`[Tiles3DLayer] Tiles loaded: ${tileCount.current}`);
-    }
-  };
+  // const handleTileLoad = () => {
+  //   tileCount.current++;
+  //   if (tileCount.current % 10 === 0) {
+  //     console.log(`[Tiles3DLayer] Tiles loaded: ${tileCount.current}`);
+  //   }
+  // };
 
   return (
     <Suspense fallback={null}>
@@ -227,8 +227,8 @@ export const Tiles3DLayer = ({
     if (rootRef.current) {
       rootRef.current.render(
         <group>
-          {/* <InvalidateSync map={map} />
-          <AdvanceCapturer advanceRef={advanceRef} /> */}
+          <InvalidateSync map={map} />
+          <AdvanceCapturer advanceRef={advanceRef} />
           <Lights />
           <TilesetContent
             assetId={assetId}
