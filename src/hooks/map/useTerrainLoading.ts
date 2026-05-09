@@ -17,8 +17,14 @@ const useTerrainLoading = (mapInstance: Map | null) => {
 
     const handleTerrainChange = () => {
       const isActive = !!mapInstance.getTerrain();
-      if (isActive && !isTerrainActive) {
-        setIsLoading3D(true);
+      if (isActive) {
+        if (!isTerrainActive) {
+          setIsLoading3D(true);
+          setIsModelReady(false);
+          setIsTerrainReady(false);
+        }
+      } else {
+        setIsLoading3D(false);
         setIsModelReady(false);
         setIsTerrainReady(false);
       }
@@ -37,12 +43,24 @@ const useTerrainLoading = (mapInstance: Map | null) => {
 
     handleTerrainChange();
 
+    // Safety fallback: if terrain active but idle event missed after 10s, force ready
+    let safetyTimer: ReturnType<typeof setTimeout>;
+    if (isTerrainActive && !isTerrainReady) {
+      safetyTimer = setTimeout(() => {
+        if (mapInstance.getTerrain() && !isTerrainReady) {
+          console.warn('[Terrain] Idle event timeout, forcing ready state');
+          setIsTerrainReady(true);
+        }
+      }, 10000);
+    }
+
     return () => {
       mapInstance.off('terrain', handleTerrainChange);
       mapInstance.off('styledata', handleTerrainChange);
       mapInstance.off('idle', handleMapIdle);
+      if (safetyTimer) clearTimeout(safetyTimer);
     };
-  }, [isTerrainActive, mapInstance]);
+  }, [isTerrainActive, isTerrainReady, mapInstance]);
 
   // Khóa Kép: Chỉ tắt Loading khi cả Model và Terrain đều sẵn sàng
   useEffect(() => {
@@ -52,7 +70,7 @@ const useTerrainLoading = (mapInstance: Map | null) => {
     }
   }, [isTerrainActive, isTerrainReady, isModelReady]);
 
-  return { isTerrainActive, isLoading3D, setIsModelReady };
+  return { isTerrainActive, isLoading3D, setIsModelReady, isTerrainReady };
 };
 
 export default useTerrainLoading;

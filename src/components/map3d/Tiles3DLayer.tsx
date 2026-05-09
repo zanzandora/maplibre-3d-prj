@@ -1,40 +1,49 @@
-import { useEffect, useMemo, useRef, Suspense, useContext } from 'react';
+import { useEffect, useMemo, useRef, Suspense, useState } from 'react';
 import {
   type CustomLayerInterface,
   type Map as MapLibreMap,
 } from 'maplibre-gl';
-import { Matrix4, WebGLRenderer, Scene, PerspectiveCamera } from 'three';
+import {
+  Matrix4,
+  WebGLRenderer,
+  Scene,
+  PerspectiveCamera,
+  Vector3,
+  Quaternion,
+  Color,
+} from 'three';
 import { createRoot, useThree } from '@react-three/fiber';
 import {
   TilesRenderer,
   TilesPlugin,
   TilesAttributionOverlay,
-  TilesRendererContext,
 } from '3d-tiles-renderer/r3f';
 import { WGS84_ELLIPSOID } from '3d-tiles-renderer/three';
 import {
-  CesiumIonAuthPlugin,
+  TilesFadePlugin,
+  UpdateOnChangePlugin,
   DebugTilesPlugin,
+  TileCompressionPlugin,
 } from '3d-tiles-renderer/plugins';
+
 import { Lights } from './Lights';
 import { MAP_CENTER } from '../../utils/constants';
 import type { AdvanceFn, R3FRoot } from '../../utils/types';
+import { Math as CesiumMath } from 'cesium';
 
 interface Tiles3DLayerProps {
-  map: MapLibreMap;
-  centerCoord: { x: number; y: number; z: number; meterScale: number };
+  map?: MapLibreMap; // Optional: Standalone mode
+  centerCoord?: { x: number; y: number; z: number; meterScale: number };
   assetId: string;
   ionToken: string;
   layerId?: string;
   beforeId?: string;
   onLoad?: () => void;
+  enabled?: boolean;
 }
 
 const MAP_MATRIX = new Matrix4();
 
-/**
- * Capture R3F advance function to sync with MapLibre render loop
- */
 const AdvanceCapturer = ({
   advanceRef,
 }: {
@@ -42,22 +51,16 @@ const AdvanceCapturer = ({
 }) => {
   const advance = useThree((state) => state.advance);
   useEffect(() => {
-    console.log('[Tiles3DLayer] Advance function captured');
     advanceRef.current = advance;
   }, [advance, advanceRef]);
   return null;
 };
 
-/**
- * Help Three.js wake up MapLibre when new data is received.
- */
 const InvalidateSync = ({ map }: { map: MapLibreMap }) => {
   const set = useThree((state) => state.set);
   const get = useThree((state) => state.get);
-
   useEffect(() => {
     const originalInvalidate = get().invalidate;
-
     set({
       invalidate: () => {
         map.triggerRepaint();
@@ -65,50 +68,46 @@ const InvalidateSync = ({ map }: { map: MapLibreMap }) => {
       },
     });
   }, [map, set, get]);
-
   return null;
 };
 
-/**
- * Aligns the Tileset (ECEF) to the Local ENU frame (MapLibre local meter space).
- * This ensures LOD calculations work correctly and tiles are visible.
- */
-const TilesetAlignment = () => {
-  const tiles = useContext(TilesRendererContext);
+// Hook tính toán ma trận ECEF -> ENU
+const useMapCenterTransform = () => {
+  const heightOffset = 50; // Độ cao nâng lên so với mặt đất
+  return useMemo(() => {
+    const latRad = CesiumMath.toRadians(MAP_CENTER.lat);
+    const lngRad = CesiumMath.toRadians(MAP_CENTER.lng);
 
-  useEffect(() => {
-    if (tiles) {
-      console.log('[Tiles3DLayer] Aligning Tileset ECEF to Local ENU surface');
-      const matrix = new Matrix4();
-      const latRad = MAP_CENTER.lat * (Math.PI / 180);
-      const lngRad = MAP_CENTER.lng * (Math.PI / 180);
+    const matrix = new Matrix4();
+    // 1. Tạo ma trận ENU -> ECEF tại tâm bản đồ
+    WGS84_ELLIPSOID.getEastNorthUpFrame(latRad, lngRad, 0, matrix);
 
-      // Get matrix that transforms ENU to ECEF
-      WGS84_ELLIPSOID.getEastNorthUpFrame(latRad, lngRad, 0, matrix);
+    // 2. Đảo ngược ma trận thành ECEF -> ENU
+    matrix.invert();
 
-      // Invert it to transform ECEF to ENU
-      matrix.invert();
+    // const mirrorMatrix = new Matrix4().makeScale(-1, 1, 1);
+    // // Nhân ma trận đối xứng vào ma trận tổng
+    // matrix.multiply(mirrorMatrix);
 
-      // Apply to the tileset group
-      tiles.group.matrix.copy(matrix);
-      tiles.group.matrix.decompose(
-        tiles.group.position,
-        tiles.group.quaternion,
-        tiles.group.scale,
-      );
-      tiles.group.updateMatrixWorld(true);
+    const position = new Vector3();
+    const quaternion = new Quaternion();
+    const scale = new Vector3();
 
-      console.log('[Tiles3DLayer] Alignment complete');
-    }
-  }, [tiles]);
+    // 3. Phân tách ma trận thành các thông số cơ bản cho R3F
+    matrix.decompose(position, quaternion, scale);
 
-  return null;
+    // 4. Bù trừ độ cao (dương = nâng lên, âm = hạ xuống)
+    position.z += heightOffset;
+
+    return { position, quaternion, scale };
+  }, [heightOffset]);
 };
 
 /**
- * Component handling the loading and display of the Tileset using R3F standards.
+ * Core R3F Component for Tileset.
+ * Handles Pre-fetch Auth with Header-based security.
  */
-const TilesetContent = ({
+export const TilesetContent = ({
   assetId,
   ionToken,
   onLoad,
@@ -117,102 +116,154 @@ const TilesetContent = ({
   ionToken: string;
   onLoad?: () => void;
 }) => {
-  const tileCount = useRef(0);
+  const [url, setUrl] = useState<string | null>(null);
+  const [token, setToken] = useState<string | null>(null);
+  const [isFetching, setIsFetching] = useState(false);
   const loadingResolved = useRef(false);
 
-  useEffect(() => {
-    console.log(`[Tiles3DLayer] Initializing Asset ID: ${assetId}`);
+  const { position, quaternion, scale } = useMapCenterTransform();
 
-    // Safety Timeout: Resolve loading state after 15s if events fail
+  useEffect(() => {
+    setUrl(null);
+    setToken(null);
+    loadingResolved.current = false;
+  }, [assetId, ionToken]);
+
+  useEffect(() => {
+    if (url || isFetching) return;
+
+    setIsFetching(true);
+    console.log(`[Tiles3DLayer] Pre-fetching Auth: ${assetId}`);
+
+    const fetchEndpoint = async () => {
+      try {
+        const response = await fetch(
+          `https://api.cesium.com/v1/assets/${assetId}/endpoint?access_token=${ionToken}`,
+        );
+        if (!response.ok)
+          throw new Error(`Cesium API error: ${response.status}`);
+        const data = await response.json();
+        if (data) {
+          setToken(`Bearer ${data.accessToken}`);
+          setUrl(data.url);
+          console.log(`[Tiles3DLayer] Auth ready for Headers.`);
+        }
+      } catch (err) {
+        console.error('[Tiles3DLayer] Auth failed:', err);
+        setIsFetching(false);
+      } finally {
+        setIsFetching(false);
+      }
+    };
+
+    fetchEndpoint();
+
     const timer = setTimeout(() => {
       if (!loadingResolved.current) {
-        console.warn('[Tiles3DLayer] Loading timed out. Forcing resolution.');
         if (onLoad) onLoad();
         loadingResolved.current = true;
       }
     }, 15000);
 
-    return () => clearTimeout(timer);
-  }, [assetId, onLoad]);
+    return () => {
+      clearTimeout(timer);
+    };
+  }, [assetId, ionToken, url, isFetching, onLoad]);
+
+  const fetchOptions = useMemo(() => {
+    if (!token) return undefined;
+    return {
+      headers: { Authorization: token },
+    };
+  }, [token]);
 
   const handleLoad = () => {
-    console.log(`[Tiles3DLayer] Tileset metadata loaded: Asset ${assetId}`);
     if (!loadingResolved.current) {
       if (onLoad) onLoad();
       loadingResolved.current = true;
     }
   };
 
-  const handleTileLoad = () => {
-    tileCount.current++;
-    if (tileCount.current % 10 === 0) {
-      console.log(`[Tiles3DLayer] Tiles loaded: ${tileCount.current}`);
-    }
-  };
+  if (!url || !token) return null;
 
   return (
     <Suspense fallback={null}>
-      {/* 
-        NOTE: 'load-tileset' core event maps to 'onLoadTileset' prop in R3F wrapper.
-      */}
-      <TilesRenderer key={`${assetId}-${ionToken}`} onLoadTileset={handleLoad}>
-        <TilesPlugin plugin={DebugTilesPlugin} displayBoxBounds={false} />
-        <TilesAttributionOverlay />
-        <TilesetAlignment />
-
-        <TilesPlugin
-          plugin={CesiumIonAuthPlugin}
-          args={useMemo(
-            () => [
-              {
-                apiToken: ionToken,
-                assetId: assetId,
-              },
-            ],
-            [assetId, ionToken],
-          )}
-        />
-      </TilesRenderer>
+      <group position={position} quaternion={quaternion} scale={scale}>
+        <TilesRenderer
+          key={`${assetId}-${ionToken}`}
+          url={url}
+          fetchOptions={fetchOptions}
+          onLoadTileset={handleLoad}
+        >
+          <TilesPlugin plugin={TileCompressionPlugin} />
+          <TilesPlugin plugin={TilesFadePlugin} fadeDuration={500} />
+          <TilesPlugin plugin={UpdateOnChangePlugin} />
+          <TilesPlugin
+            plugin={DebugTilesPlugin}
+            displayBoxBounds={false}
+            displaySphereBounds={true} // Sẽ hiển thị một khối cầu bao trọn toàn bộ dự án
+            displayRegionBounds={true} // Sẽ hiển thị các khối cong ôm theo mặt đất cho từng công trình
+            regionColor={new Color(0x00ff00)} // (Tùy chọn) Đổi màu Region thành xanh lá
+            sphereColor={new Color(0xff0000)}
+          />
+          <TilesAttributionOverlay />
+          {/* <TilesetAlignment /> */}
+        </TilesRenderer>
+      </group>
     </Suspense>
   );
 };
 
 /**
- * Custom 3D Layer for 3D Tiles (OGC).
- * Inherits the "Parasitic R3F" mechanism for perfect camera sync.
+ * Smart Wrapper: Standalone Custom Layer OR pure R3F Component.
  */
-export const Tiles3DLayer = ({
-  map,
-  centerCoord,
-  assetId,
-  ionToken,
-  layerId = 'tiles-3d-layer',
-  beforeId,
-  onLoad,
-}: Tiles3DLayerProps) => {
+export const Tiles3DLayer = (props: Tiles3DLayerProps) => {
+  const {
+    map,
+    centerCoord,
+    assetId,
+    ionToken,
+    layerId = 'tiles-3d-layer',
+    beforeId,
+    onLoad,
+    enabled = true,
+  } = props;
+
+  let inR3F = false;
+  try {
+    useThree();
+    inR3F = true;
+  } catch (e) {
+    inR3F = false;
+  }
+
   const rootRef = useRef<R3FRoot | null>(null);
   const rendererRef = useRef<WebGLRenderer | null>(null);
   const cameraRef = useRef<PerspectiveCamera | null>(null);
   const sceneRef = useRef<Scene | null>(null);
   const advanceRef = useRef<AdvanceFn | null>(null);
+  const [isReady, setIsReady] = useState(false);
 
-  // 1. World Matrix for coordinate system synchronization
   const worldMatrix = useMemo(() => {
-    console.log('[Tiles3DLayer] Computing World Matrix');
+    if (!centerCoord) return new Matrix4();
     const m = new Matrix4();
     const s = centerCoord.meterScale;
+
+    // Correct Alignment:
+    // Mercator Z is Altitude. ENU Z is Up.
+    // Mercator Y is South-increasing. ENU Y is North.
     m.set(
       s,
       0,
       0,
       centerCoord.x,
       0,
-      0,
       s,
+      0,
       centerCoord.y,
       0,
-      s,
       0,
+      s,
       centerCoord.z,
       0,
       0,
@@ -222,61 +273,59 @@ export const Tiles3DLayer = ({
     return m;
   }, [centerCoord]);
 
-  // 2. React lifecycle sync with R3F Root
+  if (inR3F) {
+    return enabled ? (
+      <TilesetContent assetId={assetId} ionToken={ionToken} onLoad={onLoad} />
+    ) : null;
+  }
+
+  // eslint-disable-next-line react-hooks/rules-of-hooks
   useEffect(() => {
-    if (rootRef.current) {
+    if (rootRef.current && isReady && map) {
       rootRef.current.render(
         <group>
-          {/* <InvalidateSync map={map} />
-          <AdvanceCapturer advanceRef={advanceRef} /> */}
+          <InvalidateSync map={map} />
+          <AdvanceCapturer advanceRef={advanceRef} />
           <Lights />
-          <TilesetContent
-            assetId={assetId}
-            ionToken={ionToken}
-            onLoad={onLoad}
-          />
+          {enabled && (
+            <TilesetContent
+              assetId={assetId}
+              ionToken={ionToken}
+              onLoad={onLoad}
+            />
+          )}
         </group>,
       );
       map.triggerRepaint();
     }
-  }, [assetId, ionToken, map, onLoad]);
+  }, [assetId, ionToken, map, onLoad, isReady, enabled]);
 
+  // eslint-disable-next-line react-hooks/rules-of-hooks
   useEffect(() => {
-    if (!map) return;
+    if (!map || inR3F) return;
 
     const customLayer: CustomLayerInterface = {
       id: layerId,
       type: 'custom',
       renderingMode: '3d',
-
       onAdd: function (mapInstance, gl) {
-        console.log(`[Tiles3DLayer] onAdd: ${layerId}`);
         const canvas = mapInstance.getCanvas() as HTMLCanvasElement;
-
         if (!canvas.__r3fSetup) {
           const renderer = new WebGLRenderer({
-            canvas: canvas,
+            canvas,
             context: gl,
             antialias: true,
             alpha: true,
           });
           renderer.autoClear = false;
-          rendererRef.current = renderer;
-
           const scene = new Scene();
-          sceneRef.current = scene;
-
           const camera = new PerspectiveCamera(28, 1, 0.01, 1e6);
           camera.matrixAutoUpdate = false;
-          cameraRef.current = camera;
-
           const root = createRoot(canvas);
-          rootRef.current = root;
-
           root.configure({
             gl: renderer,
-            camera: camera,
-            scene: scene,
+            camera,
+            scene,
             frameloop: 'never',
             size: {
               top: 0,
@@ -285,62 +334,52 @@ export const Tiles3DLayer = ({
               height: canvas.clientHeight,
             },
           });
-
           canvas.__r3fSetup = { renderer, scene, camera, root };
         }
-
         const setup = canvas.__r3fSetup;
         rendererRef.current = setup.renderer;
         sceneRef.current = setup.scene;
         cameraRef.current = setup.camera;
         rootRef.current = setup.root;
+        setIsReady(true);
       },
-
       render: function (gl, matrix) {
         const renderer = rendererRef.current;
         const camera = cameraRef.current;
         if (!renderer || !camera) return;
-
         const m = matrix.defaultProjectionData
           ? matrix.defaultProjectionData.mainMatrix
           : matrix;
         MAP_MATRIX.fromArray(m as number[]);
-
         camera.projectionMatrix.copy(MAP_MATRIX).multiply(worldMatrix);
-
         gl.enable(gl.DEPTH_TEST);
         gl.depthMask(true);
         renderer.resetState();
-
-        if (advanceRef.current) {
+        if (advanceRef.current)
           advanceRef.current(performance.now() / 1000, true);
-        }
       },
-
       onRemove: function () {
-        console.log(`[Tiles3DLayer] onRemove: ${layerId}`);
-        if (rootRef.current) {
-          rootRef.current.render(<></>);
-        }
+        if (rootRef.current) rootRef.current.render(<></>);
+        setIsReady(false);
       },
     };
 
-    const addLayerToMap = () => {
-      if (!map.getLayer(layerId)) {
-        map.addLayer(customLayer, beforeId);
-      }
-    };
-
-    addLayerToMap();
-    map.on('styledata', addLayerToMap);
-
-    return () => {
-      if (map && map.getStyle && map.getStyle()) {
-        map.off('styledata', addLayerToMap);
+    const addOrRemoveLayer = () => {
+      if (enabled) {
+        if (!map.getLayer(layerId)) map.addLayer(customLayer, beforeId);
+      } else {
         if (map.getLayer(layerId)) map.removeLayer(layerId);
       }
     };
-  }, [map, worldMatrix, layerId, beforeId, assetId, ionToken]);
+    addOrRemoveLayer();
+    map.on('styledata', addOrRemoveLayer);
+    return () => {
+      if (map.getStyle()) {
+        map.off('styledata', addOrRemoveLayer);
+        if (map.getLayer(layerId)) map.removeLayer(layerId);
+      }
+    };
+  }, [map, worldMatrix, layerId, beforeId, assetId, ionToken, inR3F, enabled]);
 
   return null;
 };
