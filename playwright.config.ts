@@ -1,4 +1,12 @@
 import { defineConfig } from '@playwright/test';
+import dotenv from 'dotenv';
+
+/**
+ * Read environment variables from file.
+ * https://github.com/motdotla/dotenv
+ */
+dotenv.config({ path: '.env.development.local' });
+dotenv.config();
 
 export default defineConfig({
   testDir: './tests/performance',
@@ -7,6 +15,7 @@ export default defineConfig({
     timeout: 60000,
   },
   use: {
+    baseURL: 'http://localhost:5173',
     headless: true,
     launchOptions: {
       args: [

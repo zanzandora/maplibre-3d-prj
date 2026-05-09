@@ -38,10 +38,13 @@ const MapView = () => {
     [],
   );
 
-  const { isTerrainActive, isLoading3D, setIsModelReady } =
+  const { isTerrainActive, isLoading3D, setIsModelReady, isTerrainReady } =
     useTerrainLoading(mapInstance);
 
-  const handleModelReady = useCallback(() => setIsModelReady(true), [setIsModelReady]);
+  const handleModelReady = useCallback(
+    () => setIsModelReady(true),
+    [setIsModelReady],
+  );
 
   useLayerVisibility(mapInstance, isTerrainActive);
 
@@ -150,20 +153,14 @@ const MapView = () => {
 
         {mapInstance && (
           <>
-            <MapThreeLayer
+            <Tiles3DLayer
               map={mapInstance}
               centerCoord={centerCoord}
-              // beforeId='poi_outdoor'
-            >
-              {/* Tích hợp 3D Tiles OGC */}
-              <Tiles3DLayer
-                map={mapInstance}
-                centerCoord={centerCoord}
-                assetId='4662688'
-                ionToken={CesiumIonToken}
-                onLoad={handleModelReady}
-              />
-            </MapThreeLayer>
+              assetId='4662688'
+              ionToken={CesiumIonToken}
+              onLoad={handleModelReady}
+              enabled={isTerrainReady}
+            />
 
             {/* Terrain Layer*/}
             <Source

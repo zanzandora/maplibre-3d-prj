@@ -17,8 +17,14 @@ const useTerrainLoading = (mapInstance: Map | null) => {
 
     const handleTerrainChange = () => {
       const isActive = !!mapInstance.getTerrain();
-      if (isActive && !isTerrainActive) {
-        setIsLoading3D(true);
+      if (isActive) {
+        if (!isTerrainActive) {
+          setIsLoading3D(true);
+          setIsModelReady(false);
+          setIsTerrainReady(false);
+        }
+      } else {
+        setIsLoading3D(false);
         setIsModelReady(false);
         setIsTerrainReady(false);
       }
@@ -64,7 +70,7 @@ const useTerrainLoading = (mapInstance: Map | null) => {
     }
   }, [isTerrainActive, isTerrainReady, isModelReady]);
 
-  return { isTerrainActive, isLoading3D, setIsModelReady };
+  return { isTerrainActive, isLoading3D, setIsModelReady, isTerrainReady };
 };
 
 export default useTerrainLoading;
