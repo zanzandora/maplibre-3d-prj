@@ -151,7 +151,7 @@ test.describe('Terrain and 3D Tiles Loading Performance', () => {
         { timeout: 30000 },
       );
       console.log(`[Test] Tileset response received: ${response.status()}`);
-    } catch (e) {
+    } catch {
       console.warn(
         '[Test] Tileset metadata timeout. Request count so far:',
         tilesetRequests.length,

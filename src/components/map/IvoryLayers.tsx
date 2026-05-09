@@ -54,13 +54,14 @@ export const IvoryLayers = ({ show3D }: IvoryLayersProps) => {
       'text-field': '{name}',
       'text-font': ['Noto Sans Regular'],
       'text-letter-spacing': 0.1,
-      'text-size': {
-        stops: [
-          [12, 11],
-          [18, 16],
-          [20, 20],
-        ],
-      },
+      'text-size': [
+        'interpolate',
+        ['linear'],
+        ['zoom'],
+        12, 11,
+        18, 16,
+        20, 20,
+      ],
       visibility: visibility2D,
     },
     paint: {
@@ -90,18 +91,19 @@ export const IvoryLayers = ({ show3D }: IvoryLayersProps) => {
     },
     paint: {
       'line-color': 'rgb(255, 255, 255)',
-      'line-width': {
-        stops: [
-          [13, 1],
-          [14, 2],
-          [15, 5],
-          [16, 8],
-          [17, 16],
-          [18, 23],
-          [19, 40],
-          [20, 50],
-        ],
-      },
+      'line-width': [
+        'interpolate',
+        ['linear'],
+        ['zoom'],
+        13, 1,
+        14, 2,
+        15, 5,
+        16, 8,
+        17, 16,
+        18, 23,
+        19, 40,
+        20, 50,
+      ],
     },
   };
 
@@ -124,25 +126,26 @@ export const IvoryLayers = ({ show3D }: IvoryLayersProps) => {
     },
     paint: {
       'line-color': 'rgb(255, 227, 171)',
-      'line-width': {
-        stops: [
-          [5, 0.1],
-          [7, 1],
-          [8, 1],
-          [9, 1],
-          [10, 1.5],
-          [11, 1.5],
-          [12, 2],
-          [13, 2],
-          [14, 2.5],
-          [15, 7.5],
-          [16, 16],
-          [17, 29],
-          [18, 40],
-          [19, 60],
-          [20, 75],
-        ],
-      },
+      'line-width': [
+        'interpolate',
+        ['linear'],
+        ['zoom'],
+        5, 0.1,
+        7, 1,
+        8, 1,
+        9, 1,
+        10, 1.5,
+        11, 1.5,
+        12, 2,
+        13, 2,
+        14, 2.5,
+        15, 7.5,
+        16, 16,
+        17, 29,
+        18, 40,
+        19, 60,
+        20, 75,
+      ],
     },
   };
 
@@ -160,28 +163,30 @@ export const IvoryLayers = ({ show3D }: IvoryLayersProps) => {
       'text-rotation-alignment': 'map',
       'text-keep-upright': true,
       'text-font': ['Noto Sans Regular'],
-      'text-size': {
-        stops: [
-          [0, 8],
-          [10, 9],
-          [14, 11],
-          [15, 12],
-          [18, 14],
-          [20, 20],
-        ],
-      },
+      'text-size': [
+        'interpolate',
+        ['linear'],
+        ['zoom'],
+        0, 8,
+        10, 9,
+        14, 11,
+        15, 12,
+        18, 14,
+        20, 20,
+      ],
       visibility: visibility2D,
     },
     paint: {
       'text-color': 'rgb(0, 0, 0)',
       'text-halo-color': 'rgb(255, 255, 255)',
-      'text-halo-width': {
-        stops: [
-          [0, 1],
-          [16, 1.5],
-          [17, 2],
-        ],
-      },
+      'text-halo-width': [
+        'interpolate',
+        ['linear'],
+        ['zoom'],
+        0, 1,
+        16, 1.5,
+        17, 2,
+      ],
     },
   };
 
@@ -197,13 +202,14 @@ export const IvoryLayers = ({ show3D }: IvoryLayersProps) => {
       'text-field': '{name}',
       'text-font': ['Noto Sans Regular'],
       'text-letter-spacing': 0.1,
-      'text-size': {
-        stops: [
-          [12, 11],
-          [18, 16],
-          [20, 20],
-        ],
-      },
+      'text-size': [
+        'interpolate',
+        ['linear'],
+        ['zoom'],
+        12, 11,
+        18, 16,
+        20, 20,
+      ],
       visibility: visibility2D,
     },
     paint: {

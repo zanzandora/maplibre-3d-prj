@@ -13,7 +13,6 @@ import type { InstanceData } from '../utils/types';
 interface InstanceProps {
   url: string;
   instances: InstanceData[];
-  zoom: number;
   selectedId?: string | null;
 }
 
@@ -24,7 +23,7 @@ const DUMMY = new Object3D();
  * InstanceRenderer: Efficiently renders multiple instances of a GLB model with LOD.
  * LOD switching is handled via the 'zoom' prop passed from ModelManager.
  */
-export const InstanceRenderer = ({ url, instances, zoom }: InstanceProps) => {
+export const InstanceRenderer = ({ url, instances }: InstanceProps) => {
   const { nodes } = GLBLoader.useLoad(url);
 
   // Extract geometries and materials from GLB
@@ -43,9 +42,8 @@ export const InstanceRenderer = ({ url, instances, zoom }: InstanceProps) => {
   }, [nodes]);
 
   const glbRefs = useRef<(InstancedMesh | null)[]>([]);
-  const boxRef = useRef<InstancedMesh>(null);
 
-  // 1. Sync Matrices for both LODs (Only runs when data or model changes)
+  // 1. Sync Matrices (Only runs when data or model changes)
   useLayoutEffect(() => {
     if (instances.length === 0) return;
 
@@ -56,14 +54,6 @@ export const InstanceRenderer = ({ url, instances, zoom }: InstanceProps) => {
       DUMMY.scale.copy(inst.scale || new Vector3(1, 1, 1));
       DUMMY.updateMatrix();
       glbRefs.current.forEach((mesh) => mesh?.setMatrixAt(i, DUMMY.matrix));
-
-      // Matrix for low-poly Box (LOD 2) - COMMENTED OUT
-      /*
-      const s = inst.scale ? inst.scale.x * 10 : 10;
-      DUMMY.scale.set(s, s, s);
-      DUMMY.updateMatrix();
-      boxRef.current?.setMatrixAt(i, DUMMY.matrix);
-      */
     });
 
     // Notify updates and compute bounding volumes for frustum culling
@@ -74,13 +64,6 @@ export const InstanceRenderer = ({ url, instances, zoom }: InstanceProps) => {
         mesh.computeBoundingSphere();
       }
     });
-    /*
-    if (boxRef.current) {
-      boxRef.current.instanceMatrix.needsUpdate = true;
-      boxRef.current.computeBoundingBox();
-      boxRef.current.computeBoundingSphere();
-    }
-    */
   }, [instances, meshParts]);
 
   return (
@@ -99,22 +82,6 @@ export const InstanceRenderer = ({ url, instances, zoom }: InstanceProps) => {
           />
         ))}
       </group>
-
-      {/* Massing Mode (Zoom < 16) - DISABLED */}
-      {/* 
-      <instancedMesh
-        visible={zoom < 16}
-        ref={(el) => {
-          boxRef.current = el;
-          if (el) el.userData.instances = instances;
-        }}
-        args={[undefined, undefined, instances.length]}
-        frustumCulled={false}
-      >
-        <boxGeometry args={[1, 1, 1]} />
-        <meshStandardMaterial color='#ffffff' transparent opacity={0.8} />
-      </instancedMesh>
-      */}
     </group>
   );
 };

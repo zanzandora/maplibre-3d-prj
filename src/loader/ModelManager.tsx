@@ -24,7 +24,6 @@ import type {
 import { Bvh, Preload } from '@react-three/drei';
 import { useIsMounted } from '../hooks/useIsMounted';
 import { MODEL_HEIGHT_OFFSET } from '../utils/constants';
-import { SITES_LIST } from '../utils/siteList';
 // import { fetchBuildingModels } from '../lib/action/map3d';
 
 interface ModelManagerProps {
@@ -74,24 +73,17 @@ export const ModelManager = ({
   map,
   isVisible,
   onLoadComplete,
-  siteId = 13, // Default to Utopia
 }: ModelManagerProps) => {
   const [rawData, setRawData] = useState<ModelData[]>([]);
   // note: Initialize with empty Float32Array to ensure stable reference and no null-flicker
   const [elevations, setElevations] = useState<Float32Array>(
     new Float32Array(0)
   );
-  const [zoom, setZoom] = useState(map.getZoom());
 
   const isMounted = useIsMounted();
   const rafRef = useRef<number>(0);
   const boundsRafRef = useRef<number>(0);
   const initializedRef = useRef<boolean>(false);
-
-  const currentSite = useMemo(
-    () => SITES_LIST.find((s) => s.site_id === siteId) || SITES_LIST[0],
-    [siteId]
-  );
 
   // todo: Track visible bounds to filter models
   const [visibleBounds, setVisibleBounds] = useState(() => {
@@ -217,7 +209,6 @@ export const ModelManager = ({
           maxLng: b.getEast(),
           maxLat: b.getNorth(),
         });
-        setZoom(map.getZoom());
       });
     };
 
@@ -294,7 +285,7 @@ export const ModelManager = ({
       <Bvh firstHitOnly>
         {Object.entries(groupedModels).map(([url, instances]) => (
           <Suspense key={url} fallback={<FallbackBox instances={instances} />}>
-            <InstanceRenderer url={url} instances={instances} zoom={zoom} />
+            <InstanceRenderer url={url} instances={instances} />
           </Suspense>
         ))}
         <Preload all />

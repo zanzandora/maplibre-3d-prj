@@ -1,4 +1,3 @@
-import { Map } from 'maplibre-gl';
 import { API_BASE_URL } from '../../utils/constants';
 import type { ModelData } from '../../utils/types';
 
