@@ -1,0 +1,50 @@
+[
+  {
+    "name": "Solar_Villa_DL",
+    "file": "/map3d/benhvien175/bv175_1000G.glb",
+    "assetId": 799,
+    "lng": 105.702857,
+    "lat": 20.581984,
+    "height": 0,
+    "yaw": 0,
+    "pitch": 0,
+    "roll": 0,
+    "scale": 1
+  },
+  {
+    "name": "Solar_Villa_DL",
+    "file": "/map3d/benhvien175/bv175_500G.glb",
+    "assetId": 795,
+    "lng": 105.702932,
+    "lat": 20.581898,
+    "height": 0,
+    "yaw": 0,
+    "pitch": 0,
+    "roll": 90,
+    "scale": 1
+  },
+  {
+    "name": "Solar_Villa_DL",
+    "file": "/map3d/benhvien175/bv175_congthaison.glb",
+    "assetId": 794,
+    "lng": 105.703009,
+    "lat": 20.581809,
+    "height": 0,
+    "yaw": 0,
+    "pitch": 0,
+    "roll": 180,
+    "scale": 1
+  },
+  {
+    "name": "Solar_Villa_DL",
+    "file": "/map3d/benhvien175/bv175_nhahaucan.glb",
+    "assetId": 789,
+    "lng": 105.703084,
+    "lat": 20.581723,
+    "height": 0,
+    "yaw": 0,
+    "pitch": 0,
+    "roll": 270,
+    "scale": 1
+  }
+]

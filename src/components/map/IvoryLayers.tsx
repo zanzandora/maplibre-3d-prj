@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { Source, Layer } from 'react-map-gl/maplibre';
 import type {
   FillLayerSpecification,
@@ -41,7 +42,7 @@ export const IvoryLayers = ({ show3D }: IvoryLayersProps) => {
     paint: { 'fill-color': 'rgb(146,199,230)' },
   };
 
-  const waterWayName: SymbolLayerSpecification = {
+  const waterWayName: any = {
     id: 'waterway-name-river-ctm',
     type: 'symbol',
     source: 'ivory',
@@ -71,7 +72,7 @@ export const IvoryLayers = ({ show3D }: IvoryLayersProps) => {
     },
   };
 
-  const roadService: LineLayerSpecification = {
+  const roadService: any = {
     id: 'road-ctm-service',
     type: 'line',
     source: 'ivory',
@@ -105,7 +106,7 @@ export const IvoryLayers = ({ show3D }: IvoryLayersProps) => {
     },
   };
 
-  const roadTrunk: LineLayerSpecification = {
+  const roadTrunk: any = {
     id: 'road-ctm-trunk',
     type: 'line',
     source: 'ivory',
@@ -146,7 +147,7 @@ export const IvoryLayers = ({ show3D }: IvoryLayersProps) => {
     },
   };
 
-  const highwayName: SymbolLayerSpecification = {
+  const highwayName: any = {
     id: 'highway-name-major-copy',
     type: 'symbol',
     source: 'ivory',
@@ -185,7 +186,7 @@ export const IvoryLayers = ({ show3D }: IvoryLayersProps) => {
     },
   };
 
-  const waterName: SymbolLayerSpecification = {
+  const waterName: any = {
     id: 'water-name-ctm',
     type: 'symbol',
     source: 'ivory',

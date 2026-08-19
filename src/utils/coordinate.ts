@@ -7,7 +7,7 @@ import { Euler, Vector3 } from 'three';
 export const WGS84_TO_MERCATOR = (
   lng: number,
   lat: number,
-  alt: number = 0
+  alt: number = 0,
 ) => {
   const coord = MercatorCoordinate.fromLngLat([lng, lat], alt);
   return {
@@ -26,7 +26,7 @@ export const getRelativePosition = (
   lng: number,
   lat: number,
   alt: number,
-  center: { x: number; y: number; z: number; meterScale: number }
+  center: { x: number; y: number; z: number; meterScale: number },
 ) => {
   const coord = WGS84_TO_MERCATOR(lng, lat, alt);
 
@@ -35,7 +35,7 @@ export const getRelativePosition = (
   return new Vector3(
     (coord.x - center.x) / center.meterScale,
     (coord.z - center.z) / center.meterScale, // Z altitude -> Y up
-    (coord.y - center.y) / center.meterScale // Y latitude -> Z depth
+    (coord.y - center.y) / center.meterScale, // Y latitude -> Z depth
   );
 };
 
@@ -45,7 +45,7 @@ export const getRelativePosition = (
 export const isWithinBounds = (
   lng: number,
   lat: number,
-  bounds: { minLng: number; minLat: number; maxLng: number; maxLat: number }
+  bounds: { minLng: number; minLat: number; maxLng: number; maxLat: number },
 ) => {
   return (
     lng >= bounds.minLng &&
@@ -61,7 +61,7 @@ export const isWithinBounds = (
 export const getRelativeRotation = (
   yaw: number = 0,
   pitch: number = 0,
-  roll: number = 0
+  roll: number = 0,
 ) => {
   const yawRad = (yaw * Math.PI) / 180;
   const pitchRad = (pitch * Math.PI) / 180;
@@ -71,10 +71,12 @@ export const getRelativeRotation = (
   // - Xoay quanh trục Y = Heading/Yaw (âm để khớp với MapLibre)
   // - Xoay quanh trục X = Pitch
   // - Xoay quanh trục Z = Roll
+  // Synchronize ArcMap Geographic Bearing (0° = North, Clockwise) to Three.js Y-up space
+  // Negating rollRad converts GIS Clockwise Rotation to Three.js Y-up Counter-Clockwise space.
   return new Euler(
-    pitchRad, // Trục X: Dựng đứng model + Pitch
-    Math.PI / 2 + rollRad, // Trục Y: Roll (Heading)
+    pitchRad, // Trục X: Pitch
+    -rollRad, // Trục Y: ArcMap Bearing Sync (-rollRad)
     yawRad, // Trục Z: Yaw
-    'YXZ'
+    'YXZ',
   );
 };

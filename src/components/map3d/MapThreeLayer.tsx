@@ -1,32 +1,18 @@
 import { useEffect, useMemo, useRef } from 'react';
 import { type CustomLayerInterface, type Map } from 'maplibre-gl';
+import * as THREE from 'three';
 import {
-  Mesh,
-  InstancedMesh,
-  BoxGeometry,
-  MeshStandardMaterial,
   Matrix4,
   WebGLRenderer,
   Scene,
   PerspectiveCamera,
-  AmbientLight,
-  Group,
-  DirectionalLight,
 } from 'three';
 import { createRoot, extend, useThree } from '@react-three/fiber';
 import { Lights } from './Lights';
 import type { AdvanceFn, R3FRoot } from '../../utils/types';
 
-// extend(THREE as any);
-extend({
-  Mesh,
-  InstancedMesh,
-  BoxGeometry,
-  MeshStandardMaterial,
-  AmbientLight,
-  Group,
-  DirectionalLight,
-});
+// Register all Three.js elements for R3F JSX
+extend(THREE as any);
 interface MapThreeLayerProps {
   map: Map;
   centerCoord: { x: number; y: number; z: number; meterScale: number };

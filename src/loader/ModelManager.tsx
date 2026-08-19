@@ -3,7 +3,6 @@ import {
   useMemo,
   useState,
   useRef,
-  useCallback,
   Suspense,
   useLayoutEffect,
 } from 'react';
@@ -14,7 +13,7 @@ import {
   isWithinBounds,
 } from '../utils/coordinate';
 import { InstancedMesh, Object3D, Vector3 } from 'three';
-import { type Map, type MapSourceDataEvent } from 'maplibre-gl';
+import { type Map } from 'maplibre-gl';
 import type {
   CenterCoordinate,
   GroupedInstances,
@@ -74,19 +73,13 @@ export const ModelManager = ({
   map,
   isVisible,
   onLoadComplete,
-  siteId = 13, // Default to Utopia
+  siteId = 175, // Default to Bệnh viện 175
 }: ModelManagerProps) => {
   const [rawData, setRawData] = useState<ModelData[]>([]);
-  // note: Initialize with empty Float32Array to ensure stable reference and no null-flicker
-  const [elevations, setElevations] = useState<Float32Array>(
-    new Float32Array(0)
-  );
   const [zoom, setZoom] = useState(map.getZoom());
 
   const isMounted = useIsMounted();
-  const rafRef = useRef<number>(0);
   const boundsRafRef = useRef<number>(0);
-  const initializedRef = useRef<boolean>(false);
 
   const currentSite = useMemo(
     () => SITES_LIST.find((s) => s.site_id === siteId) || SITES_LIST[0],
@@ -104,19 +97,19 @@ export const ModelManager = ({
     };
   });
 
-  // todo: Initial Data Fetch from new API
+  // Initial Data Fetch
   useEffect(() => {
     fetchBuildingModels(currentSite)
       .then((buildings) => {
         if (isMounted()) {
           setRawData(buildings);
-          setElevations(new Float32Array(buildings.length).fill(0));
+          onLoadComplete?.();
         }
       })
-      .catch((err) => console.error('Error loading buildings from API:', err));
-  }, [currentSite, isMounted]);
+      .catch((err) => console.error('Error loading buildings:', err));
+  }, [currentSite, isMounted, onLoadComplete]);
 
-  // note: Caching static properties (Rotation/Scale) to avoid GC pressure and unnecessary re-calcs
+  // Caching static properties (Rotation/Scale)
   const staticProperties = useMemo(() => {
     return rawData.map((m) => ({
       rotation: getRelativeRotation(m.yaw, m.pitch, m.roll),
@@ -124,77 +117,10 @@ export const ModelManager = ({
     }));
   }, [rawData]);
 
-  /*
-    note: Atomic elevation reset when toggling visibility
-  */
+  // Listen to Map Move/Zoom events to update bounds
   useEffect(() => {
-    if (isVisible && rawData.length > 0) {
-      requestAnimationFrame(() => {
-        setElevations(new Float32Array(rawData.length).fill(0));
-        initializedRef.current = false;
-      });
-    }
-  }, [isVisible, rawData.length]);
+    if (!map) return;
 
-  /**
-   * todo: Core Elevation Logic (Spatial Filtering & Throttled)
-   */
-  const updateAllElevations = useCallback(() => {
-    if (!isMounted() || !map || !isVisible || elevations.length === 0) return;
-
-    const terrain = map.getTerrain();
-    if (!terrain) return;
-
-    let hasChanged = false;
-    const newElevations = new Float32Array(elevations);
-
-    // note: CHỈ TRUY VẤN model trong vùng nhìn thấy (Spatial Filter)
-    rawData.forEach((model, index) => {
-      if (!isWithinBounds(model.lng, model.lat, visibleBounds)) return;
-
-      const alt = map.queryTerrainElevation([model.lng, model.lat]) || 0;
-      // note: Sử dụng ngưỡng 0.05m để tránh cập nhật quá li ti gây nháy
-      if (Math.abs(newElevations[index] - alt) > 0.05) {
-        newElevations[index] = alt;
-        hasChanged = true;
-      }
-    });
-
-    if (hasChanged || !initializedRef.current) {
-      if (rafRef.current) cancelAnimationFrame(rafRef.current);
-      rafRef.current = requestAnimationFrame(() => {
-        if (!isMounted()) return;
-        setElevations(newElevations);
-        initializedRef.current = true;
-        onLoadComplete?.();
-      });
-    }
-  }, [
-    rawData,
-    map,
-    isVisible,
-    elevations,
-    visibleBounds,
-    onLoadComplete,
-    isMounted,
-  ]);
-
-  // todo: Listen to Map Events
-  useEffect(() => {
-    if (rawData.length === 0 || !map) return;
-
-    const handleData = (e: MapSourceDataEvent) => {
-      // note: Lắng nghe terrain nạp trong khi di chuyển để snap cao độ kịp thời
-      if (
-        e.dataType === 'source' &&
-        e.sourceId?.includes('terrain') &&
-        isVisible
-      ) {
-        updateAllElevations();
-      }
-    };
-
-    // note: Cập nhật bounds mượt mà bằng rAF thay vì chỉ đợi moveend
     const onMove = () => {
       if (boundsRafRef.current) cancelAnimationFrame(boundsRafRef.current);
       boundsRafRef.current = requestAnimationFrame(() => {
@@ -209,23 +135,17 @@ export const ModelManager = ({
       });
     };
 
-    map.on('data', handleData);
     map.on('move', onMove);
-    map.on('idle', updateAllElevations);
-
-    updateAllElevations();
+    onMove();
 
     return () => {
-      map.off('data', handleData);
       map.off('move', onMove);
-      map.off('idle', updateAllElevations);
-      if (rafRef.current) cancelAnimationFrame(rafRef.current);
       if (boundsRafRef.current) cancelAnimationFrame(boundsRafRef.current);
     };
-  }, [rawData.length, map, isVisible, updateAllElevations]);
+  }, [map]);
 
-  // todo: Tile Filtering & Grouping
-  const padding = 0.002; // Roughly 200m
+  // Tile Filtering & Grouping for 2D Map (No Terrain required)
+  const padding = 0.05;
   const bufferedBounds = useMemo(
     () => ({
       minLng: visibleBounds.minLng - padding,
@@ -237,15 +157,14 @@ export const ModelManager = ({
   );
 
   const groupedModels = useMemo(() => {
-    if (!isVisible || elevations.length === 0) return {};
+    if (!isVisible) return {};
 
     const groups: GroupedInstances = {};
 
     rawData.forEach((model, index) => {
       if (!isWithinBounds(model.lng, model.lat, bufferedBounds)) return;
 
-      const terrainHeight = elevations[index] || 0;
-      const adjustedHeight = model.height + terrainHeight + MODEL_HEIGHT_OFFSET;
+      const adjustedHeight = model.height + MODEL_HEIGHT_OFFSET;
 
       const position = getRelativePosition(
         model.lng,
@@ -254,7 +173,6 @@ export const ModelManager = ({
         centerCoord
       );
 
-      // note: Sử dụng static properties đã cache
       const { rotation, scale } = staticProperties[index];
 
       if (!groups[model.file]) groups[model.file] = [];
@@ -271,7 +189,6 @@ export const ModelManager = ({
   }, [
     rawData,
     centerCoord,
-    elevations,
     bufferedBounds,
     isVisible,
     staticProperties,
